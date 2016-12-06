@@ -207,6 +207,7 @@ begin
   ATextLayout.Font.Assign(AFont);
   ATextLayout.HorizontalAlign := TTextAlign.Leading;
   ATextLayout.VerticalAlign := TTextAlign.Leading;
+  //ATextLayout.Trimming := ATrimming;
   ATextLayout.EndUpdate;
   //ATextLayout.RenderLayout(ATextLayout.LayoutCanvas);
   Result := ATextLayout.Width;

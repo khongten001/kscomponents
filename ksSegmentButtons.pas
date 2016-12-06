@@ -92,6 +92,7 @@ type
     FTintColor: TAlphaColor;
     FBackgroundColor: TAlphaColor;
     FOnSelectSegment: TksSelectSegmentButtonEvent;
+    FMouseDown: Boolean;
     procedure UpdateButtons;
     procedure SetItemIndex(const Value: integer);
     procedure SetSegments(const Value: TksSegmentButtonCollection);
@@ -103,6 +104,8 @@ type
   protected
     procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    procedure DoMouseLeave; override;
     procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -227,6 +230,16 @@ begin
   inherited;
 end;
 
+procedure TksSegmentButtons.DoMouseLeave;
+begin
+  inherited;
+  if FMouseDown then
+  begin
+    FMouseDown := False;
+    Tap(Point(0, 0));
+  end;
+end;
+
 function TksSegmentButtons.GetSelected: TKsSegmentButton;
 begin
   Result := nil;
@@ -245,9 +258,20 @@ procedure TksSegmentButtons.MouseDown(Button: TMouseButton; Shift: TShiftState; 
 begin
   inherited;
   ItemIndex := Min(Trunc(X / FBtnWidth), Segments.Count-1);
+  FMouseDown := True;
+end;
+
+procedure TksSegmentButtons.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Single);
+begin
   {$IFDEF MSWINDOWS}
-  Tap(PointF(x, y));
+  if FMouseDown then
+  begin
+    Tap(PointF(x, y));
+  end;
   {$ENDIF}
+  FMouseDown := False;
+  inherited;
 end;
 
 procedure TksSegmentButtons.Paint;
@@ -325,7 +349,7 @@ end;
 
 procedure TksSegmentButtons.SetItemIndex(const Value: integer);
 begin
-  if FItemIndex <> Value then
+  //if FItemIndex <> Value then
   begin
 
     FItemIndex := Value;

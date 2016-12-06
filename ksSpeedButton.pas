@@ -240,40 +240,6 @@ begin
   inherited;
   FMouseDown := True;
   Invalidate;
-  //
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   Application.ProcessMessages;
 end;
 
@@ -281,10 +247,10 @@ end;
 procedure TksSpeedButton.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Single);
 begin
-  inherited;
   FMouseDown := False;
   Invalidate;
   Application.ProcessMessages;
+  inherited;
 end;
 
 initialization

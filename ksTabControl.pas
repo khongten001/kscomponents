@@ -97,6 +97,7 @@ type
     procedure SetHighlightStyle(const Value: TksTabBarHighlightStyle);
     procedure FadeOut(ADuration: single);
     procedure FadeIn(ADuration: single);
+    procedure SetBackground(const Value: TAlphaColor);
   public
     constructor Create(AOwner: TComponent); override;
     procedure BeforeDestruction; override;
@@ -104,12 +105,12 @@ type
     procedure DrawTab(ACanvas: TCanvas; AIndex: integer; ARect: TRectF);
   published
     property Text: string read FText write SetText;
-    property BadgeValue: integer read FBadgeValue write SetBadgeValue;
+    property BadgeValue: integer read FBadgeValue write SetBadgeValue default 0;
     property Icon: TBitmap read FIcon write SetIcon;
     property StandardIcon: TksTabItemIcon read FIconType write SetIconType;
     property TabIndex: integer read FTabIndex write SetTabIndex;// stored False;
     property HighlightStyle: TksTabBarHighlightStyle read FHighlightStyle write SetHighlightStyle default ksTbHighlightSingleColor;
-    property Background: TAlphaColor read FBackground write FBackground default claNull;
+    property Background: TAlphaColor read FBackground write SetBackground default claNull;
   end;
 
   TksTabItemList = class(TObjectList<TksTabItem>)
@@ -234,6 +235,7 @@ begin
   Text := Name;
   FHighlightStyle := ksTbHighlightSingleColor;
   FBackground := claNull;
+  FBadgeValue := 0;
 end;
 
 destructor TksTabItem.Destroy;
@@ -325,6 +327,15 @@ begin
 end;
 
 
+
+procedure TksTabItem.SetBackground(const Value: TAlphaColor);
+begin
+  if FBackground <> Value then
+  begin
+    FBackground := Value;
+    TksTabControl(Parent).Repaint;
+  end;
+end;
 
 procedure TksTabItem.SetBadgeValue(const Value: integer);
 begin

@@ -28,9 +28,10 @@ interface
 
 {$I ksComponents.inc}
 
+
 uses System.Classes, System.Types, ksTypes, FMX.Graphics, System.UITypes,
   System.Generics.Collections, FMX.Types, FMX.InertialMovement, System.UIConsts,
-  FMX.StdCtrls, FMX.Controls, FMX.Platform, FMX.Objects;
+  FMX.StdCtrls, FMX.Controls, FMX.Platform, FMX.Objects, FMX.Edit, FMX.Pickers;
 
 const
   C_VLIST_ITEM_DEFAULT_HEIGHT = 44;
@@ -61,12 +62,16 @@ type
   TksVListSwipeDirection = (ksSwipeFromLeft, ksSwipeFromRight);
   TksVListItemPurpose = (None, Header);
   TksVListItemState = (Normal, Deleting, Deleted, Sliding);
+  TksVListItemSelectorType = (ksSelectorNone, ksSelectorEdit, ksSelectorPicker, ksSelectorDate);
 
   TksVListItemClickEvent = procedure(Sender: TObject; AItem: TksVListItem) of object;
   TksVListItemLongTapEvent = procedure(Sender: TObject; AItem: TksVListItem) of object;
   TksVListItemSwipeEvent = procedure(Sender: TObject; ARow: TksVListItem; ASwipeDirection: TksVListSwipeDirection; AButtons: TksVListActionButtons)  of object;
   TksVListDeletingItemEvent = procedure(Sender: TObject; AItem: TksVListItem; var ACanDelete: Boolean) of object;
   TksItemActionButtonClickEvent = procedure(Sender: TObject; ARow: TksVListItem; AButton: TksVListActionButton) of object;
+  TksItemEditInputEvent = procedure(Sender: TObject; ARow: TksVListItem; AText: string) of object;
+  TksItemDateSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ADate: TDateTime) of object;
+
 
   TksVirtualListViewAppearence = class(TPersistent)
   private
@@ -227,6 +232,7 @@ type
     FTextSettings: TTextSettings;
     FText: string;
     FMaxWidth: integer;
+    FActualTextWidth: single;
     procedure SetText(const Value: string);
     function GetFont: TFont;
     procedure SetFont(const Value: TFont);
@@ -350,6 +356,12 @@ type
     FObjects: TObjectList<TksVListItemBaseObject>;
     FTagStr: string;
     FCheckBoxVisible: Boolean;
+    FPickerService: IFMXPickerService;
+    FOnEditInput: TksItemEditInputEvent;
+    FSelectedDate: TDateTime;
+    FEditFieldKeyboardType: TVirtualKeyboardType;
+    FSelectorType: TksVListItemSelectorType;
+    FOnDateSelected: TksItemDateSelectedEvent;
     // procedure CacheRowToBitmap;
     procedure Changed;
     procedure SetAccessory(const Value: TksVListItemAccessoryObject);
@@ -375,6 +387,11 @@ type
     procedure SetOffset(const Value: integer);
     procedure SetCanSelect(const Value: Boolean);
     procedure SetIconSize(const Value: integer);
+    procedure DoDatePickerChanged(Sender: TObject; const ADateTime: TDateTime);
+
+    procedure ShowEditInput;
+    procedure ShowDatePicker;
+
   public
     constructor Create(Owner: TksVListItemList); virtual;
     destructor Destroy; override;
@@ -388,6 +405,7 @@ type
     ///procedure EndUpdate;
     procedure CacheItem;
     procedure ClearCache;
+
     // procedure ShowActionButtons(AAlign: TksVListActionButtonAlign);
     // procedure HideActionButtons;
     procedure DrawToCanvas(ACanvas: TCanvas; AScrollPos: single; ADrawToCache: Boolean);
@@ -412,9 +430,15 @@ type
     property State: TksVListItemState read FState write FState default Normal;
     property Offset: integer read FOffset write SetOffset default 0;
     property IconSize: integer read FIconSize write SetIconSize default 28;
+    property SelectedDate: TDateTime read FSelectedDate write FSelectedDate;
     // events...
     property OnClick: TNotifyEvent read FOnClick write FOnClick;
     property CheckBoxVisible: Boolean read FCheckBoxVisible write FCheckBoxVisible default True;
+    property SelectorType: TksVListItemSelectorType read FSelectorType write FSelectorType default ksSelectorNone;
+    property EditFieldKeyboardType: TVirtualKeyboardType read FEditFieldKeyboardType write FEditFieldKeyboardType default TVirtualKeyboardType.Alphabet;
+    property OnEditInput: TksItemEditInputEvent read FOnEditInput write FOnEditInput;
+    property OnDateSelected: TksItemDateSelectedEvent read FOnDateSelected write FOnDateSelected;
+
   end;
 
   TksVListItemList = class
@@ -436,13 +460,14 @@ type
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
     function Insert(AIndex: integer; ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
     function ItemAtPos(x, y: single): TksVListItem;
+
     procedure ClearCachesBeforeIndex(AIndex: integer);
     procedure ClearCachesAfterIndex(AIndex: integer);
     procedure Clear;
-    procedure Delete(AIndex: integer; AAnimate: Boolean);
+    procedure Delete(AIndex: integer; AAnimate: Boolean); overload;
+    procedure Delete(AItem: TksVListItem); overload;
     property Count: integer read GetCount;
-    property Items[index: integer]: TksVListItem read GetItem; default;
-  end;
+    property Items[index: integer]: TksVListItem read GetItem; default;  end;
 
   TksVListPullToRefreshOptions = class(TPersistent)
   private
@@ -546,7 +571,10 @@ type
     FCanDeleteItem: TksVListDeletingItemEvent;
     FHeaderHeight: integer;
     FNoItemsText: TksNoItemsText;
+    FFocusedControl: TControl;
     FOnActionButtonClick: TksItemActionButtonClickEvent;
+    FOnItemEditInputEvent: TksItemEditInputEvent;
+    FOnItemDateSelectedEvent: TksItemDateSelectedEvent;
     //FFont: TFont;
     procedure SetScrollPos(const Value: integer);
     procedure AniCalcChange(Sender: TObject);
@@ -584,6 +612,10 @@ type
       var Handled: Boolean); override;
     procedure DoMouseLeave; override;
     procedure DoItemDeleted;
+    procedure FocusControl(AItem: TksVListItem; AControl: TControl);
+    procedure UnfocusControl;
+    procedure DoItemEditInput(Sender: TObject; ARow: TksVListItem; AText: string);
+    procedure DoItemDateSelected(Sender: TObject; ARow: TksVListItem; ADate: TDateTime);
     // procedure Tap(const Point:TPointF); override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -636,6 +668,8 @@ type
     property OnPullRefresh: TNotifyEvent read FOnPullRefresh write FOnPullRefresh;
     property OnItemDeleted: TNotifyEvent read FOnItemDeleted write FOnItemDeleted;
     property OnActionButtonClick: TksItemActionButtonClickEvent read FOnActionButtonClick write FOnActionButtonClick;
+    property OnItemEditInput: TksItemEditInputEvent read FOnItemEditInputEvent write FOnItemEditInputEvent;
+    property OnItemDateSelected: TksItemDateSelectedEvent read FOnItemDateSelectedEvent write FOnItemDateSelectedEvent;
   end;
 
   // {$R *.dcr}
@@ -645,7 +679,7 @@ procedure Register;
 implementation
 
 uses SysUtils, Math, System.Math.Vectors, ksCommon,
-  DateUtils, FMX.Forms, FMX.Ani, FMX.Dialogs;
+  DateUtils, FMX.Forms, FMX.Ani, FMX.Dialogs, FMX.DialogService;
 
 var
   AAccessories: TksTableViewAccessoryImageList;
@@ -721,6 +755,7 @@ begin
   FActionButtons := TksVListActionButtons.Create(Self);
   FObjects := TObjectList<TksVListItemBaseObject>.Create(True);
   FCheckBoxVisible := True;
+  FSelectorType := ksSelectorNone;
   FOffset := 0;
   FUpdateCount := 0;
   FAbsoluteIndex := 0;
@@ -733,6 +768,8 @@ begin
   FState := Normal;
   FCanSelect := True;
   FBackground := claNull;
+  FSelectedDate := Now;
+  FEditFieldKeyboardType := TVirtualKeyboardType.Alphabet;
   //BeginUpdate;
   try
     FHeight := FOwner.FOwner.FItemHeight;
@@ -813,6 +850,21 @@ procedure TksVListItem.DoClicked;
 begin
   if Assigned(FOnClick) then
     FOnClick(Self);
+
+  case FSelectorType of
+    ksSelectorEdit: ShowEditInput;
+    ksSelectorDate: ShowDatePicker;
+
+  end;
+end;
+
+procedure TksVListItem.DoDatePickerChanged(Sender: TObject;
+  const ADateTime: TDateTime);
+begin
+  FSelectedDate := ADateTime;
+  FDetail.Text := FormatDateTime('d-mmm-yyyy', ADateTime);
+  if Assigned(FOnDateSelected) then
+    FOnDateSelected(Self, Self, ADateTime);
 end;
 
 procedure TksVListItem.SelectItem(ADeselectAfter: integer);
@@ -956,6 +1008,51 @@ procedure TksVListItem.SetTitle(const Value: TksVListItemTextObject);
 begin
   FTitle.Assign(Value);
   Changed;
+end;
+
+procedure TksVListItem.ShowEditInput;
+begin
+  TDialogService.InputQuery('Input',['Enter text'], [FDetail.Text],
+  procedure(const AResult: TModalResult; const AValues: array of string)
+  begin
+    if AResult = mrOk then
+    begin
+      FDetail.Text := AValues[0];
+      if Assigned(FOnEditInput) then
+        FOnEditInput(Self, Self, AValues[0]);
+    end;
+  end);
+end;
+
+procedure TksVListItem.ShowDatePicker;
+var
+  AIndex: integer;
+  APicker: TCustomDateTimePicker;
+begin
+  AIndex := -1;
+  if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
+  begin
+    APicker := FPickerService.CreateDateTimePicker;
+    APicker.Date := FSelectedDate;
+    APicker.OnDateChanged := DoDatePickerChanged;
+    APicker.Show;
+    APicker.OnDateChanged := DoDatePickerChanged;
+   {FOnSelectDate := AOnSelectDate;
+    FPopupDateStart := Trunc(AStart);
+    FListPicker := FPickerService.CreateListPicker;
+    for ICount := Trunc(AStart) to Trunc(AEnd) do
+    begin
+      FListPicker.Values.Add(FormatDateTime('DDDD, D MMM, YYYY', ICount));
+      if ICount = Trunc(ASelected) then
+        AIndex := FListPicker.Values.Count-1;
+
+    end;
+    FListPicker.OnValueChanged := DoSelectDate;
+    FListPicker.OnHide := AOnHide;
+    FListPicker.ItemIndex := AIndex;
+    FListPicker.Show; }
+
+  end;
 end;
 
 procedure TksVListItem.SlideOut(ADirection: TksVListSwipeDirection);
@@ -1297,6 +1394,12 @@ begin
   Result := IntersectRectF(r, FItemRect, AViewPort);
 end;
 
+{procedure TksVListItem.OnEditChange(Sender: TObject);
+begin
+  FDetail.Text := (Sender as TEdit).Text;
+  //ClearCache;
+end; }
+
 { TksVirtualListView }
 
 procedure TksVirtualListView.CacheItems(AStartIndex, AEndIndex: integer);
@@ -1439,10 +1542,24 @@ begin
     FOnItemClick(Self, AItem);
 end;
 
+procedure TksVirtualListView.DoItemDateSelected(Sender: TObject;
+  ARow: TksVListItem; ADate: TDateTime);
+begin
+  if Assigned(FOnItemDateSelectedEvent) then
+    FOnItemDateSelectedEvent(Self, ARow, ADate);
+end;
+
 procedure TksVirtualListView.DoItemDeleted;
 begin
   if Assigned(FOnItemDeleted) then
     FOnItemDeleted(Self);
+end;
+
+procedure TksVirtualListView.DoItemEditInput(Sender: TObject;
+  ARow: TksVListItem; AText: string);
+begin
+  if Assigned(FOnItemEditInputEvent) then
+    FOnItemEditInputEvent(Self, ARow, AText);
 end;
 
 procedure TksVirtualListView.DoItemSwiped(AItem: TksVListItem;
@@ -1570,6 +1687,20 @@ begin
     end;
   end;
   inherited EndUpdate;
+end;
+
+procedure TksVirtualListView.FocusControl(AItem: TksVListItem; AControl: TControl);
+begin
+  if FFocusedControl = AControl then
+    Exit;
+  UnfocusControl;
+  FFocusedControl := AControl;
+  AControl.Width := 150;
+  AControl.Position.X := (Width - AControl.Width) - 30;
+  AControl.Position.Y := (((AItem.ItemRect.Top + AItem.ItemRect.Bottom) - AControl.Height) / 2) - ScrollPos;
+  AddObject(AControl);
+  AControl.SetFocus;
+  TEdit(AControl).SelStart := Length(TEdit(AControl).Text);
 end;
 
 function TksVirtualListView.GetViewport: TRectF;
@@ -1730,12 +1861,15 @@ end;
 
 procedure TksVirtualListView.ScrollToBottom(AAnimated: Boolean);
 begin
-  FAniCalc.UpdatePosImmediately;
-  Application.ProcessMessages;
+ Application.ProcessMessages;
   if AAnimated then
     TAnimator.AnimateIntWait(Self, 'ScrollPos', FMaxScrollPos)
   else
     ScrollPos := FMaxScrollPos;
+  //Application.ProcessMessages;
+  FAniCalc.ViewportPositionF := PointF(0, FMaxScrollPos);
+ FAniCalc.UpdatePosImmediately;
+ Application.ProcessMessages;
 end;
 
 procedure TksVirtualListView.SelectItem(AItem: TksVListItem);
@@ -1822,9 +1956,11 @@ end;
 
 procedure TksVirtualListView.SetScrollPos(const Value: integer);
 begin
-  //if not SameValue(FScrollPos, Value, TEpsilon.Vector) then
-  if Value <> FScrollPos then
+  if not SameValue(FScrollPos, Value, TEpsilon.Vector) then
+  //if Value <> FScrollPos then
   begin
+    UnfocusControl;
+
     FItems.UpdateItemRects;
     FScrollBar.Visible := True;
     FScrollBar.Opacity := 1;
@@ -1853,6 +1989,17 @@ var
 begin
   for ICount := 0 to Items.Count - 1 do
     Items[ICount].FChecked := False;
+end;
+
+procedure TksVirtualListView.UnfocusControl;
+begin
+  if FFocusedControl <> nil then
+  begin
+    FFocusedControl.Root.SetFocused(nil);
+    //FFocusedControl.Visible := False;
+    RemoveObject(FFocusedControl);
+    FFocusedControl := nil;
+  end;
 end;
 
 procedure TksVirtualListView.UpdateScrollLimmits;
@@ -2094,6 +2241,8 @@ function TksVListItemList.Add: TksVListItem;
 begin
   Result := TksVListItem.Create(Self);
   FItems.Add(Result);
+  Result.OnEditInput := FOwner.DoItemEditInput;
+  Result.OnDateSelected := FOwner.DoItemDateSelected;
   Changed;
 end;
 
@@ -2198,6 +2347,11 @@ begin
   end;
 end;
 
+procedure TksVListItemList.Delete(AItem: TksVListItem);
+begin
+  FItems.Delete(FItems.IndexOf(AItem));
+end;
+
 destructor TksVListItemList.Destroy;
 begin
   ClearCachesAfterIndex(0);
@@ -2287,21 +2441,28 @@ end;  }
 
 function TksVListItemTextObject.ActualTextWidth: single;
 var
-  AMeasure: TBitmap;
   ARect: TRectF;
 begin
-  AMeasure := TBitmap.Create(1, 1);
+  if FActualTextWidth > 0 then
+  begin
+    Result := FActualTextWidth;
+    Exit;
+  end;
   try
-    AMeasure.BitmapScale := GetScreenScale;
+    //AMeasure.BitmapScale := GetScreenScale;
 
     ARect := RectF(0, 0, FWidth, MaxSingle);
     if ARect.Width = 0 then
       ARect.Width := MaxSingle;
-    AMeasure.Canvas.Font.Assign(FTextSettings.Font);
-    AMeasure.Canvas.MeasureText(ARect, FText, FTextSettings.WordWrap, [], FTextSettings.HorzAlign, TTextAlign.Leading);
+    //AMeasure.Canvas.Font.Assign(FTextSettings.Font);
+    //AMeasure.Canvas.MeasureText(ARect, FText, FTextSettings.WordWrap, [], FTextSettings.HorzAlign, TTextAlign.Leading);
+
+    TCanvasManager.MeasureCanvas.Font.Assign(FTextSettings.Font);
+    TCanvasManager.MeasureCanvas.MeasureText(ARect, FText, FTextSettings.WordWrap, [], FTextSettings.HorzAlign, TTextAlign.Leading);
     Result := ARect.Width;
+    FActualTextWidth := ARect.Width;
   finally
-    FreeAndNil(AMeasure);
+  //  FreeAndNil(AMeasure);
   end;
 end;
 
@@ -2326,6 +2487,7 @@ begin
 
   if (FCached.IsEmpty) and (FText <> '') and (FVisible) then
   begin
+    FActualTextWidth := 0;
     ASize := CalculateSize;
 
     ATrimming := FTextSettings.Trimming;
@@ -2344,7 +2506,9 @@ begin
 
     FCached.SetSize(Round(ASize.Width * AScale),
       Round(ASize.Height * AScale));
+
     FCached.BitmapScale := AScale;
+
     FCached.Clear(claNull);
 
     FCached.Canvas.Fill.Kind := TBrushKind.Solid;
@@ -2440,28 +2604,48 @@ begin
 end; }
 
 function TksVListItemTextObject.CalculateSize: TRectF;
-var
-  AMeasure: TBitmap;
+//var
+  //AMeasure: TBitmap;
 begin
   Result := FCachedSize;
 
   if Result.IsEmpty then
   begin
-    AMeasure := TBitmap.Create(1, 1);
+
+    //AMeasure := TBitmap.Create(1, 1);
     try
-      AMeasure.BitmapScale := GetScreenScale;
+      //AMeasure.BitmapScale := GetScreenScale;
 
       Result := RectF(0, 0, FWidth, MaxSingle);
       if Result.Width = 0 then
         Result.Width := FMaxWidth;
       if Result.Width = 0 then
-        Result.Width := 10000;
+        Result.Width := 1000;
 
-      AMeasure.Canvas.Font.Assign(FTextSettings.Font);
-      AMeasure.Canvas.MeasureText(Result, FText, FTextSettings.WordWrap, [], FTextSettings.HorzAlign, TTextAlign.Leading);
+      TCanvasManager.MeasureCanvas.Font.Assign(FTextSettings.Font);
+      {TCanvasManager.MeasureCanvas.MeasureText(Result,
+                                               FText, FTextSettings.WordWrap,
+                                               [],
+                                               FTextSettings.HorzAlign,
+                                               TTextAlign.Leading);   }
+      Result.Width := CalculateTextWidth(FText,
+                                         FTextSettings.Font,
+                                         FTextSettings.WordWrap,
+                                         Result.Width,
+                                         0);
+      Result.Height := CalculateTextHeight(FText,
+                                          FTextSettings.Font,
+                                          FTextSettings.WordWrap,
+                                          FTextSettings.Trimming,
+                                          Result.Width);
+      if GetScreenScale < 2 then
+      begin
+        Result.Width := Result.Width + 8;
+      end;
+
       FCachedSize := Result;
     finally
-      FreeAndNil(AMeasure);
+    //  FreeAndNil(AMeasure);
     end;
   end;
 end;
@@ -2483,6 +2667,7 @@ end;
 procedure TksVListItemTextObject.ClearCache;
 begin
   FreeAndNil(FCached);
+  FActualTextWidth := 0;
 end;
 
 constructor TksVListItemTextObject.Create(AItem: TksVListItem);
@@ -2490,6 +2675,7 @@ begin
   inherited Create(AItem);
   FTextSettings := TTextSettings.Create(nil);
   FMaxWidth := 0;
+  FActualTextWidth := 0;
   //{$IFDEF IOS}
   //FTextSettings.Font.Size := 16;
   //FTextSettings.Font.Family := 'Segoe UI Semilight';
@@ -2516,9 +2702,10 @@ begin
   ARect := CalcObjectRect(AItemRect);
   BeforeRenderText(ACanvas, ARect);
   ACanvas.DrawBitmap(FCached, RectF(0, 0, FCached.Width, FCached.Height), ARect, 1, True);
-{  ACanvas.Stroke.Color := claRed;
+
+  {ACanvas.Stroke.Color := claRed;
   ACanvas.Stroke.Kind := TBrushKind.Solid;
-  ACanvas.DrawRect(ARect, 8, 8, AllCorners, 1);}
+  ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1); }
 end;
 
 function TksVListItemTextObject.GetFont: TFont;
@@ -3250,19 +3437,18 @@ var
   APath: TPathData;
 begin
   r := ARect;
-  r.Width := ActualTextWidth;
+  r.Width := FCached.Width / GetScreenScale;
   InflateRect(r, 8, 8);
   ACanvas.Fill.Kind := TBrushKind.Solid;
   ACanvas.Fill.Color := FColor;
   ACanvas.FillRect(r, 10, 10, AllCorners, 1);
+
   case HorzAlign of
     taLeftJustify: r := RectF(r.Left-4, r.Bottom-16, r.Left+16, r.Bottom+4);
     taRightJustify: r := RectF(r.Right-16, r.Bottom-16, r.Right+4, r.Bottom+4);
   end;
   ACanvas.Stroke.Color := claRed;
   ACanvas.Stroke.Kind := TBrushKind.Solid;
-
-
 
   APath := TPathData.Create;
   if HorzAlign = taLeftJustify then
@@ -3288,8 +3474,8 @@ begin
     ACanvas.Fill.Color := claDimgray;
     ACanvas.Font.Size := 11;
     ACanvas.FillText(ASenderRect, FSender, False, 1, [], TTextAlign.Trailing);
-
   end;
+
   inherited;
 end;
 
