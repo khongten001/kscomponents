@@ -283,14 +283,6 @@ begin
     if FSegments.Count = 0 then
       Canvas.FillText(ClipRect, 'Add "Segments" in the Object Inspector', True, 1, [], TTextAlign.Center);
   end;
-  if FSegments.Count > 0 then
-  begin
-    {if Height <> (FSegments[0].FButton.Height + 16) then
-    begin
-      Height := FSegments[0].FButton.Height + 16;
-      UpdateExplicitBounds;
-    end;}
-  end;
 end;
 
 procedure TksSegmentButtons.Resize;
@@ -302,9 +294,11 @@ end;
 procedure TksSegmentButtons.UpdateButtons;
 var
   ICount: integer;
+  s: string;
 begin
   if FSegments.Count = 0 then
     Exit;
+
   FBtnWidth := (Width-16) / FSegments.Count;
   for ICount := 0 to FSegments.Count-1 do
   begin
@@ -315,24 +309,29 @@ begin
 
       with FSegments[ICount].FButton do
       begin
-        StaysPressed := True;
+        StaysPressed := (ICount = FItemIndex);
+        IsPressed := False;
         GroupName := FGroupID;
-        Width := FBtnWidth;
+        Width := FBtnWidth+1;
         TintColor := FTintColor;
         if FItemIndex = ICount then
           TextSettings.FontColor := FBackgroundColor
         else
           TextSettings.FontColor := FTintColor;
-        IsPressed := (ICount = FItemIndex);
         Text := FSegments[ICount].Text;
         {$IFDEF ANDROID}
         StyleLookup := 'listitembutton';
         Height := 30;
         {$ELSE}
-        if ICount = 0 then StyleLookup := 'segmentedbuttonleft';
-        if ICount > 0 then StyleLookup := 'segmentedbuttonmiddle';
-        if ICount = FSegments.Count-1 then StyleLookup := 'segmentedbuttonright';
-        if FSegments.Count = 1 then StyleLookup := 'listitembutton';
+
+        if ICount = 0 then s := 'toolbuttonleft';
+        if ICount > 0 then s := 'toolbuttonmiddle';
+        if ICount = FSegments.Count-1 then s := 'toolbuttonright';
+        FSegments[ICount].FButton.StyleLookup := s;
+        //if FSegments.Count = 1 then StyleLookup := 'listitembutton';}
+
+        IsPressed := (ICount = FItemIndex);
+
         {$ENDIF}
         Position.Y := (Self.Height - Height) / 2;
         Position.X := (ICount * FBtnWidth)+8;
@@ -349,7 +348,7 @@ end;
 
 procedure TksSegmentButtons.SetItemIndex(const Value: integer);
 begin
-  //if FItemIndex <> Value then
+  if FItemIndex <> Value then
   begin
 
     FItemIndex := Value;

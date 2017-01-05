@@ -88,6 +88,7 @@ type
     FText: string;
     FBadgeValue: integer;
     FHighlightStyle: TksTabBarHighlightStyle;
+    FCachedBmp: TBitmap;
     procedure SetText(const Value: string);
     procedure SetBadgeValue(const Value: integer);
     procedure UpdateTabs;
@@ -100,8 +101,8 @@ type
     procedure SetBackground(const Value: TAlphaColor);
   public
     constructor Create(AOwner: TComponent); override;
-    procedure BeforeDestruction; override;
     destructor Destroy; override;
+    procedure BeforeDestruction; override;
     procedure DrawTab(ACanvas: TCanvas; AIndex: integer; ARect: TRectF);
   published
     property Text: string read FText write SetText;
@@ -110,7 +111,7 @@ type
     property StandardIcon: TksTabItemIcon read FIconType write SetIconType;
     property TabIndex: integer read FTabIndex write SetTabIndex;// stored False;
     property HighlightStyle: TksTabBarHighlightStyle read FHighlightStyle write SetHighlightStyle default ksTbHighlightSingleColor;
-    property Background: TAlphaColor read FBackground write SetBackground default claNull;
+    property Background: TAlphaColor read FBackground write SetBackground default claWhite;
   end;
 
   TksTabItemList = class(TObjectList<TksTabItem>)
@@ -181,6 +182,7 @@ type
     property Tabs: TksTabItemList read FTabs;
     property SelectedTab: TksTabItem read GetSelectedTab;
     procedure FadeToNextTab(const ADelaySeconds: single = 0.5);
+    procedure FadeToPrevTab(const ADelaySeconds: single = 0.5);
     procedure FadeToTab(ATab: TksTabItem; const ADelaySeconds: single = 0.5);
   published
     property Align;
@@ -227,6 +229,7 @@ end;
 constructor TksTabItem.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FCachedBmp := TBitmap.Create;
   FIcon := TBitmap.Create;
   ClipChildren := True;
   Stored := True;
@@ -234,13 +237,13 @@ begin
   HitTest := False;
   Text := Name;
   FHighlightStyle := ksTbHighlightSingleColor;
-  FBackground := claNull;
+  FBackground := claWhite;
   FBadgeValue := 0;
 end;
 
 destructor TksTabItem.Destroy;
 begin
-
+  FreeAndNil(FCachedBmp);
   FreeAndNil(FIcon);
   inherited;
 end;
@@ -251,15 +254,37 @@ var
   AAppearence: TksTabBarAppearence;
   ABmp: TBitmap;
   ADestRect: TRectF;
+  r: TRectF;
 begin
+  if FCachedBmp.IsEmpty = False then
+  begin
+    ACanvas.DrawBitmap(FCachedBmp,
+                       RectF(0, 0, FCachedBmp.Width, FCachedBmp.Height),
+                       ARect,
+                       1,
+                       True);
+    Exit;
+  end;
+
+  r := ARect;
+  r.Offset(0-r.Left, 0-r.Top);
+
   AAppearence := TksTabControl(Parent).Appearence;
-  InflateRect(ARect, 0, -3);
-  ACanvas.Fill.Color := AAppearence.NormalColor;
+  InflateRect(r, 0, -3);
+
+  FCachedBmp.SetSize(Round(ARect.Width*2), Round(ARect.Height*2));
+  FCachedBmp.BitmapScale := 2;
+  FCachedBmp.Canvas.BeginScene;
+
+  FCachedBmp.Canvas.Font.Size := 11;
+  FCachedBmp.Canvas.Fill.Color := AAppearence.NormalColor;
 
   if AIndex = TksTabControl(Parent).TabIndex then
-    ACanvas.Fill.Color := AAppearence.SelectedColor;
-  ACanvas.Font.Size := 11;
-  ACanvas.FillText(ARect, FText, False, 1, [], TTextAlign.Center, TTextAlign.Trailing);
+    FCachedBmp.Canvas.Fill.Color := AAppearence.SelectedColor;
+
+
+  FCachedBmp.Canvas.FillText(r, FText, False, 1, [], TTextAlign.Center, TTextAlign.Trailing);
+
   ABmp := TBitmap.Create;
   try
     ABmp.Assign(FIcon);
@@ -278,19 +303,29 @@ begin
       if (AIndex <> TksTabControl(Parent).TabIndex) then
         ReplaceOpaqueColor(ABmp, AAppearence.NormalColor);
     end;
-    ADestRect := RectF(0, 0, 22, 22);
-    OffsetRect(ADestRect, ARect.Left + ((ARect.Width - ADestRect.Width) / 2), 4);
-    ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ADestRect, 1, True);
 
+    ADestRect := RectF(0, 0, 22, 22);
+    OffsetRect(ADestRect, {ARect.Left +} ((ARect.Width - ADestRect.Width) / 2), 4);
+
+    FCachedBmp.Canvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ADestRect, 1, True);
     if FBadgeValue > 0 then
     begin
-      GenerateBadge(ACanvas,
+      GenerateBadge(FCachedBmp.Canvas,
                     PointF(ADestRect.Right-7, ADestRect.Top-2),
                     FBadgeValue,
                     AAppearence.BadgeColor,
                     AAppearence.BackgroundColor,
                     claWhite);
     end;
+
+
+    FCachedBmp.Canvas.EndScene;
+
+    ACanvas.DrawBitmap(FCachedBmp,
+                       RectF(0, 0, FCachedBmp.Width, FCachedBmp.Height),
+                       ARect,
+                       1,
+                       True);
   finally
     FreeAndNil(ABmp);
   end;
@@ -637,6 +672,12 @@ begin
     FadeToTab(Tabs[TabIndex+1], ADelaySeconds);
 end;
 
+procedure TksTabControl.FadeToPrevTab(const ADelaySeconds: single = 0.5);
+begin
+  if TabIndex > 0 then
+    FadeToTab(Tabs[TabIndex-1], ADelaySeconds);
+end;
+
 procedure TksTabControl.FadeToTab(ATab: TksTabItem; const ADelaySeconds: single = 0.5);
 var
   APrevTab: TksTabItem;
@@ -684,6 +725,7 @@ begin
       ksTbpTop: FTabBar.Align := TAlignLayout.Top;
     end;
     ATab := Tabs[ICount];
+    ATab.FCachedBmp.SetSize(0, 0);
     ATab.FTabIndex := ICount;
     ATab.Width := Self.Width;
     case FTabPosition of
@@ -770,6 +812,7 @@ begin
       if (csDesigning in ComponentState) then
         DrawDesignBorder(claDimgray, claDimgray);
 
+
       case ATabControl.TabPosition of
         ksTbpBottom: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Top]);
         ksTbpTop: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Bottom]);
@@ -777,6 +820,8 @@ begin
 
       for ICount := 0 to TksTabControl(FTabControl).GetTabCount-1 do
         ATabControl.Tabs[ICount].DrawTab(Canvas, ICount, ATabControl.GetTabRect(ICount));
+
+
     finally
       RestoreState(AState);
       Font.Size := 10;
@@ -789,7 +834,8 @@ end;
 
 procedure TksTabBarAppearence.Changed;
 begin
-  TksTabControl(FTabControl).Repaint;
+  TksTabControl(FTabControl).UpdateTabs;
+  //TksTabControl(FTabControl).Repaint;
 end;
 
 constructor TksTabBarAppearence.Create(ATabControl: TksTabControl);
@@ -880,6 +926,7 @@ begin
   if (Action = TCollectionNotification.cnRemoved) and (not (csDesigning in FTabControl.ComponentState)) then
   begin
     Value.DisposeOf;
+    FTabControl.UpdateTabs;
   end;
 end;
 

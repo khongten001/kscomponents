@@ -456,6 +456,8 @@ type
 
     function Add: TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
+    function Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
+
     function AddHeader(AText: string): TksVListItem;
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
     function Insert(AIndex: integer; ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
@@ -651,6 +653,7 @@ type
     property ItemHeight: integer read FItemHeight write SetItemHeight default C_VLIST_ITEM_DEFAULT_HEIGHT;
     property HeaderHeight: integer read FHeaderHeight write SetHeaderHeight default C_VLIST_HEADER_DEFAULT_HEIGHT;
     property NoItemsText: TksNoItemsText read FNoItemsText write SetNoItemsText;
+    property Opacity;
     property Position;
     property PullToRefresh: TksVListPullToRefreshOptions read FPullToRefresh write FPullToRefresh;
     property SelectionOptions: TksVListSelectionOptions read FSelectionOptions write FSelectionOptions;
@@ -679,7 +682,9 @@ procedure Register;
 implementation
 
 uses SysUtils, Math, System.Math.Vectors, ksCommon,
-  DateUtils, FMX.Forms, FMX.Ani, FMX.Dialogs, FMX.DialogService;
+  DateUtils, FMX.Forms, FMX.Ani, FMX.Dialogs
+  {$IFDEF XE10_OR_NEWER} , FMX.DialogService {$ENDIF}
+  ;
 
 var
   AAccessories: TksTableViewAccessoryImageList;
@@ -1012,6 +1017,7 @@ end;
 
 procedure TksVListItem.ShowEditInput;
 begin
+  {$IFDEF XE10_OR_NEWER}
   TDialogService.InputQuery('Input',['Enter text'], [FDetail.Text],
   procedure(const AResult: TModalResult; const AValues: array of string)
   begin
@@ -1022,14 +1028,15 @@ begin
         FOnEditInput(Self, Self, AValues[0]);
     end;
   end);
+  {$ENDIF}
 end;
 
 procedure TksVListItem.ShowDatePicker;
 var
-  AIndex: integer;
+//  AIndex: integer;
   APicker: TCustomDateTimePicker;
 begin
-  AIndex := -1;
+  //AIndex := -1;
   if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
   begin
     APicker := FPickerService.CreateDateTimePicker;
@@ -1365,15 +1372,15 @@ begin
     ACanvas.RestoreState(AState);
   end;
 
-  ACanvas.StrokeThickness := 1 / GetScreenScale;
+  ACanvas.Stroke.Thickness := 1 / GetScreenScale;
   ACanvas.Stroke.Color := FOwner.FOwner.Appearence.SeparatorColor;
   if ACanvas.Stroke.Color = claNull then
     ACanvas.Stroke.Color := claDarkgray;
 
   if (FIndex = 0) {and (FPurpose = None) and (AScrollPos < 0)} then
-    ACanvas.DrawLine(PointF(0, ARect.Top+(ACanvas.StrokeThickness/2)), PointF(ARect.Width, ARect.Top+(ACanvas.StrokeThickness/2)), 1);
+    ACanvas.DrawLine(PointF(0, ARect.Top+(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Top+(ACanvas.Stroke.Thickness/2)), 1);
 
-  ACanvas.DrawLine(PointF(0, ARect.Bottom-(ACanvas.StrokeThickness/2)), PointF(ARect.Width, ARect.Bottom-(ACanvas.StrokeThickness/2)), 1);
+  ACanvas.DrawLine(PointF(0, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), 1);
 end;
 
 {
@@ -2259,6 +2266,12 @@ begin
   Result.Detail.Font.Size := 13;
   Result.Accessory.AccessoryType := AAccessory;
   Changed;
+end;
+
+function TksVListItemList.Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem;
+begin
+  Result := Add(ATitle, ASubtitle, ADetail, AAccessory);
+  Result.Image.Bitmap := AImage;
 end;
 
 function TksVListItemList.AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;

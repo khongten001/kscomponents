@@ -71,6 +71,7 @@ type
     [weak]FFormTo: TForm;
     FTransitionType: TksFormTransitionType;
     FBackgroundScroll: Boolean;
+    FOnClose: TNotifyEvent;
     function GetReverseTransition: TksFormTransitionType;
   public
     property FormFrom: TForm read FFormFrom write FFormFrom;
@@ -78,11 +79,12 @@ type
     property TransitionType: TksFormTransitionType read FTransitionType write FTransitionType;
     property ReverseTransition: TksFormTransitionType read GetReverseTransition;
     property BackgroundScroll: Boolean read FBackgroundScroll write FBackgroundScroll;
+    property OnClose: TNotifyEvent read FOnClose write FOnClose;
   end;
 
   TksFormTransitioIntoList = class(TObjectList<TksFormTransitionInfo>)
   public
-    procedure AddTransition(AFrom, ATo: TForm; AType: TksFormTransitionType; ABackgroundScroll: Boolean);
+    procedure AddTransition(AFrom, ATo: TForm; AType: TksFormTransitionType; ABackgroundScroll: Boolean; AOnClose: TNotifyEvent);
   end;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
@@ -95,7 +97,7 @@ type
     procedure AnimateImage(AImage: TksFormImage; ADirection: TAnimateDirection;
       ANewValue: single; AWait: Boolean);
     class function GenerateFormImage(AForm: TForm): TBitmap;
-    procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True);
+    procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
     procedure PopForm(const Animate: Boolean = True);
     procedure PopAllForms;
   public
@@ -106,7 +108,7 @@ type
 
   procedure Register;
 
-  procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True);
+  procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
   procedure PopForm;
   procedure PopAllForms;
   procedure ClearTransitionTrail;
@@ -128,14 +130,14 @@ begin
   RegisterComponents('Kernow Software FMX', [TksFormTransition]);
 end;
 
-procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True);
+procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
 var
   ATran: TksFormTransition;
 begin
   if AAnimating then
     Exit;  ATran := TksFormTransition.Create(nil);
   try
-    ATran.PushForm(AFrom, ATo, ATransition, ScrollBackgroundForm);
+    ATran.PushForm(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm);
   finally
     ATran.DisposeOf;
   end;
@@ -258,6 +260,8 @@ begin
   FPreventAdd := False;
   Application.ProcessMessages;
   ATransitionList.Delete(ATransitionList.Count-1);
+  if Assigned(AInfo.OnClose) then
+    AInfo.OnClose(AInfo.FormFrom);
 end;
 
 procedure TksFormTransition.PopAllForms;
@@ -278,7 +282,7 @@ begin
 end;
 
 procedure TksFormTransition.PushForm(AFrom, ATo: TForm;
-  ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True);
+  ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
 var
   AImageFrom: TksFormImage;
   AImageTo: TksFormImage;
@@ -289,7 +293,7 @@ begin
   AAnimating := True;
 
   if FPreventAdd = False then
-    ATransitionList.AddTransition(AFrom, ATo, ATransition, ScrollBackgroundForm);
+    ATransitionList.AddTransition(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm);
 
 
   AImageFrom := TksFormImage.Create(nil);
@@ -441,7 +445,7 @@ end;
 
 { TksFormTransitioIntoList }
 
-procedure TksFormTransitioIntoList.AddTransition(AFrom, ATo: TForm; AType: TksFormTransitionType; ABackgroundScroll: Boolean);
+procedure TksFormTransitioIntoList.AddTransition(AFrom, ATo: TForm; AType: TksFormTransitionType; ABackgroundScroll: Boolean; AOnClose: TNotifyEvent);
 var
   AInfo: TksFormTransitionInfo;
 begin
@@ -450,6 +454,7 @@ begin
   AInfo.FormTo := ATo;
   AInfo.TransitionType := AType;
   AInfo.BackgroundScroll := ABackgroundScroll;
+  AInfo.OnClose := AOnClose;
   Add(AInfo);
 end;
 
@@ -457,7 +462,6 @@ end;
 
 function TksFormTransitionInfo.GetReverseTransition: TksFormTransitionType;
 begin
-  Result := ksFtSlideInFromLeft;
   case FTransitionType of
     ksFtSlideInFromLeft: Result := ksFtSlideOutToLeft;
     ksFtSlideInFromTop: Result := ksFtSlideOutToTop;
@@ -468,8 +472,9 @@ begin
     ksFtSlideOutToTop: Result := ksFtSlideInFromTop;
     ksFtSlideOutToRight: Result := ksFtSlideInFromRight;
     ksFtSlideOutToBottom: Result := ksFtSlideInFromBottom;
+  else
+    Result := ksFtSlideInFromLeft;
   end;
-
 end;
 
 { TksFormImage }
