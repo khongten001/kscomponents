@@ -180,6 +180,9 @@ begin
         {$IFDEF ANDROID}
         ReplaceOpaqueColor(FBitmap, GetColorOrDefault(FIconColor, claDimgray));
         {$ENDIF}
+        {$IFDEF MSWINDOWS}
+        ReplaceOpaqueColor(FBitmap, FIconColor);
+        {$ENDIF}
       end;
 
       Canvas.DrawBitmap(ABmp,

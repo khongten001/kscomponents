@@ -93,22 +93,35 @@ type
   TksFormTransition = class(TksComponent)
   private
     FPreventAdd: Boolean;
+    FLoadingIndicator: Boolean;
+    FRectangle: TRectangle;
+    FText: TLabel;
+    procedure ShowLoadingIndicator(AForm: TForm);
+    procedure HideLoadingIndicator;
     procedure AddBorder(ABmp: TBitmap; ABorder: TSide);
     procedure AnimateImage(AImage: TksFormImage; ADirection: TAnimateDirection;
       ANewValue: single; AWait: Boolean);
     class function GenerateFormImage(AForm: TForm): TBitmap;
-    procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
+    procedure PushForm(AFrom, ATo: TForm;
+                       ATransition: TksFormTransitionType;
+                       const ScrollBackgroundForm: Boolean = True;
+                       const AOnCloseForm: TNotifyEvent = nil);
     procedure PopForm(const Animate: Boolean = True);
     procedure PopAllForms;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    property LoadingIndicator: Boolean read FLoadingIndicator write FLoadingIndicator default False;
   end;
 
   {$R *.dcr}
 
   procedure Register;
 
-  procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
+  procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType;
+                     const ScrollBackgroundForm: Boolean = True;
+                     const AOnCloseForm: TNotifyEvent = nil;
+                     const AShowLoadingIndicator: Boolean = False);
   procedure PopForm;
   procedure PopAllForms;
   procedure ClearTransitionTrail;
@@ -124,19 +137,25 @@ var
   AAnimating: Boolean;
   ATransitionList: TksFormTransitioIntoList;
 
-
 procedure Register;
 begin
   RegisterComponents('Kernow Software FMX', [TksFormTransition]);
 end;
 
-procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
+procedure PushForm(AFrom, ATo: TForm;
+                   ATransition: TksFormTransitionType;
+                   const ScrollBackgroundForm: Boolean = True;
+                   const AOnCloseForm: TNotifyEvent = nil;
+                   const AShowLoadingIndicator: Boolean = False);
 var
   ATran: TksFormTransition;
 begin
   if AAnimating then
-    Exit;  ATran := TksFormTransition.Create(nil);
+    Exit;
+
+  ATran := TksFormTransition.Create(nil);
   try
+    ATran.LoadingIndicator := AShowLoadingIndicator;
     ATran.PushForm(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm);
   finally
     ATran.DisposeOf;
@@ -212,6 +231,7 @@ begin
   if AWait then
   begin
     AImage.BringToFront;
+    FRectangle.BringToFront;
     //
   end;
   //Application.ProcessMessages;
@@ -228,7 +248,33 @@ end;
 constructor TksFormTransition.Create(AOwner: TComponent);
 begin
   inherited;
+  FRectangle := TRectangle.Create(nil);
+  FRectangle.Fill.Color := claBlack;
+  FRectangle.Width := 100;
+  FRectangle.Height := 100;
+  FRectangle.XRadius := 10;
+  FRectangle.YRadius := 10;
+  FRectangle.Opacity := 0.75;
+  //FRectangle.Align := TAlignLayout.Center;
+
+  FRectangle.Visible := False;
+
+  FText := TLabel.Create(FRectangle);
+  FText.Align := TAlignLayout.Client;
+  FText.TextSettings.FontColor := claWhite;
+  FText.StyledSettings := FText.StyledSettings - [TStyledSetting.FontColor];
+  FText.Text := 'LOADING';
+  FText.TextAlign := TTextAlign.Center;
+  FRectangle.AddObject(FText);
   FPreventAdd := False;
+  FLoadingIndicator := False;
+
+end;
+
+destructor TksFormTransition.Destroy;
+begin
+  FRectangle.DisposeOf;
+  inherited;
 end;
 
 class function TksFormTransition.GenerateFormImage(AForm: TForm): TBitmap;
@@ -246,6 +292,11 @@ begin
   Result.Canvas.EndScene;
 end;
 
+procedure TksFormTransition.HideLoadingIndicator;
+begin
+
+end;
+
 procedure TksFormTransition.PopForm(const Animate: Boolean = True);
 var
   AInfo: TksFormTransitionInfo;
@@ -253,6 +304,8 @@ begin
   if ATransitionList.Count = 0 then
     Exit;
   AInfo := ATransitionList.Last;
+
+  HideLoadingIndicator;
 
   FPreventAdd := True;
   //if Animate then
@@ -282,7 +335,9 @@ begin
 end;
 
 procedure TksFormTransition.PushForm(AFrom, ATo: TForm;
-  ATransition: TksFormTransitionType; const ScrollBackgroundForm: Boolean = True; const AOnCloseForm: TNotifyEvent = nil);
+                                     ATransition: TksFormTransitionType;
+                                     const ScrollBackgroundForm: Boolean = True;
+                                     const AOnCloseForm: TNotifyEvent = nil);
 var
   AImageFrom: TksFormImage;
   AImageTo: TksFormImage;
@@ -302,6 +357,11 @@ begin
     ATo.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
     AFrom.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
 
+    {$IFDEF ANDROID}
+    ATo.Show;
+    ATo.Hide;
+    {$ENDIF}
+
     AImageFrom.Width := AFrom.Width;
     AImageFrom.Height := AFrom.Height;
 
@@ -314,6 +374,12 @@ begin
     finally
       FreeAndNil(ABmp);
     end;
+
+    FRectangle.Visible := False;
+    if FLoadingIndicator then
+      ShowLoadingIndicator( AFrom);
+
+
     AImageFrom.Position.X := 0;
     AImageFrom.Position.Y := 0;
     AFrom.AddObject(AImageFrom);
@@ -321,13 +387,17 @@ begin
     AImageTo.Position.X := 0;
     AImageTo.Position.Y := 0;
     AFrom.AddObject(AImageTo);
+
+    FRectangle.BringToFront;
     Application.ProcessMessages;
+
     ABmp := TksFormTransition.GenerateFormImage(ATo);
     try
       AImageTo.Bitmap := ABmp;
     finally
       FreeAndNil(ABmp);
     end;
+
 
     case ATransition of
       ksFtSlideInFromLeft: AImageTo.Position.X := 0-AImageTo.Width;
@@ -348,15 +418,16 @@ begin
     end;
 
     if (ATransition in [ksFtSlideOutToLeft, ksFtSlideOutToRight, ksFtSlideOutToBottom, ksFtSlideOutToTop]) then
+    begin
       AImageFrom.BringToFront;
-
+      FRectangle.BringToFront;
+    end;
     Application.ProcessMessages;
 
     case ATransition of
       // slide ins...
       ksFtSlideInFromRight:
       begin
-        AImageTo.BringToFront;
         AddBorder(AImageTo.Bitmap, TSide.Left);
         AImageFrom.Fade;
         if ScrollBackgroundForm then
@@ -367,7 +438,6 @@ begin
 
       ksFtSlideInFromLeft:
       begin
-        AImageTo.BringToFront;
         AddBorder(AImageTo.Bitmap, TSide.Right);
         AImageFrom.Fade;
         if ScrollBackgroundForm then
@@ -441,6 +511,17 @@ begin
     AFrom.Hide;
     AAnimating := False;
   end;
+  HideLoadingIndicator;
+end;
+
+procedure TksFormTransition.ShowLoadingIndicator(AForm: TForm);
+begin
+  FRectangle.Position.X := (AForm.ClientWidth/2) - (FRectangle.Width / 2);
+  FRectangle.Position.Y := (AForm.ClientHeight/2) - (FRectangle.Width / 2);
+  AForm.AddObject(FRectangle);
+  FRectangle.Parent := AForm;
+  FRectangle.Visible := True;
+  Application.ProcessMessages;
 end;
 
 { TksFormTransitioIntoList }

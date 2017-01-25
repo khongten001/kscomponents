@@ -184,6 +184,7 @@ end;
 
 procedure TKsSegmentButton.SetText(const Value: string);
 begin
+
   FText := Value;
   (Collection as TksSegmentButtonCollection).FSegmentButtons.UpdateButtons;
 
@@ -309,28 +310,32 @@ begin
 
       with FSegments[ICount].FButton do
       begin
-        StaysPressed := (ICount = FItemIndex);
         IsPressed := False;
-        GroupName := FGroupID;
-        Width := FBtnWidth+1;
-        TintColor := FTintColor;
-        if FItemIndex = ICount then
-          TextSettings.FontColor := FBackgroundColor
-        else
-          TextSettings.FontColor := FTintColor;
-        Text := FSegments[ICount].Text;
-        {$IFDEF ANDROID}
-        StyleLookup := 'listitembutton';
-        Height := 30;
-        {$ELSE}
 
         if ICount = 0 then s := 'toolbuttonleft';
         if ICount > 0 then s := 'toolbuttonmiddle';
         if ICount = FSegments.Count-1 then s := 'toolbuttonright';
-        FSegments[ICount].FButton.StyleLookup := s;
-        //if FSegments.Count = 1 then StyleLookup := 'listitembutton';}
 
-        IsPressed := (ICount = FItemIndex);
+        {$IFDEF ANDROID}
+        StyleLookup := 'listitembutton';
+        Height := 30;
+        {$ELSE}
+        FSegments[ICount].FButton.StyleLookup := s;
+
+        StaysPressed := ICount = FItemIndex;
+        IsPressed := ICount = FItemIndex;
+        GroupName := FGroupID;
+        Width := FBtnWidth+1;
+        TintColor := FTintColor;
+
+
+        TextSettings.FontColorForState.Focused := FTintColor;
+        TextSettings.FontColorForState.Active := FTintColor;
+        TextSettings.FontColorForState.Normal := FTintColor;
+        TextSettings.FontColorForState.Pressed := FBackgroundColor;
+        Text := FSegments[ICount].Text;
+
+        TextSettings.FontColor := FTintColor;
 
         {$ENDIF}
         Position.Y := (Self.Height - Height) / 2;

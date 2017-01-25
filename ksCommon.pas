@@ -328,6 +328,7 @@ begin
   end;
 end;
 
+
 procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ABackgroundColor, ATextColor: TAlphaColor);
 
   procedure DrawEllipse(ACanvas: TCanvas; ARect: TRectF; AColor: TAlphaColor);
@@ -344,9 +345,16 @@ var
   ARect: TRectF;
   r, r2: TRectF;
   s: single;
+  AWidth: single;
 begin
   s := GetScreenScale;
-  ABmp := TBitmap.Create(Round(32*s), Round(32*s));
+  if AValue = -1 then
+    AWidth := 32
+  else
+    AWidth := 32;
+  //else
+
+  ABmp := TBitmap.Create(Round(AWidth*s), Round(AWidth*s));
   try
     ARect := RectF(ATopLeft.X, ATopLeft.Y, ATopLeft.X + 16, ATopLeft.Y + 16);
 
@@ -355,15 +363,35 @@ begin
 
     ABmp.Clear(claNull);
     ABmp.Canvas.BeginScene;
-    r := RectF(2, 2, 30*s, 30*s);
-    r2 := RectF(0, 0, 32*s, 32*s);
+    r := RectF(2, 2, (AWidth-2)*s, (AWidth-2)*s);
+    r2 := RectF(0, 0, AWidth*s, AWidth*s);
+
+    if AValue = -1 then
+    begin
+      InflateRect(r, -12, -12);
+      InflateRect(r2,-12, -12);
+      OffsetRect(r, 0, -6);
+      OffsetRect(r2, 0, -6);
+    end;
     DrawEllipse(ABmp.Canvas, r2, ABackgroundColor);
     DrawEllipse(ABmp.Canvas, r, AColor);
     ABmp.Canvas.EndScene;
+
+   {if AValue = -1 then
+   begin
+      ARect.Left := ARect.Left + 2;
+      //ARect.Top := ARect.Top + 2;
+      ARect.Right := ARect.Right - 6;
+      ARect.Bottom := ARect.Bottom - 8;
+   end; }
+
+
+
     ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, 1, False);
     ACanvas.Fill.Color := ATextColor;
     ACanvas.Font.Size := 9;
-    ACanvas.FillText(ARect, IntToStr(AValue), False, 1, [], TTextAlign.Center);
+    if AValue > 0 then
+      ACanvas.FillText(ARect, IntToStr(AValue), False, 1, [], TTextAlign.Center);
   finally
     FreeAndNil(ABmp);
   end;

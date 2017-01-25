@@ -274,6 +274,7 @@ begin
 
   FCachedBmp.SetSize(Round(ARect.Width*2), Round(ARect.Height*2));
   FCachedBmp.BitmapScale := 2;
+  FCachedBmp.Clear(claNull);
   FCachedBmp.Canvas.BeginScene;
 
   FCachedBmp.Canvas.Font.Size := 11;
@@ -308,7 +309,7 @@ begin
     OffsetRect(ADestRect, {ARect.Left +} ((ARect.Width - ADestRect.Width) / 2), 4);
 
     FCachedBmp.Canvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ADestRect, 1, True);
-    if FBadgeValue > 0 then
+    if FBadgeValue <> 0 then
     begin
       GenerateBadge(FCachedBmp.Canvas,
                     PointF(ADestRect.Right-7, ADestRect.Top-2),

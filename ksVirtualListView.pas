@@ -70,7 +70,10 @@ type
   TksVListDeletingItemEvent = procedure(Sender: TObject; AItem: TksVListItem; var ACanDelete: Boolean) of object;
   TksItemActionButtonClickEvent = procedure(Sender: TObject; ARow: TksVListItem; AButton: TksVListActionButton) of object;
   TksItemEditInputEvent = procedure(Sender: TObject; ARow: TksVListItem; AText: string) of object;
+  TksItemSelectPickerItemEvent = procedure(Sender: TObject; ARow: TksVListItem; AText: string) of object;
+
   TksItemDateSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ADate: TDateTime) of object;
+  TksItemGetPickerItemsEvent = procedure(Sender: TObject; ARow: TksVListItem; var ASelected: string; AItems: TSTrings) of object;
 
 
   TksVirtualListViewAppearence = class(TPersistent)
@@ -357,7 +360,9 @@ type
     FTagStr: string;
     FCheckBoxVisible: Boolean;
     FPickerService: IFMXPickerService;
+    FPicker: TCustomListPicker;
     FOnEditInput: TksItemEditInputEvent;
+    FOnSelectPickerItem: TksItemSelectPickerItemEvent;
     FSelectedDate: TDateTime;
     FEditFieldKeyboardType: TVirtualKeyboardType;
     FSelectorType: TksVListItemSelectorType;
@@ -388,9 +393,11 @@ type
     procedure SetCanSelect(const Value: Boolean);
     procedure SetIconSize(const Value: integer);
     procedure DoDatePickerChanged(Sender: TObject; const ADateTime: TDateTime);
+    procedure DoItemPickerChanged(Sender: TObject; const AValueIndex: Integer);
 
     procedure ShowEditInput;
     procedure ShowDatePicker;
+    procedure ShowPicker;
 
   public
     constructor Create(Owner: TksVListItemList); virtual;
@@ -437,6 +444,7 @@ type
     property SelectorType: TksVListItemSelectorType read FSelectorType write FSelectorType default ksSelectorNone;
     property EditFieldKeyboardType: TVirtualKeyboardType read FEditFieldKeyboardType write FEditFieldKeyboardType default TVirtualKeyboardType.Alphabet;
     property OnEditInput: TksItemEditInputEvent read FOnEditInput write FOnEditInput;
+    property OnSelectPickerItem: TksItemSelectPickerItemEvent read FOnSelectPickerItem write FOnSelectPickerItem;
     property OnDateSelected: TksItemDateSelectedEvent read FOnDateSelected write FOnDateSelected;
 
   end;
@@ -449,6 +457,7 @@ type
     procedure Changed;
     function GetItem(index: integer): TksVListItem;
     function GetCount: integer;
+    function GetCheckedCount: integer;
     //procedure UpdateItemHeaders;
   public
     constructor Create(AOwner: TksVirtualListView); virtual;
@@ -469,7 +478,10 @@ type
     procedure Delete(AIndex: integer; AAnimate: Boolean); overload;
     procedure Delete(AItem: TksVListItem); overload;
     property Count: integer read GetCount;
-    property Items[index: integer]: TksVListItem read GetItem; default;  end;
+    property CheckedCount: integer read GetCheckedCount;
+    property Items[index: integer]: TksVListItem read GetItem; default;
+
+  end;
 
   TksVListPullToRefreshOptions = class(TPersistent)
   private
@@ -564,6 +576,10 @@ type
     FDeleteButton: TksVListDeleteButton;
     FItemHeight: integer;
     FItemIndex: integer;
+    FPullRefreshTimer: TFmxHandle;
+
+    //FEventThread: TThread;
+    FRefreshing: Boolean;
 
     // events...
     FOnItemClick: TksVListItemClickEvent;
@@ -577,6 +593,8 @@ type
     FOnActionButtonClick: TksItemActionButtonClickEvent;
     FOnItemEditInputEvent: TksItemEditInputEvent;
     FOnItemDateSelectedEvent: TksItemDateSelectedEvent;
+    FOnItemPickerSelectedEvent: TksItemSelectPickerItemEvent;
+    FOnGetPickerItemsEvent: TksItemGetPickerItemsEvent;
     //FFont: TFont;
     procedure SetScrollPos(const Value: integer);
     procedure AniCalcChange(Sender: TObject);
@@ -618,11 +636,14 @@ type
     procedure UnfocusControl;
     procedure DoItemEditInput(Sender: TObject; ARow: TksVListItem; AText: string);
     procedure DoItemDateSelected(Sender: TObject; ARow: TksVListItem; ADate: TDateTime);
+    procedure DoItemPickerSelected(Sender: TObject; ARow: TksVListItem; AText: string);
+    procedure DoPullRefresh;
     // procedure Tap(const Point:TPointF); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    procedure CreateAniCalc2(AUpdateLimits: Boolean);
     procedure DoCleanupDeletedItems;
     procedure DoItemSwiped(AItem: TksVListItem;
       ASwipeDirection: TksVListSwipeDirection);
@@ -673,6 +694,8 @@ type
     property OnActionButtonClick: TksItemActionButtonClickEvent read FOnActionButtonClick write FOnActionButtonClick;
     property OnItemEditInput: TksItemEditInputEvent read FOnItemEditInputEvent write FOnItemEditInputEvent;
     property OnItemDateSelected: TksItemDateSelectedEvent read FOnItemDateSelectedEvent write FOnItemDateSelectedEvent;
+    property OnItemPickerSelected: TksItemSelectPickerItemEvent read FOnItemPickerSelectedEvent write FOnItemPickerSelectedEvent;
+    property OnGetPickerItems: TksItemGetPickerItemsEvent read FOnGetPickerItemsEvent write FOnGetPickerItemsEvent;
   end;
 
   // {$R *.dcr}
@@ -859,6 +882,7 @@ begin
   case FSelectorType of
     ksSelectorEdit: ShowEditInput;
     ksSelectorDate: ShowDatePicker;
+    ksSelectorPicker: ShowPicker;
 
   end;
 end;
@@ -870,6 +894,14 @@ begin
   FDetail.Text := FormatDateTime('d-mmm-yyyy', ADateTime);
   if Assigned(FOnDateSelected) then
     FOnDateSelected(Self, Self, ADateTime);
+end;
+
+procedure TksVListItem.DoItemPickerChanged(Sender: TObject;
+  const AValueIndex: Integer);
+begin
+  FDetail.Text := FPicker.Values[AValueIndex];
+  if Assigned(FOnSelectPickerItem) then
+    FOnSelectPickerItem(FOwner.FOwner, Self, FPicker.Values[AValueIndex]);
 end;
 
 procedure TksVListItem.SelectItem(ADeselectAfter: integer);
@@ -1029,6 +1061,36 @@ begin
     end;
   end);
   {$ENDIF}
+end;
+
+procedure TksVListItem.ShowPicker;
+var
+  AItems: TStrings;
+  ASelected: string;
+begin
+  //AIndex := -1;
+  if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
+  begin
+    FPickerService.CloseAllPickers;
+    AItems := TStringList.Create;
+    try
+      FPicker := FPickerService.CreateListPicker;
+      if Assigned(FOwner.FOwner.OnGetPickerItems) then
+        FOwner.FOwner.OnGetPickerItems(FOwner.FOwner, Self, ASelected, AItems);
+      FPicker.Values.Assign(AItems);
+
+      if AItems.IndexOf(FDetail.Text) > -1 then
+        FPicker.ItemIndex := AItems.IndexOf(FDetail.Text)
+      else
+        FPicker.ItemIndex := 0;
+
+      FPicker.OnValueChanged := DoItemPickerChanged;
+      FPicker.Show;
+
+    finally
+      FreeAndNil(AItems);
+    end;
+  end;
 end;
 
 procedure TksVListItem.ShowDatePicker;
@@ -1463,9 +1525,31 @@ begin
   FScrollBar.Width := 8;
   FPendingRefresh := False;
 
+  CreateAniCalc2(False);
+
+  FScrollBar.Orientation := TOrientation.Vertical;
+  // FScrollBar.Align := TAlignLayout.Right;
+  FScrollBar.OnChange := ScrollBarChanged;
+  AddObject(FScrollBar);
+
+  HitTest := True;
+  FRefreshing := False;
+  if (csDesigning in ComponentState) then
+  begin
+    Items.Add('Title 1', 'sub title', 'detail');
+    Items.Add('Title 2', 'sub title', 'detail');
+    Items.Add('Title 3', 'sub title', 'detail');
+  end;
+end;
+
+procedure TksVirtualListView.CreateAniCalc2(AUpdateLimits: Boolean);
+begin
+  FreeAndNil(FAniCalc);
   FAniCalc := TksAniCalc.Create(nil);
   FAniCalc.OnChanged := AniCalcChange;
-  FAniCalc.ViewportPositionF := PointF(0, 0);
+  //FAniCalc.ViewportPositionF := PointF(0, 0);
+  FAniCalc.ViewportPositionF := PointF(0, FScrollPos);
+  FAniCalc.UpdatePosImmediately;
   FAniCalc.Animation := True;
   FAniCalc.Averaging := True;
   FAniCalc.Interval := 8;
@@ -1474,20 +1558,8 @@ begin
   FAniCalc.OnChanged := AniCalcChange;
   FAniCalc.OnStart := AniCalcStart;
   FAniCalc.OnStop := AniCalcStop;
-
-  FScrollBar.Orientation := TOrientation.Vertical;
-  // FScrollBar.Align := TAlignLayout.Right;
-  FScrollBar.OnChange := ScrollBarChanged;
-  AddObject(FScrollBar);
-
-  HitTest := True;
-
-  if (csDesigning in ComponentState) then
-  begin
-    Items.Add('Title 1', 'sub title', 'detail');
-    Items.Add('Title 2', 'sub title', 'detail');
-    Items.Add('Title 3', 'sub title', 'detail');
-  end;
+  if AUpdateLimits then
+    UpdateScrollLimmits;
 end;
 
 destructor TksVirtualListView.Destroy;
@@ -1554,6 +1626,10 @@ procedure TksVirtualListView.DoItemDateSelected(Sender: TObject;
 begin
   if Assigned(FOnItemDateSelectedEvent) then
     FOnItemDateSelectedEvent(Self, ARow, ADate);
+  {$IFDEF ANDROID}
+  Application.ProcessMessages;
+  Repaint;
+  {$ENDIF}
 end;
 
 procedure TksVirtualListView.DoItemDeleted;
@@ -1609,9 +1685,21 @@ end;
 
 procedure TksVirtualListView.DoMouseLeave;
 begin
-  inherited;
   if (FAniCalc <> nil) then
     FAniCalc.MouseLeave;
+  FPendingRefresh := True;
+//MouseUp(TMouseButton.mbLeft, [], FMousePt.X, FMousePt.y);
+//Application.ProcessMessages;
+//  CheckForPendingRefresh;
+  inherited DoMouseLeave;
+end;
+
+procedure TksVirtualListView.DoPullRefresh;
+begin
+  KillTimer(FPullRefreshTimer);
+  if Assigned(FOnPullRefresh) then
+    FOnPullRefresh(Self);
+
 end;
 
 procedure TksVirtualListView.DrawPullToRefresh;
@@ -1650,6 +1738,17 @@ procedure TksVirtualListView.DoItemLongTap(AItem: TksVListItem);
 begin
   if Assigned(FOnItemLongTap) then
     FOnItemLongTap(Self, AItem);
+end;
+
+procedure TksVirtualListView.DoItemPickerSelected(Sender: TObject;
+  ARow: TksVListItem; AText: string);
+begin
+  if Assigned(FOnItemPickerSelectedEvent) then
+    FOnItemPickerSelectedEvent(Self, ARow, AText);
+  {$IFDEF ANDROID}
+  Application.ProcessMessages;
+  Repaint;
+  {$ENDIF}
 end;
 
 procedure TksVirtualListView.LongTapTimerProc;
@@ -1981,6 +2080,13 @@ begin
     FScrollBar.Value := Value;
     FScrollBar.OnChange := ScrollBarChanged;
 
+    if (value = 0) and (FPendingRefresh) then
+    begin
+      FAniCalc.UpdatePosImmediately;
+      Application.ProcessMessages;
+      if Assigned(FOnPullRefresh) then
+        FOnPullRefresh(Self);
+    end;
   end;
 end;
 
@@ -2015,6 +2121,8 @@ var
 begin
   if FAniCalc <> nil then
   begin
+    FAniCalc.OnStop := nil;
+    FAniCalc.OnChanged := nil;
     SetLength(Targets, 2);
     Targets[0].TargetType := TAniCalculations.TTargetType.Min;
     Targets[0].Point := TPointD.Create(0, 0);
@@ -2025,7 +2133,10 @@ begin
       FScrollPos := FMaxScrollPos;
     Targets[1].Point := TPointD.Create(100, FMaxScrollPos);
     FAniCalc.SetTargets(Targets);
+
     FAniCalc.ViewportPosition := PointF(0, FScrollPos);
+    FAniCalc.OnChanged := AniCalcChange;
+    FAniCalc.OnStop := AniCalcStop;
   end;
   FScrollBar.Max := FTotalItemHeight;
   FScrollBar.ViewportSize := Height;
@@ -2109,7 +2220,8 @@ procedure TksVirtualListView.MouseMove(Shift: TShiftState; x, y: single);
 begin
   FMousePt := PointF(x, y);
   FAniCalc.MouseMove(x, y);
-  FPendingRefresh := ((ScrollPos <= -50) and (FAniCalc.Down));
+  if (ssLeft in Shift) then
+    FPendingRefresh := ((ScrollPos <= -50) and (FAniCalc.Down));
   if (FAniCalc.Down) and (FMouseDownPos.y <> y) then
   begin
     if FSelectionOptions.KeepSelection = False then
@@ -2199,7 +2311,7 @@ begin
 
   end;
 
-  if FPendingRefresh then
+  {if FPendingRefresh then
   begin
     while Trunc(ScrollPos) <> 0 do
     begin
@@ -2212,10 +2324,13 @@ begin
     FPendingRefresh := False;
     if Assigned(FOnPullRefresh) then
       FOnPullRefresh(Self);
-  end;
+  end; }
 
   if FSelectionOptions.FKeepSelection = False then
     DeselectAll;
+
+  //CheckForPendingRefresh;
+  //CheckForPendingRefresh;
 end;
 
 procedure TksVirtualListView.MouseWheel(Shift: TShiftState; WheelDelta: integer;
@@ -2248,8 +2363,10 @@ function TksVListItemList.Add: TksVListItem;
 begin
   Result := TksVListItem.Create(Self);
   FItems.Add(Result);
+  Result.Background := FOwner.Appearence.ItemBackground;
   Result.OnEditInput := FOwner.DoItemEditInput;
   Result.OnDateSelected := FOwner.DoItemDateSelected;
+  Result.OnSelectPickerItem := FOwner.DoItemPickerSelected;
   Changed;
 end;
 
@@ -2289,7 +2406,7 @@ begin
   Result := Add(AText, '', '');
   //Result.BeginUpdate;
   try
-    //Result.Background := //GetColorOrDefault(FOwner.Appearence.HeaderColor, claSilver);
+    Result.Background := GetColorOrDefault(FOwner.Appearence.HeaderColor, claNull);
     Result.Title.Font.Size := 13;
     Result.Title.TextSettings.FontColor := claBlack;
     Result.Detail.Font.Size := 12;
@@ -2370,6 +2487,16 @@ begin
   ClearCachesAfterIndex(0);
   FreeAndNil(FItems);
   inherited;
+end;
+
+function TksVListItemList.GetCheckedCount: integer;
+var
+  ICount: integer;
+begin
+  Result := 0;
+  for ICount := 0 to Count-1 do
+    if Items[ICount].Checked then
+      Result := Result +1;
 end;
 
 function TksVListItemList.GetCount: integer;
