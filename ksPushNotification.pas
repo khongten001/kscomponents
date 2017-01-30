@@ -2,9 +2,9 @@
 *                                                                              *
 *  TksPushNotification - Push Notification Component                           *
 *                                                                              *
-*  https://bitbucket.org/gmurt/kscomponents                                    *
+*  https://github.com/gmurt/KernowSoftwareFMX                                  *
 *                                                                              *
-*  Copyright 2017 Graham Murt                                                  *
+*  Copyright 2015 Graham Murt                                                  *
 *                                                                              *
 *  email: graham@kernow-software.co.uk                                         *
 *                                                                              *
@@ -29,30 +29,35 @@ interface
 {$I ksComponents.inc}
 
 uses Classes, FMX.MediaLibrary, FMX.Media, FMX.Platform, System.Messaging, FMX.Graphics,
-  ksTypes, System.PushNotification;
+  ksTypes, System.PushNotification, Json, FMX.Types;
 
 type
   TksReceivePushTokenEvent = procedure(Sender: TObject; AToken: string) of object;
-  TksReceivePushMessageEvent = procedure(Sender: TObject; ATitle, AMessage: string; ABadge: integer) of object;
+  TksReceivePushMessageEvent = procedure(Sender: TObject; AData: TJsonObject) of object;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
     {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
-  TksPushNotification = class(TksComponent)
+  TksPushNotification = class(TComponent)
   private
+    FAppEvent: IFMXApplicationEventService;
     FFirebaseSenderID: string;
-
+    FTimer: TFmxHandle;
     FServiceConnection: TPushServiceConnection;
     FPushService: TPushService;
     FDeviceToken: string;
     // events...
     FOnReceiveTokenEvent: TksReceivePushTokenEvent;
     FOnReceivePushMessageEvent: TksReceivePushMessageEvent;
+    //function CreateTimer(AInterval: integer; AProc: TTimerProc): TFmxHandle;
+    //procedure DoCheckStartupNotifications;
+    function AppEvent(AAppEvent: TApplicationEvent; AContext: TObject): Boolean;
     procedure OnNotificationChange(Sender: TObject; AChange: TPushService.TChanges);
     procedure OnReceiveNotificationEvent(Sender: TObject; const ANotification: TPushServiceNotification);
   protected
     procedure Loaded; override;
   public
+    constructor Create(AOwner: TComponent); override;
     procedure Activate;
   published
     property FirebaseSenderID: string read FFirebaseSenderID write FFirebaseSenderID stored True;
@@ -64,8 +69,7 @@ type
 
 implementation
 
-uses Types, SysUtils, System.Threading
-  {$IFDEF XE10_OR_NEWER} ,FMX.DialogService {$ELSE} , FMX.Dialogs {$ENDIF}
+uses Types, SysUtils, System.Threading, FMX.DialogService
 
   {$IFDEF IOS}
   , FMX.PushNotification.IOS
@@ -120,7 +124,29 @@ begin
   {$ENDIF}
 end;
 
+function TksPushNotification.AppEvent(AAppEvent: TApplicationEvent;
+  AContext: TObject): Boolean;
+var
+  ICount: integer;
+  ANotification: TPushServiceNotification;
+begin
+  if AAppEvent = TApplicationEvent.FinishedLaunching then
+  begin
+    for ICount := Low(FPushService.StartupNotifications) to High(FPushService.StartupNotifications) do
+    begin
+      ANotification := FPushService.StartupNotifications[ICount];
+      OnReceiveNotificationEvent(Self, ANotification);
+    end;
+  end;
+end;
 
+constructor TksPushNotification.Create(AOwner: TComponent);
+begin
+  inherited;
+  TPlatformServices.Current.SupportsPlatformService(IFMXApplicationEventService, IInterface(FAppEvent));
+  if FAppEvent <> nil then
+    FAppEvent.SetApplicationEventHandler(AppEvent);
+end;
 
 procedure TksPushNotification.Loaded;
 var
@@ -142,38 +168,29 @@ begin
   FServiceConnection.OnReceiveNotification := OnReceiveNotificationEvent;
 end;
 
-procedure ShowMsg(AMsg: string);
-begin
-  {$IFDEF XE10_OR_NEWER}
-  TDialogService.ShowMessage(AMsg);
-  {$ELSE}
-  ShowMessage(AMsg);
-  {$ENDIF}
-end;
-
 procedure TksPushNotification.OnNotificationChange(Sender: TObject; AChange: TPushService.TChanges);
-
 var
   AToken: string;
+  ICount: integer;
 begin
   if (TPushService.TChange.Status in AChange) then
   begin
+
+
     if (FPushService.Status = TPushService.TStatus.StartupError) then
     begin
       TThread.Synchronize(nil,
         procedure
-
         begin
           if Pos('java.lang.securityexception', LowerCase(FPushService.StartupError)) > 0 then
-
-            ShowMsg('Unable to activate push notifications...'+#13+#13+
-                    'Check that you have enabled "Receive Push Notifications" in Options->Entitlement List')
+            TDialogService.ShowMessage('Unable to activate push notifications...'+#13+#13+
+                                       'Check that you have enabled "Receive Push Notifications" in Options->Entitlement List')
           else
           if Pos('invalid_sender', LowerCase(FPushService.StartupError)) > 0 then
-            ShowMsg('Unable to activate push notifications...'+#13+#13+
+            TDialogService.ShowMessage('Unable to activate push notifications...'+#13+#13+
                                        'The FirebaseSenderID value is invalid.')
           else
-            ShowMsg(FPushService.StartupError);
+            TDialogService.ShowMessage(FPushService.StartupError);
         end);
       Exit;
     end;
@@ -195,22 +212,19 @@ end;
 
 procedure TksPushNotification.OnReceiveNotificationEvent(Sender: TObject;
   const ANotification: TPushServiceNotification);
+var
+  AJson: TJsonObject;
 begin
   if Assigned(FOnReceivePushMessageEvent) then
   begin
+    AJson := ANotification.Json;
     {$IFDEF IOS}
-    FOnReceivePushMessageEvent(Self,
-                               '',
-                               ANotification.DataObject.Values['alert'].Value,
-                               StrToIntDef(ANotification.DataObject.Values['badge'].Value, 0));
+    AJson := AJson.Values['aps'] as TJSONObject;
     {$ENDIF}
-    {$IFDEF ANDROID}
     FOnReceivePushMessageEvent(Self,
-                               ANotification.DataObject.Values['title'].Value,
-                               ANotification.DataObject.Values['message'].Value,
-                               0);
-    {$ENDIF}
+                               AJson);
   end;
 end;
 
 end.
+

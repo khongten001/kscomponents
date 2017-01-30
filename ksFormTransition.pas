@@ -92,6 +92,7 @@ type
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
   TksFormTransition = class(TksComponent)
   private
+    FPopping: Boolean;
     FPreventAdd: Boolean;
     FLoadingIndicator: Boolean;
     FRectangle: TRectangle;
@@ -152,13 +153,17 @@ var
 begin
   if AAnimating then
     Exit;
-
-  ATran := TksFormTransition.Create(nil);
+  AAnimating := True;
   try
-    ATran.LoadingIndicator := AShowLoadingIndicator;
-    ATran.PushForm(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm);
+    ATran := TksFormTransition.Create(nil);
+    try
+      ATran.LoadingIndicator := AShowLoadingIndicator;
+      ATran.PushForm(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm);
+    finally
+      ATran.DisposeOf;
+    end;
   finally
-    ATran.DisposeOf;
+    AAnimating := False;
   end;
 end;
 
@@ -166,14 +171,16 @@ procedure PopForm(const AShowLoadingIndicator: Boolean = False);
 var
   ATran: TksFormTransition;
 begin
-  if AAnimating then
+  if (AAnimating) then
     Exit;
+  AAnimating := True;
   ATran := TksFormTransition.Create(nil);
   try
     ATran.LoadingIndicator := AShowLoadingIndicator;
     ATran.PopForm;
   finally
     ATran.DisposeOf;
+    AAnimating := False;
   end;
 end;
 
@@ -269,7 +276,7 @@ begin
   FRectangle.AddObject(FText);
   FPreventAdd := False;
   FLoadingIndicator := False;
-
+  FPopping := False;
 end;
 
 destructor TksFormTransition.Destroy;
@@ -302,20 +309,25 @@ procedure TksFormTransition.PopForm(const Animate: Boolean = True);
 var
   AInfo: TksFormTransitionInfo;
 begin
-  if ATransitionList.Count = 0 then
+  if (ATransitionList.Count = 0) or (FPopping) then
     Exit;
-  AInfo := ATransitionList.Last;
+  FPopping := True;
+  try
+    AInfo := ATransitionList.Last;
 
-  HideLoadingIndicator;
+    HideLoadingIndicator;
 
-  FPreventAdd := True;
-  //if Animate then
-  PushForm(AInfo.FormTo, AInfo.FormFrom, AInfo.ReverseTransition, AInfo.BackgroundScroll);
-  FPreventAdd := False;
-  Application.ProcessMessages;
-  ATransitionList.Delete(ATransitionList.Count-1);
-  if Assigned(AInfo.OnClose) then
-    AInfo.OnClose(AInfo.FormFrom);
+    FPreventAdd := True;
+    //if Animate then
+    PushForm(AInfo.FormTo, AInfo.FormFrom, AInfo.ReverseTransition, AInfo.BackgroundScroll);
+    FPreventAdd := False;
+    Application.ProcessMessages;
+    ATransitionList.Delete(ATransitionList.Count-1);
+    if Assigned(AInfo.OnClose) then
+      AInfo.OnClose(AInfo.FormFrom);
+  finally
+    FPopping := False;
+  end;
 end;
 
 procedure TksFormTransition.PopAllForms;
@@ -344,10 +356,6 @@ var
   AImageTo: TksFormImage;
   ABmp: TBitmap;
 begin
-  if AAnimating then
-    Exit;
-  AAnimating := True;
-
   if FPreventAdd = False then
     ATransitionList.AddTransition(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm);
 
@@ -510,7 +518,6 @@ begin
     AImageFrom.DisposeOf;
     AImageTo.DisposeOf;
     AFrom.Hide;
-    AAnimating := False;
   end;
   HideLoadingIndicator;
 end;
