@@ -1,26 +1,26 @@
-{ *******************************************************************************
-  *                                                                              *
-  *  TksVirtualListView                                                          *
-  *                                                                              *
-  *  https://github.com/gmurt/KernowSoftwareFMX                                  *
-  *                                                                              *
-  *  Copyright 2015 Graham Murt                                                  *
-  *                                                                              *
-  *  email: graham@kernow-software.co.uk                                         *
-  *                                                                              *
-  *  Licensed under the Apache License, Version 2.0 (the "License");             *
-  *  you may not use this file except in compliance with the License.            *
-  *  You may obtain a copy of the License at                                     *
-  *                                                                              *
-  *    http://www.apache.org/licenses/LICENSE-2.0                                *
-  *                                                                              *
-  *  Unless required by applicable law or agreed to in writing, software         *
-  *  distributed under the License is distributed on an "AS IS" BASIS,           *
-  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    *
-  *  See the License forthe specific language governing permissions and          *
-  *  limitations under the License.                                              *
-  *                                                                              *
-  *******************************************************************************}
+{*******************************************************************************
+*                                                                              *
+*  TksVirtualListView                                                          *
+*                                                                              *
+*  https://bitbucket.org/gmurt/kscomponents                                    *
+*                                                                              *
+*  Copyright 2017 Graham Murt                                                  *
+*                                                                              *
+*  email: graham@kernow-software.co.uk                                         *
+*                                                                              *
+*  Licensed under the Apache License, Version 2.0 (the "License");             *
+*  you may not use this file except in compliance with the License.            *
+*  You may obtain a copy of the License at                                     *
+*                                                                              *
+*    http://www.apache.org/licenses/LICENSE-2.0                                *
+*                                                                              *
+*  Unless required by applicable law or agreed to in writing, software         *
+*  distributed under the License is distributed on an "AS IS" BASIS,           *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    *
+*  See the License forthe specific language governing permissions and          *
+*  limitations under the License.                                              *
+*                                                                              *
+*******************************************************************************}
 
 unit ksVirtualListView;
 
@@ -480,7 +480,7 @@ type
     property Count: integer read GetCount;
     property CheckedCount: integer read GetCheckedCount;
     property Items[index: integer]: TksVListItem read GetItem; default;
-
+    function IndexOf(AItem: TksVListItem): integer;
   end;
 
   TksVListPullToRefreshOptions = class(TPersistent)
@@ -1170,50 +1170,8 @@ begin
     Height := Round(FDeleteCalc.ViewportPosition.y);
     FOwner.UpdateItemRects;
     FOwner.FOwner.Invalidate;
-    // if Height = 0 then
-    // FOwner.Delete(FIndex, False);
   end;
 end;
-
-{ procedure TksVListItem.ShowActionButtons(AAlign: TksVListActionButtonAlign);
-  var
-  ICOunt: integer;
-  begin
-  FActionButtons.Alignment := AAlign;
-  CacheRowToBitmap;
-  if AAlign = ksAbLeftAlign then
-  begin
-
-  //for ICount := 0 to 50 do
-  //  Offset := ICount;
-
-  end;
-
-  if AAlign = ksAbRightAlign then
-  begin
-  //for ICount := 0 downto -50 do
-  //  Offset := ICount;
-  end;
-  end;
-
-  procedure TksVListItem.HideActionButtons;
-  var
-  ICount: integer;
-  begin
-  if Offset = 0 then
-  Exit;
-  if FActionButtons.Alignment = ksAbLeftAlign then
-  begin
-  for ICount := Offset downto 0 do
-  Offset := ICount;
-  end;
-
-  if FActionButtons.Alignment = ksAbRightAlign then
-  begin
-  for ICount := Offset to 0 do
-  Offset := ICount;
-  end;
-  end; }
 
 procedure TksVListItem.UpdateStandardObjectPositions;
 begin
@@ -1314,33 +1272,15 @@ begin
 
   ARect := FItemRect;
 
-  //if FPurpose = TksVListItemPurpose.None then
+  AScrollOffset := 0 - AScrollPos;
+
+  OffsetRect(ARect, FOffset, AScrollOffset);
+  if Purpose = TksVListItemPurpose.Header then
   begin
-    AScrollOffset := 0 - AScrollPos;
-    //if Index = 0 then
-    //begin
-      //f/rmMain.lblHeader.Text := IntToStr(Round(AScrollOffset));
-      //Application.ProcessMessages;
-    //end;
-    //if (FPurpose = TksVListItemPurpose.Header) then
-    //  if AScrollOffset < 0 then
-   //     AScrollOffset := 0;
-
-    OffsetRect(ARect, FOffset, AScrollOffset);
-    if Purpose = TksVListItemPurpose.Header then
-    begin
-      if ARect.Top < 0 then
-        OffsetRect(ARect, 0, 0-ARect.Top);
-    end;
+    if ARect.Top < 0 then
+      OffsetRect(ARect, 0, 0-ARect.Top);
   end;
-   r := ARect;
-
- // ?// OffsetRect(r, 0, 0 - AScrollPos);
-
-
-
-  //if Index = 0 then
-  //  frmMain.lblHeader.Text := ARect
+  r := ARect;
 
   if ADrawToCache then
     OffsetRect(ARect, 0 - ARect.Left, 0 - ARect.Top);
@@ -1661,7 +1601,6 @@ begin
   end;
 
   FAniCalc.UpdatePosImmediately;
-
   AItem.FActionButtons.Clear;
   if Assigned(FOnItemSwipe) then
     FOnItemSwipe(Self, AItem, ASwipeDirection, AItem.FActionButtons);
@@ -1673,7 +1612,7 @@ begin
       if FDeleteButton.ShowImage then
         ADeleteIcon := atTrash;
       ADeleteBtn := AItem.FActionButtons.AddButton(FDeleteButton.FText,
-        FDeleteButton.Color, FDeleteButton.TextColor, ADeleteIcon, 60);
+        FDeleteButton.Color, FDeleteButton.TextColor, ADeleteIcon, FDeleteButton.Width);
       ADeleteBtn.IsDeleteButton := True;
 
     end;
@@ -1923,10 +1862,12 @@ begin
     if FItems[ICount].FOffset <> 0 then
     begin
       if FItems[ICount] <> AIgnore then
+      begin
         FItems[ICount].SlideIn;
+        //FAniCalc.MouseLeave;
+      end;
     end;
   end;
-
 end;
 
 procedure TksVirtualListView.Resize;
@@ -2172,6 +2113,7 @@ procedure TksVirtualListView.MouseDown(Button: TMouseButton; Shift: TShiftState;
 var
   ABtn: TksVListActionButton;
   ACanDelete: Boolean;
+//  ATask: ITask;
 begin
   inherited;
   if FScrollPos < 0 then
@@ -2202,11 +2144,14 @@ begin
       end
       else
       begin
+
         if Assigned(FOnActionButtonClick) then
           FOnActionButtonClick(Self, FMouseDownItem, ABtn);
       end;
     end;
     FMouseDownItem.SlideIn;
+    FMouseDownItem := nil;
+    FAniCalc.MouseLeave;
     Exit;
   end;
 
@@ -2219,7 +2164,8 @@ end;
 procedure TksVirtualListView.MouseMove(Shift: TShiftState; x, y: single);
 begin
   FMousePt := PointF(x, y);
-  FAniCalc.MouseMove(x, y);
+  if FAniCalc.Down then
+    FAniCalc.MouseMove(x, y);
   if (ssLeft in Shift) then
     FPendingRefresh := ((ScrollPos <= -50) and (FAniCalc.Down));
   if (FAniCalc.Down) and (FMouseDownPos.y <> y) then
@@ -2311,26 +2257,10 @@ begin
 
   end;
 
-  {if FPendingRefresh then
-  begin
-    while Trunc(ScrollPos) <> 0 do
-    begin
-      Sleep(0);
-      Application.ProcessMessages;
-    end;
-    ScrollPos := 0;
-    FAniCalc.ViewportPositionF := PointF(0, 0);
-    FAniCalc.UpdatePosImmediately;
-    FPendingRefresh := False;
-    if Assigned(FOnPullRefresh) then
-      FOnPullRefresh(Self);
-  end; }
 
   if FSelectionOptions.FKeepSelection = False then
     DeselectAll;
 
-  //CheckForPendingRefresh;
-  //CheckForPendingRefresh;
 end;
 
 procedure TksVirtualListView.MouseWheel(Shift: TShiftState; WheelDelta: integer;
@@ -2504,6 +2434,11 @@ begin
   Result := FItems.Count;
 end;
 
+function TksVListItemList.IndexOf(AItem: TksVListItem): integer;
+begin
+  Result := FItems.IndexOf(AItem);
+end;
+
 function TksVListItemList.GetItem(index: integer): TksVListItem;
 begin
   Result := FItems[index];
@@ -2556,25 +2491,6 @@ begin
     FOwner.FTotalItemHeight := FOwner.FTotalItemHeight + AItem.Height;
   end;
 end;
-       {
-procedure TksVListItemList.UpdateItemHeaders;
-var
-  ICount: integer;
-  ARect: TRectF;
-  AYPos: integer;
-  AItem: TksVListItem;
-begin
-  for ICount := 0 to Count - 1 do
-  begin
-    AItem := Items[ICount];
-    if AItem.Purpose = TksVListItemPurpose.Header then
-    begin
-      if AItem.FItemRect.Top < FOwner.ScrollPos then
-        OffsetRect(AItem.FItemRect, 0, FOwner.ScrollPos);
-     // AItem.FItemRect := ARect;
-    end;
-  end;
-end;  }
 
 { TksVListItemTextObject }
 
@@ -2588,22 +2504,15 @@ begin
     Result := FActualTextWidth;
     Exit;
   end;
-  try
-    //AMeasure.BitmapScale := GetScreenScale;
 
-    ARect := RectF(0, 0, FWidth, MaxSingle);
-    if ARect.Width = 0 then
-      ARect.Width := MaxSingle;
-    //AMeasure.Canvas.Font.Assign(FTextSettings.Font);
-    //AMeasure.Canvas.MeasureText(ARect, FText, FTextSettings.WordWrap, [], FTextSettings.HorzAlign, TTextAlign.Leading);
+  ARect := RectF(0, 0, FWidth, MaxSingle);
+  if ARect.Width = 0 then
+    ARect.Width := MaxSingle;
 
-    TCanvasManager.MeasureCanvas.Font.Assign(FTextSettings.Font);
-    TCanvasManager.MeasureCanvas.MeasureText(ARect, FText, FTextSettings.WordWrap, [], FTextSettings.HorzAlign, TTextAlign.Leading);
-    Result := ARect.Width;
-    FActualTextWidth := ARect.Width;
-  finally
-  //  FreeAndNil(AMeasure);
-  end;
+  TCanvasManager.MeasureCanvas.Font.Assign(FTextSettings.Font);
+  TCanvasManager.MeasureCanvas.MeasureText(ARect, FText, FTextSettings.WordWrap, [], FTextSettings.HorzAlign, TTextAlign.Leading);
+  Result := ARect.Width;
+  FActualTextWidth := ARect.Width;
 end;
 
 procedure TksVListItemTextObject.BeforeRenderText(ACanvas: TCanvas; ARect: TRectF);

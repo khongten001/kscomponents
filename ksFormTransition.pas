@@ -2,9 +2,9 @@
 *                                                                              *
 *  TksFormTransition - Animated Form Transition Component                      *
 *                                                                              *
-*  https://github.com/gmurt/KernowSoftwareFMX                                  *
+*  https://bitbucket.org/gmurt/kscomponents                                    *
 *                                                                              *
-*  Copyright 2015 Graham Murt                                                  *
+*  Copyright 2017 Graham Murt                                                  *
 *                                                                              *
 *  email: graham@kernow-software.co.uk                                         *
 *                                                                              *
@@ -122,7 +122,7 @@ type
                      const ScrollBackgroundForm: Boolean = True;
                      const AOnCloseForm: TNotifyEvent = nil;
                      const AShowLoadingIndicator: Boolean = False);
-  procedure PopForm;
+  procedure PopForm(const AShowLoadingIndicator: Boolean = False);
   procedure PopAllForms;
   procedure ClearTransitionTrail;
 
@@ -162,7 +162,7 @@ begin
   end;
 end;
 
-procedure PopForm;
+procedure PopForm(const AShowLoadingIndicator: Boolean = False);
 var
   ATran: TksFormTransition;
 begin
@@ -170,6 +170,7 @@ begin
     Exit;
   ATran := TksFormTransition.Create(nil);
   try
+    ATran.LoadingIndicator := AShowLoadingIndicator;
     ATran.PopForm;
   finally
     ATran.DisposeOf;
