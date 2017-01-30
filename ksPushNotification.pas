@@ -130,7 +130,9 @@ var
   ICount: integer;
   ANotification: TPushServiceNotification;
 begin
-  if AAppEvent = TApplicationEvent.FinishedLaunching then
+  //TDialogService.ShowMessage('app event');
+  if (AAppEvent = TApplicationEvent.BecameActive) or
+     (AAppEvent = TApplicationEvent.FinishedLaunching) then
   begin
     for ICount := Low(FPushService.StartupNotifications) to High(FPushService.StartupNotifications) do
     begin
