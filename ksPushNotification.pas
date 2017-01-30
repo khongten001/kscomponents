@@ -220,9 +220,6 @@ begin
   if Assigned(FOnReceivePushMessageEvent) then
   begin
     AJson := ANotification.Json;
-    {$IFDEF IOS}
-    AJson := AJson.Values['aps'] as TJSONObject;
-    {$ENDIF}
     FOnReceivePushMessageEvent(Self,
                                AJson);
   end;
