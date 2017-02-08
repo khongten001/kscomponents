@@ -68,9 +68,16 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, System.UICons
 
   procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ABackgroundColor, ATextColor: TAlphaColor);
 
+  procedure ShowMessage(AText: string);
+
 implementation
 
-uses FMX.Platform, FMX.Forms,  SysUtils, FMX.TextLayout, Math, FMX.Utils
+uses FMX.Platform, FMX.Forms,  SysUtils, FMX.TextLayout, Math, FMX.Utils,
+  {$IFDEF VER290}
+  FMX.Dialogs
+  {$ELSE}
+  FMX.DialogService
+  {$ENDIF}
   {$IFDEF IOS}
   , IOSApi.Foundation
   {$ENDIF}
@@ -81,6 +88,14 @@ var
   AScreenScale: single;
   ATextLayout: TTextLayout;
 
+procedure ShowMessage(AText: string);
+begin
+  {$IFDEF VER290}
+  ShowMessage(AText);
+  {$ELSE}
+  TDialogService.ShowMessage(AText);
+  {$ENDIF}
+end;
 
 function GetScreenScale: single;
 var
@@ -98,6 +113,15 @@ begin
   {$IFDEF IOS}
   if Result < 2 then
    Result := 2;
+  {$ENDIF}
+
+  //Result := Trunc(Result);
+  {$IFDEF ANDROID}
+  {  Result := Round(Result);
+    if Result < 2 then
+      Result := 2;     }
+    //if Result > 2 then
+    // Result := 1;
   {$ENDIF}
 
   AScreenScale := Result;
@@ -315,6 +339,8 @@ var
   PixelWhiteColor: TAlphaColor;
   C: PAlphaColorRec;
 begin
+
+
   if (Assigned(ABmp)) then
   begin
     if ABmp.Map(TMapAccess.ReadWrite, AMap) then

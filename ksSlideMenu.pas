@@ -834,8 +834,8 @@ begin
         //AItem.Accessory.Color := claRed;
         //AItem.Background := FAppearence.ItemColor;
       end;
-      AItem.ClearCache;
-      AItem.CacheItem;
+      //AItem.ClearCache;
+      //AItem.CacheItem;
     end;
   finally
     FMenu.ListView.EndUpdate;
@@ -950,6 +950,8 @@ begin
   if FAnimating then
     Exit;
 
+  ANewXPos := 0;
+
   UpdateSelectedItem;
 
   if FShowing = False then
@@ -991,7 +993,6 @@ begin
     if FShowing = False then
     begin
       AStartXPos := 0;
-      ANewXPos := 0;
       case FMenuPosition of
         mpLeft:  ANewXPos := C_DEFAULT_MENU_WIDTH;
         mpRight: ANewXPos := 0-C_DEFAULT_MENU_WIDTH;

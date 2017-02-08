@@ -22,14 +22,11 @@ type
     timer3secs: TTimer;
     Label3: TLabel;
     Edit1: TEdit;
-    Label4: TLabel;
-    Switch3: TSwitch;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Switch1Switch(Sender: TObject);
     procedure Switch2Switch(Sender: TObject);
     procedure timer3secsTimer(Sender: TObject);
-    procedure Switch3Switch(Sender: TObject);
   private
     { Private declarations }
   public
@@ -48,7 +45,7 @@ begin
   if ksLoadingIndicator1.IsModal then
     timer3secs.Enabled := True;
 
-  ksLoadingIndicator1.LoadingText.Text := Edit1.Text;
+  ksLoadingIndicator1.LoadingText := Edit1.Text;
   ksLoadingIndicator1.ShowLoading;
 end;
 
@@ -65,11 +62,6 @@ end;
 procedure TForm64.Switch2Switch(Sender: TObject);
 begin
   ksLoadingIndicator1.FadeBackground := Switch2.IsChecked;
-end;
-
-procedure TForm64.Switch3Switch(Sender: TObject);
-begin
-  ksLoadingIndicator1.LoadingText.Visible := Switch3.IsChecked;
 end;
 
 procedure TForm64.timer3secsTimer(Sender: TObject);

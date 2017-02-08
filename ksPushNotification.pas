@@ -29,7 +29,13 @@ interface
 {$I ksComponents.inc}
 
 uses Classes, FMX.MediaLibrary, FMX.Media, FMX.Platform, System.Messaging, FMX.Graphics,
-  ksTypes, System.PushNotification, Json, FMX.Types;
+  ksTypes, System.PushNotification, Json, FMX.Types,
+  {$IFDEF VER290}
+  FMX.Notification
+  {$ELSE}
+  System.Notification
+  {$ENDIF}
+  ;
 
 type
   TksReceivePushTokenEvent = procedure(Sender: TObject; AToken: string) of object;
@@ -42,15 +48,17 @@ type
   private
     FAppEvent: IFMXApplicationEventService;
     FFirebaseSenderID: string;
-    FTimer: TFmxHandle;
+  //  FTimer: TFmxHandle;
     FServiceConnection: TPushServiceConnection;
     FPushService: TPushService;
     FDeviceToken: string;
+    FNotificationCenter: TNotificationCenter;
+  //  FTimerService: IFMXTimerService;
     // events...
     FOnReceiveTokenEvent: TksReceivePushTokenEvent;
     FOnReceivePushMessageEvent: TksReceivePushMessageEvent;
     //function CreateTimer(AInterval: integer; AProc: TTimerProc): TFmxHandle;
-    //procedure DoCheckStartupNotifications;
+   // procedure DoCheckStartupNotifications;
     function AppEvent(AAppEvent: TApplicationEvent; AContext: TObject): Boolean;
     procedure OnNotificationChange(Sender: TObject; AChange: TPushService.TChanges);
     procedure OnReceiveNotificationEvent(Sender: TObject; const ANotification: TPushServiceNotification);
@@ -58,7 +66,9 @@ type
     procedure Loaded; override;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     procedure Activate;
+    procedure ClearNotifications;
   published
     property FirebaseSenderID: string read FFirebaseSenderID write FFirebaseSenderID stored True;
     property OnReceiveToken: TksReceivePushTokenEvent read FOnReceiveTokenEvent write FOnReceiveTokenEvent;
@@ -69,7 +79,7 @@ type
 
 implementation
 
-uses Types, SysUtils, System.Threading, FMX.DialogService
+uses Types, SysUtils, System.Threading, ksCommon, {$IFDEF VER290} FMX.Dialogs {$ELSE} FMX.DialogService {$ENDIF}
 
   {$IFDEF IOS}
   , FMX.PushNotification.IOS
@@ -77,6 +87,7 @@ uses Types, SysUtils, System.Threading, FMX.DialogService
 
   {$IFDEF ANDROID}
   , FMX.PushNotification.Android,
+  FMX.Platform.Android,
   Androidapi.Helpers,
   FMX.Helpers.Android,
   Androidapi.JNI.GraphicsContentViewText,
@@ -130,7 +141,7 @@ var
   ICount: integer;
   ANotification: TPushServiceNotification;
 begin
-  //TDialogService.ShowMessage('app event');
+  Result := True;
   if (AAppEvent = TApplicationEvent.BecameActive) or
      (AAppEvent = TApplicationEvent.FinishedLaunching) then
   begin
@@ -139,7 +150,13 @@ begin
       ANotification := FPushService.StartupNotifications[ICount];
       OnReceiveNotificationEvent(Self, ANotification);
     end;
+    FNotificationCenter.CancelAll;
   end;
+end;
+
+procedure TksPushNotification.ClearNotifications;
+begin
+  FNotificationCenter.CancelAll;
 end;
 
 constructor TksPushNotification.Create(AOwner: TComponent);
@@ -148,8 +165,39 @@ begin
   TPlatformServices.Current.SupportsPlatformService(IFMXApplicationEventService, IInterface(FAppEvent));
   if FAppEvent <> nil then
     FAppEvent.SetApplicationEventHandler(AppEvent);
-end;
 
+  //TPlatformServices.Current.SupportsPlatformService(IFMXTimerService, FTimerService);
+  //CreateTimer(500, DoCheckStartupNotifications);
+
+  FNotificationCenter := TNotificationCenter.Create(nil);
+end;
+              {
+function TksPushNotification.CreateTimer(AInterval: integer; AProc: TTimerProc): TFmxHandle;
+begin
+  Result := 0;
+  if FTimerService <> nil then
+    Result := FTimerService.CreateTimer(AInterval, AProc);
+end;       }
+
+destructor TksPushNotification.Destroy;
+begin
+  FreeAndNil(FNotificationCenter);
+  inherited;
+end;
+            {
+procedure TksPushNotification.DoCheckStartupNotifications;
+var
+  ICount: integer;
+  ANotification: TPushServiceNotification;
+begin
+  for ICount := Low(FPushService.StartupNotifications) to High(FPushService.StartupNotifications) do
+  begin
+    ANotification := FPushService.StartupNotifications[ICount];
+    OnReceiveNotificationEvent(Self, ANotification);
+  end;
+  FNotificationCenter.CancelAll;
+end;
+             }
 procedure TksPushNotification.Loaded;
 var
   AServiceName: string;
@@ -173,7 +221,6 @@ end;
 procedure TksPushNotification.OnNotificationChange(Sender: TObject; AChange: TPushService.TChanges);
 var
   AToken: string;
-  ICount: integer;
 begin
   if (TPushService.TChange.Status in AChange) then
   begin
@@ -181,18 +228,19 @@ begin
 
     if (FPushService.Status = TPushService.TStatus.StartupError) then
     begin
+      FServiceConnection.Active := False;
       TThread.Synchronize(nil,
         procedure
         begin
           if Pos('java.lang.securityexception', LowerCase(FPushService.StartupError)) > 0 then
-            TDialogService.ShowMessage('Unable to activate push notifications...'+#13+#13+
+            ksCommon.ShowMessage('Unable to activate push notifications...'+#13+#13+
                                        'Check that you have enabled "Receive Push Notifications" in Options->Entitlement List')
           else
           if Pos('invalid_sender', LowerCase(FPushService.StartupError)) > 0 then
-            TDialogService.ShowMessage('Unable to activate push notifications...'+#13+#13+
+            ShowMessage('Unable to activate push notifications...'+#13+#13+
                                        'The FirebaseSenderID value is invalid.')
           else
-            TDialogService.ShowMessage(FPushService.StartupError);
+            ShowMessage(FPushService.StartupError);
         end);
       Exit;
     end;

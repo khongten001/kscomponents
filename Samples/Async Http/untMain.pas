@@ -10,14 +10,14 @@ uses
 
 type
   TForm33 = class(TForm)
-    ksNetHttpClient1: TksNetHttpClient;
     ToolBar1: TToolBar;
     ToolBar2: TToolBar;
     Button1: TButton;
     Button2: TButton;
-    ksLoadingIndicator1: TksLoadingIndicator;
     ProgressBar1: TProgressBar;
     Label1: TLabel;
+    ksNetHttpClient1: TksNetHttpClient;
+    ksLoadingIndicator1: TksLoadingIndicator;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure ksNetHttpClient1ReceiveData(const Sender: TObject; AContentLength, AReadCount: Int64; var Abort: Boolean);
