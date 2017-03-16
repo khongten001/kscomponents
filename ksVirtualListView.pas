@@ -2907,7 +2907,7 @@ end;
 
 procedure TksVListCheckBoxOptions.Changed;
 begin
-  //FOwner.Invalidate;
+  FOwner.Invalidate;
 end;
 
 constructor TksVListCheckBoxOptions.Create(AOwner: TksVirtualListView);
