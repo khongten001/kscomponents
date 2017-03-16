@@ -27,11 +27,11 @@ unit ksCommon;
 
 interface
 
-uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, System.UIConsts, ksTypes;
+uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, System.UIConsts, ksTypes, FMX.Forms;
 
 {$I ksComponents.inc}
 
-  function GetScreenScale: single;
+  function GetScreenScale(const ARound: Boolean = True): single;
   procedure ProcessMessages;
 
   procedure ReplaceOpaqueColor(ABmp: TBitmap; Color : TAlphaColor);
@@ -70,9 +70,11 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, System.UICons
 
   procedure ShowMessage(AText: string);
 
+  function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
+
 implementation
 
-uses FMX.Platform, FMX.Forms,  SysUtils, FMX.TextLayout, Math, FMX.Utils,
+uses FMX.Platform, SysUtils, FMX.TextLayout, Math, FMX.Utils,
   {$IFDEF VER290}
   FMX.Dialogs
   {$ELSE}
@@ -97,7 +99,36 @@ begin
   {$ENDIF}
 end;
 
-function GetScreenScale: single;
+function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
+var
+  AScale: single;
+begin
+  //{$IFDEF ANDROID}
+  AForm.Visible := True;
+  AForm.Visible := False;
+  //{$ENDIF}
+  Result := TBitmap.Create;
+  AScale := GetScreenScale(True);
+  Result.BitmapScale := AScale;
+  Result.Width := Round(AForm.Width * AScale);
+  Result.Height := Round(AForm.Height * AScale);
+  //Result.Clear(claFuchsia);
+  Result.Canvas.BeginScene;
+  TForm(AForm).PaintTo(Result.Canvas);
+  Result.Canvas.EndScene;
+  if Result.IsEmpty then
+  begin
+    AForm.Visible := True;
+    AForm.Visible := False;
+    FreeAndNil(Result);
+    Result := GenerateFormImageExt(AForm);
+  end;
+
+  //Result.SaveToFile('C:\Users\Graham\Desktop\screen.bmp');
+end;
+
+
+function GetScreenScale(const ARound: Boolean = True): single;
 var
   Service: IFMXScreenService;
 begin
@@ -105,26 +136,23 @@ begin
   begin
     Result := AScreenScale;
     Exit;
-  end;
-  Service := IFMXScreenService(TPlatformServices.Current.GetPlatformService(IFMXScreenService));
-
-  Result := Service.GetScreenScale;
-
-  {$IFDEF IOS}
-  if Result < 2 then
-   Result := 2;
-  {$ENDIF}
-
-  //Result := Trunc(Result);
-  {$IFDEF ANDROID}
-  {  Result := Round(Result);
+  end
+  else
+  begin
+    Service := IFMXScreenService(TPlatformServices.Current.GetPlatformService(IFMXScreenService));
+    Result := Service.GetScreenScale;
+    {$IFDEF IOS}
     if Result < 2 then
-      Result := 2;     }
-    //if Result > 2 then
-    // Result := 1;
+     Result := 2;
+    {$ENDIF}
+  end;
+  {$IFDEF ANDROID}
+  AScreenScale := Result;
+
+  if ARound then
+    Result := Round(Result);
   {$ENDIF}
 
-  AScreenScale := Result;
 end;
 
 
@@ -377,7 +405,6 @@ begin
     AForm.MouseUp(TMouseButton.mbLeft, [], AFormPoint.X, AFormPoint.Y);
   end;
 end;
-
 
 procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ABackgroundColor, ATextColor: TAlphaColor);
 

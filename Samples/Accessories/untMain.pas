@@ -5,15 +5,16 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
-  FMX.Controls.Presentation, FMX.ListBox, ksTypes, ksTableView, ksSegmentButtons;
+  FMX.Controls.Presentation, FMX.ListBox, ksTypes, ksTableView, ksSegmentButtons,
+  ksVirtualListView;
 
 type
   TForm24 = class(TForm)
     ToolBar1: TToolBar;
     Label1: TLabel;
     ToolBar2: TToolBar;
-    ksTableView1: TksTableView;
     ksSegmentButtons1: TksSegmentButtons;
+    ksVirtualListView1: TksVirtualListView;
     procedure FormCreate(Sender: TObject);
     procedure ksSegmentButtons1Change(Sender: TObject);
   private
@@ -59,20 +60,19 @@ procedure TForm24.PopulateList;
 var
   ICount: TksAccessoryType;
   AEnumName: string;
-  AItem: TksTableViewItem;
+  AItem: TksVListItem;
 begin
-  ksTableView1.AccessoryOptions.Color := GetSelectedColor;
-  ksTableView1.BeginUpdate;
+  ksVirtualListView1.BeginUpdate;
   try
-    ksTableView1.ClearItems;
+    ksVirtualListView1.ClearItems;
     for ICount := Low(TksAccessoryType) to High(TksAccessoryType) do
     begin
       AEnumName := GetENumName(TypeInfo(TksAccessoryType), Ord(ICount));
-      AItem := ksTableView1.Items.AddItem(AEnumName, ICount);
-      AItem.Accessory.Color := GetSelectedColor;
+      AItem := ksVirtualListView1.Items.Add(AEnumName, '', '', ICount);
+      AItem.Accessory.SetOpaqueColor(GetSelectedColor);
     end;
   finally
-    ksTableView1.EndUpdate;
+    ksVirtualListView1.EndUpdate;
   end;
 end;
 

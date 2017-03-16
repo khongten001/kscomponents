@@ -40,9 +40,27 @@ type
   TksSelectSegmentButtonEvent = procedure(Sender: TObject; AIndex: integer; AButton: TksSegmentButton) of object;
 
 
-  TksSegmentSpeedButton = class(TksSpeedButton)
+  TksSegmentSpeedButton = class(TControl)
+  private
+    FBadge: integer;
+    FIsPressed: Boolean;
+    FText: string;
+    FIndex: integer;
+    FOwner: TksSegmentButtons;
+    procedure Changed;
+    procedure SetBadge(const Value: integer);
+    procedure SetIsPressed(const Value: Boolean);
+    procedure SetText(const Value: string);
+  protected
+    procedure Paint; override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+
   public
     constructor Create(AOwner: TComponent); override;
+    property Badge: integer read FBadge write SetBadge;
+    property IsPressed: Boolean read FIsPressed write SetIsPressed;
+    property Text: string read FText write SetText;
+    property Index: integer read FIndex write FIndex;
   end;
 
   TKsSegmentButton = class(TCollectionItem)
@@ -92,7 +110,6 @@ type
     FTintColor: TAlphaColor;
     FBackgroundColor: TAlphaColor;
     FOnSelectSegment: TksSelectSegmentButtonEvent;
-    FMouseDown: Boolean;
     procedure UpdateButtons;
     procedure SetItemIndex(const Value: integer);
     procedure SetSegments(const Value: TksSegmentButtonCollection);
@@ -103,9 +120,9 @@ type
     procedure SetSelectedID(const Value: string);
   protected
     procedure Resize; override;
-    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    {procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    procedure DoMouseLeave; override;
+    procedure DoMouseLeave; override;                }
     procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -137,7 +154,7 @@ type
 
 implementation
 
-uses SysUtils,  Math;
+uses SysUtils,  Math, ksCommon, FMX.Forms;
 
 procedure Register;
 begin
@@ -174,12 +191,12 @@ end;
 
 function TKsSegmentButton.GetBadgeValue: integer;
 begin
-  Result := FButton.Badge.Value;
+  Result := FButton.Badge;
 end;
 
 procedure TKsSegmentButton.SetBadgeValue(const Value: integer);
 begin
-  FButton.Badge.Value := Value;
+  FButton.Badge := Value;
 end;
 
 procedure TKsSegmentButton.SetText(const Value: string);
@@ -230,7 +247,7 @@ begin
   FreeAndNil(FSegments);
   inherited;
 end;
-
+                {
 procedure TksSegmentButtons.DoMouseLeave;
 begin
   inherited;
@@ -239,7 +256,7 @@ begin
     FMouseDown := False;
     Tap(Point(0, 0));
   end;
-end;
+end;    }
 
 function TksSegmentButtons.GetSelected: TKsSegmentButton;
 begin
@@ -254,14 +271,14 @@ begin
   if Selected <> nil then
     Result := Selected.ID;
 end;
-
+         {
 procedure TksSegmentButtons.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single);
 begin
   inherited;
   ItemIndex := Min(Trunc(X / FBtnWidth), Segments.Count-1);
   FMouseDown := True;
-end;
-
+end;  }
+        (*
 procedure TksSegmentButtons.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Single);
 begin
@@ -273,7 +290,7 @@ begin
   {$ENDIF}
   FMouseDown := False;
   inherited;
-end;
+end;    *)
 
 procedure TksSegmentButtons.Paint;
 begin
@@ -295,7 +312,6 @@ end;
 procedure TksSegmentButtons.UpdateButtons;
 var
   ICount: integer;
-  s: string;
 begin
   if FSegments.Count = 0 then
     Exit;
@@ -310,34 +326,39 @@ begin
 
       with FSegments[ICount].FButton do
       begin
-        IsPressed := False;
+       (* IsPressed := False;
 
         if ICount = 0 then s := 'toolbuttonleft';
         if ICount > 0 then s := 'toolbuttonmiddle';
         if ICount = FSegments.Count-1 then s := 'toolbuttonright';
 
+
         {$IFDEF ANDROID}
-        StyleLookup := 'listitembutton';
-        Height := 30;
+        //StyleLookup := 'listitembutton';
+        //Height := 30;
         {$ELSE}
-        FSegments[ICount].FButton.StyleLookup := s;
+        //FSegments[ICount].FButton.StyleLookup := s;
 
-        StaysPressed := ICount = FItemIndex;
+        //StaysPressed := ICount = FItemIndex;
+
+        //GroupName := FGroupID;
+
+        //TintColor := FTintColor;
+
+                              *)
+        Index := ICount;
         IsPressed := ICount = FItemIndex;
-        GroupName := FGroupID;
         Width := FBtnWidth+1;
-        TintColor := FTintColor;
-
-
-        TextSettings.FontColorForState.Focused := FTintColor;
+        Height := 30;
+        {TextSettings.FontColorForState.Focused := FTintColor;
         TextSettings.FontColorForState.Active := FTintColor;
         TextSettings.FontColorForState.Normal := FTintColor;
-        TextSettings.FontColorForState.Pressed := FBackgroundColor;
+        TextSettings.FontColorForState.Pressed := FBackgroundColor;}
         Text := FSegments[ICount].Text;
 
-        TextSettings.FontColor := FTintColor;
+        //TextSettings.FontColor := FTintColor;
 
-        {$ENDIF}
+       // {$ENDIF}
         Position.Y := (Self.Height - Height) / 2;
         Position.X := (ICount * FBtnWidth)+8;
       end;
@@ -358,13 +379,19 @@ begin
 
     FItemIndex := Value;
     UpdateButtons;
+    Repaint;
+    Application.ProcessMessages;
 
     if Assigned(FOnChange) then
       FOnChange(Self);
     if FItemIndex > -1 then
     begin
-      if Assigned(FOnSelectSegment) then
+      TThread.Synchronize (TThread.CurrentThread,
+      procedure ()
+      begin
+        if Assigned(FOnSelectSegment) then
         FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]);
+      end);
     end;
   end;
 end;
@@ -438,13 +465,75 @@ end;
 
 { TksSegmentSpeedButton }
 
+procedure TksSegmentSpeedButton.Changed;
+begin
+  Repaint;
+end;
+
 constructor TksSegmentSpeedButton.Create(AOwner: TComponent);
 begin
   inherited;
-  Locked := True;
+  FOwner := (AOwner as TksSegmentButtons);
   Stored := False;
-  HitTest := False;
-  StyledSettings := [];
+end;
+
+procedure TksSegmentSpeedButton.MouseDown(Button: TMouseButton;
+  Shift: TShiftState; X, Y: Single);
+begin
+  inherited;
+  if FOwner.HitTest = False then
+    Exit;
+  FOwner.ItemIndex := FIndex;
+end;
+
+procedure TksSegmentSpeedButton.Paint;
+begin
+  inherited;
+  //AState := Canvas.SaveState;
+  try
+    //Canvas.IntersectClipRect(ClipRect);
+    Canvas.Stroke.Color := claBlack;
+    if FIsPressed then
+      Canvas.Fill.Color := claDodgerblue
+    else
+      Canvas.Fill.Color := claWhite;
+    Canvas.Stroke.Color := claDodgerblue;
+    Canvas.Stroke.Kind := TBrushKind.Solid;
+
+    Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
+    Canvas.DrawRect(ClipRect, 0, 0, AllCorners, 1);
+
+    if FIsPressed then
+      Canvas.Fill.Color := claWhite
+    else
+      Canvas.Fill.Color := claDodgerblue;
+
+    Canvas.Font.Size := 14;
+    RenderText(Canvas, ClipRect, FText, Canvas.Font, Canvas.Fill.Color, False, TTextAlign.Center, TTextAlign.Center, TTextTrimming.Character);
+
+
+  finally
+  //  Canvas.RestoreState(AState);
+  end;
+end;
+
+procedure TksSegmentSpeedButton.SetBadge(const Value: integer);
+begin
+  FBadge := Value;
+  Changed;
+end;
+
+procedure TksSegmentSpeedButton.SetIsPressed(const Value: Boolean);
+begin
+  FIsPressed := Value;
+  Changed;
+end;
+
+procedure TksSegmentSpeedButton.SetText(const Value: string);
+begin
+  FText := Value;
+  Changed;
 end;
 
 end.
+

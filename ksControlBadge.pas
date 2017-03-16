@@ -192,3 +192,4 @@ initialization
   Classes.RegisterClass(TksControlBadge);
 
 end.
+

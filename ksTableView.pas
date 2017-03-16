@@ -1836,8 +1836,8 @@ type
 
 procedure Register;
 
-var
-  AccessoryImages: TksTableViewAccessoryImageList;
+//var
+  //AccessoryImages: TksTableViewAccessoryImageList;
 
 implementation
 
@@ -2541,11 +2541,11 @@ end;
 
 procedure TksTableViewItemAccessory.RedrawAccessory;
 begin
-  Bitmap := AccessoryImages.Images[FAccessory];
+  Bitmap := AAccessories.Images[FAccessory];
   if FColor = claNull then
     OwnsBitmap := False;
-  FWidth := Bitmap.Width / AccessoryImages.ImageScale;
-  FHeight := Bitmap.Height / AccessoryImages.ImageScale;
+  FWidth := Bitmap.Width / AAccessories.ImageScale;
+  FHeight := Bitmap.Height / AAccessories.ImageScale;
   Changed;
 end;
 
@@ -5728,8 +5728,8 @@ begin
                   OffsetRect(FStickyButtonRect,-(SelectionOptions.FSelectionOverlay.Stroke.Thickness/2),0);
                 // draw the sticky button...
                 case FHeaderOptions.StickyHeaders.Button.Selected of
-                  True: AccessoryImages.DrawAccessory(Canvas, FStickyButtonRect, TksAccessoryType.atArrowDown, claBlack, FAppearence.SelectedColor);
-                  False: AccessoryImages.DrawAccessory(Canvas, FStickyButtonRect, TksAccessoryType.atArrowDown, claNull, claNull);
+                  True: AAccessories.DrawAccessory(Canvas, FStickyButtonRect, TksAccessoryType.atArrowDown, claBlack, FAppearence.SelectedColor);
+                  False: AAccessories.DrawAccessory(Canvas, FStickyButtonRect, TksAccessoryType.atArrowDown, claNull, claNull);
                 end;
               end;
             end;
@@ -6791,7 +6791,7 @@ begin
       if FIcon = nil then
       begin
         FIcon := TksTableViewAccessoryImage.Create;
-        FIcon.Assign(AccessoryImages.GetAccessoryImage(FAccessory));
+        FIcon.Assign(AAccessories.GetAccessoryImage(FAccessory));
         (FIcon as TksTableViewAccessoryImage).Color := FTextColor;
       end;
 
@@ -9255,11 +9255,11 @@ end;
 initialization
 
   AIsSwiping := False;
-  AccessoryImages := TksTableViewAccessoryImageList.Create;
+  //AccessoryImages := TksTableViewAccessoryImageList.Create;
 
 finalization
 
- FreeAndNil(AccessoryImages);
+ //FreeAndNil(AccessoryImages);
 
 
 end.

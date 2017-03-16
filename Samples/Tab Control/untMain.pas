@@ -23,7 +23,6 @@ type
     ksSegmentButtons3: TksSegmentButtons;
     Button3: TButton;
     Button2: TButton;
-    Button4: TButton;
     procedure FormCreate(Sender: TObject);
     procedure ksSegmentButtons1Change(Sender: TObject);
     procedure ksSegmentButtons2Change(Sender: TObject);
@@ -31,7 +30,6 @@ type
     procedure Label1Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
-    procedure Button4Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -61,11 +59,6 @@ var
 begin
   AIcon := TksTabItemIcon(Random(Ord(High(TksTabItemIcon))));
   ksTabControl1.AddTab.StandardIcon := AIcon;
-end;
-
-procedure TForm24.Button4Click(Sender: TObject);
-begin
-  ksTabControl1.FadeToNextTab;
 end;
 
 procedure TForm24.FormCreate(Sender: TObject);

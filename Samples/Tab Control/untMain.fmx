@@ -1870,7 +1870,7 @@ object Form24: TForm24
           Size.Height = 30.000000000000000000
           Size.PlatformDefault = False
           StyleLookup = 'listitembutton'
-          TabOrder = 2
+          TabOrder = 1
           TabStop = False
           Text = 'Add Tab'
           OnClick = Button3Click
@@ -1884,24 +1884,10 @@ object Form24: TForm24
           Size.Height = 30.000000000000000000
           Size.PlatformDefault = False
           StyleLookup = 'listitembutton'
-          TabOrder = 3
+          TabOrder = 2
           TabStop = False
           Text = 'Clear Tabs'
           OnClick = Button2Click
-        end
-        object Button4: TButton
-          CanFocus = False
-          DisableFocusEffect = True
-          Position.X = 101.000000000000000000
-          Position.Y = 222.000000000000000000
-          Size.Width = 108.000000000000000000
-          Size.Height = 30.000000000000000000
-          Size.PlatformDefault = False
-          StyleLookup = 'listitembutton'
-          TabOrder = 1
-          TabStop = False
-          Text = 'Fade to Next'
-          OnClick = Button4Click
         end
       end
     end

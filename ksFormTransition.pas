@@ -1,6 +1,6 @@
 {*******************************************************************************
 *                                                                              *
-*  TksFormTransition - Animated Form Transition Component                      *
+*  TksFormTransition - Push/Pop Form Queue Component                                *
 *                                                                              *
 *  https://bitbucket.org/gmurt/kscomponents                                    *
 *                                                                              *
@@ -30,629 +30,158 @@ interface
 
 uses System.UITypes, FMX.Controls, FMX.Layouts, FMX.Objects, System.Classes,
   FMX.Types, Generics.Collections, FMX.Graphics, System.UIConsts, FMX.Effects,
-  FMX.StdCtrls, System.Types, FMX.Forms, ksTypes;
+  FMX.StdCtrls, System.Types, FMX.Forms, ksTypes, System.Generics.Collections;
 
 const
-  C_TRANSITION_DELAY = 0.3;
-  C_TRANSITION_FADE  = 0.3;
-  C_TRANSITION_PART_SCROLL_FACTOR = 0.3;
-  C_INTERPOLATION_TYPE = TInterpolationType.Quadratic;
-  C_ANIMATION_TYPE  = TAnimationType.InOut;
+  {$IFDEF ANDROID}
+  C_TRANSITION_DURATION = 0.3;
+  {$ELSE}
+  C_TRANSITION_DURATION = 0.3;
+  {$ENDIF}
+  C_FADE_OPACITY = 0.5;
 
 type
-  TAnimateDirection = (ksAdHorizontal, ksAdVertical);
+  TksTransitionType = (ksFtSlideInFromLeft,
+                       ksFtSlideInFromTop,
+                       ksFtSlideInFromRight,
+                       ksFtSlideInFromBottom,
+                       ksFtSlideOutToLeft,
+                       ksFtSlideOutToTop,
+                       ksFtSlideOutToRight,
+                       ksFtSlideOutToBottom,
+                       ksFtNoTransition);
 
-  TksFormTransitionType = (ksFtSlideInFromLeft,
-                           ksFtSlideInFromTop,
-                           ksFtSlideInFromRight,
-                           ksFtSlideInFromBottom,
-                           ksFtSlideOutToLeft,
-                           ksFtSlideOutToTop,
-                           ksFtSlideOutToRight,
-                           ksFtSlideOutToBottom,
-                           ksFtNoTransition);
-
-  TksFormImage = class(TImage)
-  private
-    FRectangle: TRectangle;
-    procedure SetFade(const Value: single);
-    function GetFade: single;
+  TksFormTransitionItem = class
+    FFromForm: TCommonCustomForm;
+    FToForm: TCommonCustomForm;
+    FTransition: TksTransitionType;
   public
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    procedure Fade;
-    procedure UnFade;
-  published
-    property FadeValue: single read GetFade write SetFade;
+    property FromForm: TCommonCustomForm read FFromForm;
+    property ToForm: TCommonCustomForm read FToForm;
+    property Transition: TksTransitionType read FTransition;
   end;
 
-  TksFormTransitionInfo = class
-  private
-    [weak]FFormFrom: TForm;
-    [weak]FFormTo: TForm;
-    FTransitionType: TksFormTransitionType;
-    FBackgroundScroll: Boolean;
-    FOnClose: TNotifyEvent;
-    function GetReverseTransition: TksFormTransitionType;
+  TksFormTransitionList = class(TObjectList<TksFormTransitionItem>)
   public
-    property FormFrom: TForm read FFormFrom write FFormFrom;
-    property FormTo: TForm read FFormTo write FFormTo;
-    property TransitionType: TksFormTransitionType read FTransitionType write FTransitionType;
-    property ReverseTransition: TksFormTransitionType read GetReverseTransition;
-    property BackgroundScroll: Boolean read FBackgroundScroll write FBackgroundScroll;
-    property OnClose: TNotifyEvent read FOnClose write FOnClose;
-  end;
 
-  TksFormTransitioIntoList = class(TObjectList<TksFormTransitionInfo>)
-  public
-    procedure AddTransition(AFrom, ATo: TForm; AType: TksFormTransitionType; ABackgroundScroll: Boolean; AOnClose: TNotifyEvent);
   end;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
     {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+
   TksFormTransition = class(TksComponent)
   private
-    FPopping: Boolean;
-    FPreventAdd: Boolean;
-    //FLoadingIndicator: Boolean;
-    //FText: TLabel;
-    //procedure ShowLoadingIndicator(AForm: TForm);
-    //procedure HideLoadingIndicator;
-    procedure AddBorder(ABmp: TBitmap; ABorder: TSide);
-    procedure AnimateImage(AImage: TksFormImage; ADirection: TAnimateDirection;
-      ANewValue: single; AWait: Boolean; AShowLoading: Boolean);
-    class function GenerateFormImage(AForm: TForm): TBitmap;
-    procedure PushForm(AFrom, ATo: TForm;
-                       ATransition: TksFormTransitionType;
-                       const ScrollBackgroundForm: Boolean = True;
-                       const AOnCloseForm: TNotifyEvent = nil;
-                       const AShowLoadingIndicator: Boolean = True);
-    procedure PopForm(const AShowLoadingIndicator: Boolean = True);
-    procedure PopAllForms;
+    function GetTransitionList: TksFormTransitionList;
   public
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    //property LoadingIndicator: Boolean read FLoadingIndicator write FLoadingIndicator default False;
+    procedure Push(AForm: TCommonCustomForm; ATransition: TksTransitionType);
+    procedure Pop;
+    property TransitionList: TksFormTransitionList read GetTransitionList;
   end;
 
-  {$R *.dcr}
+  //{$R *.dcr}
 
   procedure Register;
 
-  procedure PushForm(AFrom, ATo: TForm; ATransition: TksFormTransitionType;
-                     const ScrollBackgroundForm: Boolean = True;
-                     const AOnCloseForm: TNotifyEvent = nil;
-                     const AShowLoadingIndicator: Boolean = False);
-  procedure PopForm(const AShowLoadingIndicator: Boolean = False);
-  procedure PopAllForms;
-  procedure ClearTransitionTrail;
-
-var
-  TransitionFading: Boolean;
 
 implementation
 
-uses FMX.Ani, SysUtils, ksCommon, ksLoadingIndicator;
+uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI;
 
 var
-  AAnimating: Boolean;
-  ATransitionList: TksFormTransitioIntoList;
+  _InternalTransitionList: TksFormTransitionList;
 
 procedure Register;
 begin
   RegisterComponents('Kernow Software FMX', [TksFormTransition]);
 end;
 
-procedure PushForm(AFrom, ATo: TForm;
-                   ATransition: TksFormTransitionType;
-                   const ScrollBackgroundForm: Boolean = True;
-                   const AOnCloseForm: TNotifyEvent = nil;
-                   const AShowLoadingIndicator: Boolean = False);
-var
-  ATran: TksFormTransition;
+{ TksFormTransition }
+
+function TksFormTransition.GetTransitionList: TksFormTransitionList;
 begin
-  if AAnimating then
+  Result := _InternalTransitionList;
+end;
+
+procedure TksFormTransition.Pop;
+var
+  AInfo: TksFormTransitionItem;
+  AFrom, ATo: TCommonCustomForm;
+  AAnimateForm: TfrmFormTransitionUI;
+begin
+  if _InternalTransitionList.Count = 0 then
     Exit;
-  AAnimating := True;
-  try
-    ATran := TksFormTransition.Create(nil);
-    try
-      //ATran.LoadingIndicator := AShowLoadingIndicator;
-      ATran.PushForm(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm, AShowLoadingIndicator);
-    finally
-      ATran.DisposeOf;
-    end;
-  finally
-    AAnimating := False;
-  end;
-end;
 
-procedure PopForm(const AShowLoadingIndicator: Boolean = False);
-var
-  ATran: TksFormTransition;
-begin
-  if (AAnimating) then
-    Exit;
-  AAnimating := True;
-  ATran := TksFormTransition.Create(nil);
-  try
-    //ATran.LoadingIndicator := AShowLoadingIndicator;
-    ATran.PopForm(AShowLoadingIndicator);
-  finally
-    ATran.DisposeOf;
-    AAnimating := False;
-  end;
-end;
-
-procedure ClearTransitionTrail;
-begin
-  ATransitionList.Clear;
-end;
-
-procedure PopAllForms;
-var
-  ATran: TksFormTransition;
-begin
-  ATran := TksFormTransition.Create(nil);
-  try
-    ATran.PopAllForms;
-  finally
-    ATran.DisposeOf;
-  end;
-end;
-
-procedure TksFormTransition.AddBorder(ABmp: TBitmap; ABorder: TSide);
-{var
-  ASides: TSides;
-  ASaveState: TCanvasSaveState;
-  ARect: TRectF;}
-begin
- { ASides := [ABorder];
-  ASaveState := ABmp.Canvas.SaveState;
-  try
-    ABmp.Canvas.BeginScene;
-    try
-      ARect := RectF(0, 0, ABmp.Width/GetScreenScale, ABmp.Height/GetScreenScale);
-      ABmp.Canvas.IntersectClipRect(ARect);
-      ABmp.Canvas.Stroke.Color := claSilver;
-      ABmp.Canvas.Stroke.Thickness := GetScreenScale;
-      ABmp.Canvas.DrawRectSides(ARect, 0, 0, AllCorners, 1, ASides);
-    finally
-      ABmp.Canvas.EndScene;
-    end;
-  finally
-    ABmp.Canvas.RestoreState(ASaveState);
-  end;
-  Application.ProcessMessages;}
-end;
-
-procedure TksFormTransition.AnimateImage(AImage: TksFormImage; ADirection: TAnimateDirection;
-  ANewValue: single; AWait: Boolean; AShowLoading: Boolean);
-var
-  AProperty: string;
-begin
-
-  case ADirection of
-    ksAdHorizontal: AProperty := 'X';
-    ksAdVertical: AProperty := 'Y';
-  end;
-  if AWait then
-  begin
-    AImage.BringToFront;
-    if AShowLoading then
-      ShowLoadingIndicator(AImage.Parent as TForm);
-    //
-  end;
-  //Application.ProcessMessages;
-  //AImage.Fade := 0;
-  //if AFade then
- //   AImage.Fade;
-
-  case AWait of
-    False: TAnimator.AnimateFloat(AImage, 'Position.'+AProperty, ANewValue, C_TRANSITION_DELAY);
-    True: TAnimator.AnimateFloatWait(AImage, 'Position.'+AProperty, ANewValue, C_TRANSITION_DELAY);
-  end;
-end;
-
-constructor TksFormTransition.Create(AOwner: TComponent);
-begin
-  inherited;
-  {FRectangle := TRectangle.Create(nil);
-  FRectangle.Fill.Color := claBlack;
-  FRectangle.Width := 100;
-  FRectangle.Height := 100;
-  FRectangle.XRadius := 10;
-  FRectangle.YRadius := 10;
-  FRectangle.Opacity := 0.75;
-  //FRectangle.Align := TAlignLayout.Center;
-
-  FRectangle.Visible := False;   }
-
-  {FText := TLabel.Create(FRectangle);
-  FText.Align := TAlignLayout.Client;
-  FText.TextSettings.FontColor := claWhite;
-  FText.StyledSettings := FText.StyledSettings - [TStyledSetting.FontColor];
-  FText.Text := 'LOADING';
-  FText.TextAlign := TTextAlign.Center;
-  FRectangle.AddObject(FText); }
-  FPreventAdd := False;
-  //FLoadingIndicator := False;
-  FPopping := False;
-end;
-
-destructor TksFormTransition.Destroy;
-begin
-  //FRectangle.DisposeOf;
-  inherited;
-end;
-
-class function TksFormTransition.GenerateFormImage(AForm: TForm): TBitmap;
-var
-  AScale: single;
-begin
-  Result := TBitmap.Create;
-  AScale := GetScreenScale;
-  Result.BitmapScale := AScale;
-  Result.Width := Round(AForm.Width * AScale);
-  Result.Height := Round(AForm.Height * AScale);
-  Result.Clear(claWhite);
-  Result.Canvas.BeginScene;
-  AForm.PaintTo(Result.Canvas);
-  Result.Canvas.EndScene;
-end;
-
-{
-procedure TksFormTransition.HideLoadingIndicator;
-begin
-
-end; }
-
-procedure TksFormTransition.PopForm(const AShowLoadingIndicator: Boolean = True);
-var
-  AInfo: TksFormTransitionInfo;
-begin
-  if (ATransitionList.Count = 0) or (FPopping) then
-    Exit;
-  FPopping := True;
-  AInfo := ATransitionList.Last;
-  if AShowLoadingIndicator then
-    ShowLoadingIndicator(AInfo.FormTo);
+  AAnimateForm := TfrmFormTransitionUI.Create(nil);
   try
 
-    FPreventAdd := True;
-    PushForm(AInfo.FormTo, AInfo.FormFrom, AInfo.ReverseTransition, AInfo.BackgroundScroll, nil, AShowLoadingIndicator);
-    FPreventAdd := False;
-    Application.ProcessMessages;
-    ATransitionList.Delete(ATransitionList.Count-1);
-    if Assigned(AInfo.OnClose) then
-      AInfo.OnClose(AInfo.FormFrom);
-  finally
-    HideLoadingIndicator(AInfo.FormTo);
-    FPopping := False;
-  end;
-end;
+    AInfo := _InternalTransitionList.Last;
 
-procedure TksFormTransition.PopAllForms;
-var
-  AFirst: TksFormTransitionInfo;
-  ALast: TksFormTransitionInfo;
-begin
-  if ATransitionList.Count = 0 then
-    Exit;
-  ALast := ATransitionList.Last;
-  AFirst := ATransitionList.First;
-  FPreventAdd := True;
-  //if Animate then
-  PushForm(ALast.FormTo, AFirst.FormFrom, ALast.ReverseTransition, ALast.BackgroundScroll);
-  FPreventAdd := False;
-  ClearTransitionTrail;
-  Application.ProcessMessages;
-end;
+    AFrom := AInfo.FToForm;
+    ATo := AInfo.FFromForm;
 
-procedure TksFormTransition.PushForm(AFrom, ATo: TForm;
-                                     ATransition: TksFormTransitionType;
-                                     const ScrollBackgroundForm: Boolean = True;
-                                     const AOnCloseForm: TNotifyEvent = nil;
-                                     const AShowLoadingIndicator: Boolean = True);
-var
-  AImageFrom: TksFormImage;
-  AImageTo: TksFormImage;
-  ABmp: TBitmap;
-begin
-  if FPreventAdd = False then
-    ATransitionList.AddTransition(AFrom, ATo, ATransition, ScrollBackgroundForm, AOnCloseForm);
 
-  if AShowLoadingIndicator then
-    ShowLoadingIndicator(AFrom);
+    AAnimateForm.Initialise(AFrom, ATo);
+    AAnimateForm.Visible := True;
+    AAnimateForm.Animate(AInfo.FTransition, True);
+    ATo.Visible := True;
+    AAnimateForm.Visible := False;
 
+
+    AFrom.Visible := False;
+    ATo.Activate;
+
+    {$IFDEF MSWINDOWS}
     ATo.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
-    AFrom.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
-
-  if ATransition = TksFormTransitionType.ksFtNoTransition then
-  begin
-    //FRectangle.Visible := False;
-    //if FLoadingIndicator then
-    //  ShowLoadingIndicator( AFrom);
-    Sleep(100);
-    ATo.Show;
-    AFrom.Hide;
-    //FRectangle.Visible := False;
-    Exit;
-  end;
-
-
-  AImageFrom := TksFormImage.Create(nil);
-  AImageTo := TksFormImage.Create(nil);
-  try
-
-    {$IFDEF ANDROID}
-    ATo.Show;
-    ATo.Hide;
     {$ENDIF}
 
-    AImageFrom.Width := AFrom.Width;
-    AImageFrom.Height := AFrom.Height;
-
-    AImageTo.Width := ATo.Width;
-    AImageTo.Height := ATo.Height;
-
-
-    HideLoadingIndicator(AFrom);
-    ABmp := TksFormTransition.GenerateFormImage(AFrom);
-    try
-      AImageFrom.Bitmap := ABmp;
-    finally
-      FreeAndNil(ABmp);
-      if AShowLoadingIndicator then
-        ShowLoadingIndicator(AFrom);
-    end;
-
-    //FRectangle.Visible := False;
-    //if FLoadingIndicator then
-    //  ShowLoadingIndicator( AFrom);
-
-
-    AImageFrom.Position.X := 0;
-    AImageFrom.Position.Y := 0;
-    AImageTo.Position.X := 0;
-    AImageTo.Position.Y := 0;
-    AFrom.AddObject(AImageTo);
-    AFrom.AddObject(AImageFrom);
-    if AShowLoadingIndicator then
-      ShowLoadingIndicator(AFrom);
-
-    //FRectangle.BringToFront;
-    Application.ProcessMessages;
-
-    ABmp := TksFormTransition.GenerateFormImage(ATo);
-    try
-      AImageTo.Bitmap := ABmp;
-    finally
-      FreeAndNil(ABmp);
-    end;
-
-
-    case ATransition of
-      ksFtSlideInFromLeft: AImageTo.Position.X := 0-AImageTo.Width;
-      ksFtSlideInFromTop: AImageTo.Position.Y := 0-AImageTo.Height;
-      ksFtSlideInFromRight: AImageTo.Position.X := AFrom.Width;
-      ksFtSlideInFromBottom: AImageTo.Position.Y := AFrom.Height;
-
-    end;
-
-    if ScrollBackgroundForm then
-    begin
-      case ATransition of
-        ksFtSlideOutToLeft: AImageTo.Position.X := (AImageTo.Width * C_TRANSITION_PART_SCROLL_FACTOR);
-        ksFtSlideOutToTop: AImageTo.Position.Y := (AImageTo.Height * C_TRANSITION_PART_SCROLL_FACTOR);
-        ksFtSlideOutToRight: AImageTo.Position.X := 0-(AImageTo.Width * C_TRANSITION_PART_SCROLL_FACTOR);
-        ksFtSlideOutToBottom: AImageTo.Position.Y := 0-(AImageTo.Height * C_TRANSITION_PART_SCROLL_FACTOR);
-      end;
-    end;
-
-    if (ATransition in [ksFtSlideOutToLeft, ksFtSlideOutToRight, ksFtSlideOutToBottom, ksFtSlideOutToTop]) then
-    begin
-      //AImageFrom.BringToFront;
-      //FRectangle.BringToFront;
-    end;
-    Application.ProcessMessages;
-
-    case ATransition of
-      // slide ins...
-      ksFtSlideInFromRight:
-      begin
-        AddBorder(AImageTo.Bitmap, TSide.Left);
-        AImageFrom.Fade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageFrom, ksAdHorizontal, 0-(AImageFrom.Width * C_TRANSITION_PART_SCROLL_FACTOR), False, AShowLoadingIndicator);
-          //TAnimator.AnimateFloat(AImageFrom, 'Fade', 0.5, C_TRANSITION_DELAY);
-        AnimateImage(AImageTo, ksAdHorizontal, 0, True, AShowLoadingIndicator);
-      end;
-
-      ksFtSlideInFromLeft:
-      begin
-        AddBorder(AImageTo.Bitmap, TSide.Right);
-        AImageFrom.Fade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageFrom, ksAdHorizontal, AImageFrom.Width * C_TRANSITION_PART_SCROLL_FACTOR, False, AShowLoadingIndicator);
-        AnimateImage(AImageTo, ksAdHorizontal, 0, True, AShowLoadingIndicator);
-      end;
-
-
-      ksFtSlideInFromBottom:
-      begin
-        AddBorder(AImageTo.Bitmap, TSide.Top);
-        AImageFrom.Fade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageFrom, ksAdVertical, 0-(AImageFrom.Height * C_TRANSITION_PART_SCROLL_FACTOR), False, AShowLoadingIndicator);
-        AnimateImage(AImageTo, ksAdVertical, 0, True, AShowLoadingIndicator);
-      end;
-
-      ksFtSlideInFromTop:
-      begin
-        AddBorder(AImageTo.Bitmap, TSide.Bottom);
-        AImageFrom.Fade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageFrom, ksAdVertical, AImageFrom.Height * C_TRANSITION_PART_SCROLL_FACTOR, False, AShowLoadingIndicator);
-        AnimateImage(AImageTo, ksAdVertical, 0, True, AShowLoadingIndicator);
-      end;
-
-      // slide outs...
-      ksFtSlideOutToLeft:
-      begin
-        AddBorder(AImageFrom.Bitmap, TSide.Right);
-        AImageTo.UnFade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageTo, ksAdHorizontal, 0, False, AShowLoadingIndicator);
-        AnimateImage(AImageFrom, ksAdHorizontal, 0-AImageFrom.Width, True, AShowLoadingIndicator);
-      end;
-
-
-      ksFtSlideOutToTop:
-      begin
-        AddBorder(AImageFrom.Bitmap, TSide.Bottom);
-        AImageTo.UnFade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageTo, ksAdVertical, 0, False, AShowLoadingIndicator);
-        AnimateImage(AImageFrom, ksAdVertical, 0-AImageFrom.Height, True, AShowLoadingIndicator);
-      end;
-
-      ksFtSlideOutToRight:
-      begin
-        AddBorder(AImageFrom.Bitmap, TSide.Left);
-        AImageTo.UnFade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageTo, ksAdHorizontal, 0, False, AShowLoadingIndicator);
-        AnimateImage(AImageFrom, ksAdHorizontal, AImageFrom.Width, True, AShowLoadingIndicator);
-      end;
-
-      ksFtSlideOutToBottom:
-      begin
-        AddBorder(AImageFrom.Bitmap, TSide.Top);
-        AImageTo.UnFade;
-        if ScrollBackgroundForm then
-          AnimateImage(AImageTo, ksAdVertical, 0, False, AShowLoadingIndicator);
-        AnimateImage(AImageFrom, ksAdVertical, AImageFrom.Height, True, AShowLoadingIndicator);
-      end;
-    end;
+    _InternalTransitionList.Delete(_InternalTransitionList.Count-1);
   finally
-    ATo.Show;
-    ATo.Invalidate;
-    Application.ProcessMessages;
-    AImageFrom.DisposeOf;
-    AImageTo.DisposeOf;
-    AFrom.Hide;
+    AAnimateForm.DisposeOf;
   end;
-  //HideLoadingIndicator;
-  HideLoadingIndicator(AFrom);
 end;
-       {
-procedure TksFormTransition.ShowLoadingIndicator(AForm: TForm);
-begin
-  FRectangle.Position.X := (AForm.ClientWidth/2) - (FRectangle.Width / 2);
-  FRectangle.Position.Y := (AForm.ClientHeight/2) - (FRectangle.Width / 2);
-  AForm.AddObject(FRectangle);
-  FRectangle.Parent := AForm;
-  FRectangle.Visible := True;
-  Application.ProcessMessages;
-end;    }
 
-{ TksFormTransitioIntoList }
-
-procedure TksFormTransitioIntoList.AddTransition(AFrom, ATo: TForm; AType: TksFormTransitionType; ABackgroundScroll: Boolean; AOnClose: TNotifyEvent);
+procedure TksFormTransition.Push(AForm: TCommonCustomForm; ATransition: TksTransitionType);
 var
-  AInfo: TksFormTransitionInfo;
+  AInfo: TksFormTransitionItem;
+  AFrom, ATo: TCommonCustomForm;
+  AAnimateForm: TfrmFormTransitionUI;
 begin
-  AInfo := TksFormTransitionInfo.Create;
-  AInfo.FormFrom := AFrom;
-  AInfo.FormTo := ATo;
-  AInfo.TransitionType := AType;
-  AInfo.BackgroundScroll := ABackgroundScroll;
-  AInfo.OnClose := AOnClose;
-  Add(AInfo);
-end;
+  AFrom := Screen.ActiveForm;
+  ATo := AForm;
 
-{ TksFormTransitionInfo }
+  AAnimateForm := TfrmFormTransitionUI.Create(nil);
+  try
+    AInfo := TksFormTransitionItem.Create;
+    AInfo.FFromForm := AFrom;
+    AInfo.FToForm := ATo;
 
-function TksFormTransitionInfo.GetReverseTransition: TksFormTransitionType;
-begin
-  case FTransitionType of
-    ksFtNoTransition: Result := ksFtNoTransition;
-    ksFtSlideInFromLeft: Result := ksFtSlideOutToLeft;
-    ksFtSlideInFromTop: Result := ksFtSlideOutToTop;
-    ksFtSlideInFromRight: Result := ksFtSlideOutToRight;
-    ksFtSlideInFromBottom: Result := ksFtSlideOutToBottom;
 
-    ksFtSlideOutToLeft: Result := ksFtSlideInFromLeft;
-    ksFtSlideOutToTop: Result := ksFtSlideInFromTop;
-    ksFtSlideOutToRight: Result := ksFtSlideInFromRight;
-    ksFtSlideOutToBottom: Result := ksFtSlideInFromBottom;
-  else
-    Result := ksFtSlideInFromLeft;
+    AInfo.FTransition := ATransition;
+    _InternalTransitionList.Add(AInfo);
+
+    AAnimateForm.Initialise(AFrom, ATo);
+    AAnimateForm.Visible := True;
+    AAnimateForm.Animate(AInfo.FTransition, False);
+    AForm.Visible := True;
+    AAnimateForm.Visible := False;
+    AFrom.Visible := False;
+    AForm.Activate;
+    {$IFDEF MSWINDOWS}
+    AForm.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
+    {$ENDIF}
+  finally
+    AAnimateForm.DisposeOf;
   end;
-end;
-
-{ TksFormImage }
-
-constructor TksFormImage.Create(AOwner: TComponent);
-begin
-  inherited;
-  FRectangle := TRectangle.Create(Self);
-  FRectangle.Align := TAlignLayout.Client;
-  FRectangle.Fill.Color := claBlack;
-  FRectangle.Fill.Kind := TBrushKind.Solid;
-
-  FRectangle.Opacity := 0;
-  AddObject(FRectangle);
-end;
-
-destructor TksFormImage.Destroy;
-begin
-  {$IFDEF IOS}
-  FRectangle.DisposeOf;
-  {$ELSE}
-  FRectangle.Free;
-  {$ENDIF}
-  inherited;
-end;
-
-procedure TksFormImage.Fade;
-begin
-  FRectangle.Opacity := 0;
-  if TransitionFading then
-    TAnimator.AnimateFloat(Self, 'FadeValue', C_TRANSITION_FADE, C_TRANSITION_DELAY);
-end;
-
-function TksFormImage.GetFade: single;
-begin
-  Result := FRectangle.Opacity;
-end;
-
-procedure TksFormImage.SetFade(const Value: single);
-begin
-  FRectangle.Opacity := Value;
-end;
-
-procedure TksFormImage.UnFade;
-begin
-  if TransitionFading = False then
-  begin
-    FRectangle.Opacity := 0;
-    Exit;
-  end;
-  FRectangle.Opacity := C_TRANSITION_FADE;
-  TAnimator.AnimateFloat(Self, 'FadeValue', 0, C_TRANSITION_DELAY);
 end;
 
 initialization
 
-  ATransitionList := TksFormTransitioIntoList.Create;
-  TransitionFading := True;
+  _InternalTransitionList := TksFormTransitionList.Create(True);
 
 finalization
 
-  FreeAndNil(ATransitionList);
+  FreeAndNil(_InternalTransitionList);
 
 end.
 

@@ -9,13 +9,13 @@ package KernowSoftwareFMX;
 {$EXTENDEDSYNTAX ON}
 {$IMPORTEDDATA ON}
 {$IOCHECKS ON}
-{$LOCALSYMBOLS OFF}
+{$LOCALSYMBOLS ON}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
 {$OPTIMIZATION ON}
 {$OVERFLOWCHECKS OFF}
 {$RANGECHECKS OFF}
-{$REFERENCEINFO OFF}
+{$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES OFF}
 {$TYPEDADDRESS OFF}
@@ -23,7 +23,6 @@ package KernowSoftwareFMX;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD OFF}
 
@@ -33,11 +32,9 @@ requires
   designide;
 
 contains
-  ksSlideMenu in 'ksSlideMenu.pas',
   ksSegmentButtons in 'ksSegmentButtons.pas',
   ksTableView in 'ksTableView.pas',
   ksMainMenu in 'ksMainMenu.pas',
-  ksFormTransition in 'ksFormTransition.pas',
   ksChatView in 'ksChatView.pas',
   ksTileMenu in 'ksTileMenu.pas',
   ksNetHttpClient in 'ksNetHttpClient.pas',
@@ -53,9 +50,15 @@ contains
   ksImageViewer in 'ksImageViewer.pas',
   ksProgressIndicator in 'ksProgressIndicator.pas',
   ksCircleProgress in 'ksCircleProgress.pas',
-  ksPushNotification in 'ksPushNotification.pas',
-  ksLoadingIndicator in 'ksLoadingIndicator.pas';
+  //ksPushNotification in 'ksPushNotification.pas',
+  ksLoadingIndicator in 'ksLoadingIndicator.pas',
+  ksSlideMenu in 'ksSlideMenu.pas',
+  ksSlideMenuUI in 'ksSlideMenuUI.pas',
+  ksFormTransition in 'ksFormTransition.pas',
+  ksFormTransitionUI in 'ksFormTransitionUI.pas' {frmFormTransitionUI};
 
 end.
+
+
 
 

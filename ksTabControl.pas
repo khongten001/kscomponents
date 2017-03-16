@@ -87,6 +87,7 @@ type
     FTabIndex: integer;
     FText: string;
     FBadgeValue: integer;
+    FBadge: TBitmap;
     FHighlightStyle: TksTabBarHighlightStyle;
     //FCachedBmp: TBitmap;
     procedure SetText(const Value: string);
@@ -104,6 +105,7 @@ type
     destructor Destroy; override;
     procedure BeforeDestruction; override;
     procedure DrawTab(ACanvas: TCanvas; AIndex: integer; ARect: TRectF);
+    procedure RedrawBadge;
   published
     property Text: string read FText write SetText;
     property BadgeValue: integer read FBadgeValue write SetBadgeValue default 0;
@@ -250,33 +252,27 @@ end;
 
 
 procedure TksTabItem.DrawTab(ACanvas: TCanvas; AIndex: integer; ARect: TRectF);
+
+procedure DrawEllipse(ACanvas: TCanvas; ARect: TRectF; AColor: TAlphaColor);
+  begin
+    ACanvas.Fill.Color := AColor;
+    ACanvas.FillEllipse(ARect, 1);
+    ACanvas.Stroke.Color := AColor;
+    ACanvas.Stroke.Thickness := 1;
+    ACanvas.DrawEllipse(ARect, 1);
+  end;
+
 var
   AAppearence: TksTabBarAppearence;
   ABmp: TBitmap;
   ADestRect: TRectF;
   r: TRectF;
+  ABadgeRect: TRectF;
 begin
-  {if FCachedBmp.IsEmpty = False then
-  begin
-    ACanvas.DrawBitmap(FCachedBmp,
-                       RectF(0, 0, FCachedBmp.Width, FCachedBmp.Height),
-                       ARect,
-                       1,
-                       True);
-    Exit;
-  end;  }
-
-
   r := ARect;
-  //r.Offset(0-r.Left, 0-r.Top);
 
   AAppearence := TksTabControl(Parent).Appearence;
   InflateRect(r, 0, -3);
-
-  //FCachedBmp.SetSize(Round(ARect.Width*2), Round(ARect.Height*2));
-  //FCachedBmp.BitmapScale := 2;
-  //FCachedBmp.Clear(claNull);
-  //FCachedBmp.Canvas.BeginScene;
 
   ACanvas.Font.Size := 11;
   ACanvas.Fill.Color := AAppearence.NormalColor;
@@ -320,39 +316,17 @@ begin
 
     if FBadgeValue <> 0 then
     begin
-      GenerateBadge(ACanvas,
-                    PointF(ADestRect.Right-7, ADestRect.Top-2),
-                    FBadgeValue,
-                    AAppearence.BadgeColor,
-                    AAppearence.BackgroundColor,
-                    claWhite);
-    end;
+      ABadgeRect := RectF(ADestRect.Left, ADestRect.Top, ADestRect.Left+ 16, ADestRect.Top+16);
+      OffsetRect(ABadgeRect, ADestRect.Width-7, -2);
 
-    //ACanvas.Stroke.Color := claRed;
-    //ACanvas.DrawRect(ADestRect, 0, 0, AllCorners, 1);
-
-    (*ADestRect := RectF(0, 0, 22, 22);
-    OffsetRect(ADestRect, {ARect.Left +} ((ARect.Width - ADestRect.Width) / 2), 4);
-
-    FCachedBmp.Canvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ADestRect, 1, True);
-    if FBadgeValue <> 0 then
-    begin
-      GenerateBadge(FCachedBmp.Canvas,
-                    PointF(ADestRect.Right-7, ADestRect.Top-2),
-                    FBadgeValue,
-                    AAppearence.BadgeColor,
-                    AAppearence.BackgroundColor,
-                    claWhite);
+      ACanvas.DrawBitmap(FBadge, RectF(0, 0, FBadge.Width, FBadge.Height), ABadgeRect, 1);
+      ACanvas.Fill.Color := claWhite;
+      ACanvas.Font.Size := 9;
+      if FBadgeValue > 0 then
+        ACanvas.FillText(ABadgeRect, IntToStr(FBadgeValue), False, 1, [], TTextAlign.Center);
     end;
 
 
-    FCachedBmp.Canvas.EndScene;
-
-    ACanvas.DrawBitmap(FCachedBmp,
-                       RectF(0, 0, FCachedBmp.Width, FCachedBmp.Height),
-                       ARect,
-                       1,
-                       True);   *)
   finally
     FreeAndNil(ABmp);
   end;
@@ -366,6 +340,31 @@ end;
 procedure TksTabItem.FadeOut(ADuration: single);
 begin
   TAnimator.AnimateFloatWait(Self, 'Opacity', 0, ADuration);
+end;
+
+procedure TksTabItem.RedrawBadge;
+var
+  s: single;
+begin
+  if FBadgeValue = 0 then
+    FreeAndNil(FBadge)
+  else
+  begin
+    s := GetScreenScale(False);
+    FBadge := TBitmap.Create(Round(32*s), Round(32*s));
+    FBadge.Canvas.Fill.Color := claRed;
+    FBadge.Canvas.Fill.Kind := TBrushKind.Solid;
+    FBadge.Canvas.BeginScene;
+    try
+      FBadge.Canvas.FillEllipse(RectF(0, 0, FBadge.Width, FBadge.Height), 1);
+    finally
+      FBadge.Canvas.EndScene;
+    end;
+     {GenerateBadge(fb,
+                            TksTabControl(Parent).Appearence.BadgeColor,
+                            TksTabControl(Parent).Appearence.BackgroundColor,
+                            claWhite); }
+  end;
 end;
 
 procedure TksTabItem.SetIconType(const Value: TksTabItemIcon);
@@ -404,6 +403,7 @@ begin
   if FBadgeValue <> Value then
   begin
     FBadgeValue := Value;
+    RedrawBadge;
     UpdateTabs;
   end;
 end;
@@ -753,6 +753,7 @@ begin
     end;
     ATab := Tabs[ICount];
     //ATab.FCachedBmp.SetSize(0, 0);
+    ATab.RedrawBadge;
     ATab.FTabIndex := ICount;
     ATab.Width := Self.Width;
     case FTabPosition of
@@ -846,8 +847,10 @@ begin
       end;
 
       for ICount := 0 to TksTabControl(FTabControl).GetTabCount-1 do
+      begin
+        //if ATabControl.Tabs[ICount].Visible then
         ATabControl.Tabs[ICount].DrawTab(Canvas, ICount, ATabControl.GetTabRect(ICount));
-
+      end;
 
     finally
       RestoreState(AState);

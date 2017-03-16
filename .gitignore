@@ -214,3 +214,4 @@ Samples/HTML Text/HtmlText.RES
 *.vsr
 Samples/Circle Progress/CircleProgress.res
 /*.tmp
+/Ignore
