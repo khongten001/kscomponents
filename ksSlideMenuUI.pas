@@ -47,8 +47,9 @@ end;
 procedure TfrmSlideMenuUI.DoShow;
 begin
   inherited;
-  //Application.ProcessMessages;
-
+  {$IFDEF IOS}
+  Application.ProcessMessages;
+  {$ENDIF}
   ksVirtualListView1.HitTest := False;
   TAnimator.AnimateFloatWait(Image1, 'Position.X', C_DEFAULT_MENU_WIDTH, 0.2, TAnimationType.InOut, TInterpolationType.Sinusoidal);
   ksVirtualListView1.HitTest := True;
@@ -68,8 +69,6 @@ begin
   Image1.Bitmap := GenerateFormImageExt(ACallingForm);
   Image1.SetBounds(0, 0, ACallingForm.Width, ACallingForm.Height);
   Visible := True;
-  //Application.ProcessMessages;
-
 end;
 
 procedure TfrmSlideMenuUI.SelectItem(Sender: TObject; AItem: TksVListItem);
