@@ -15,6 +15,7 @@ type
     procedure Image1Click(Sender: TObject);
   private
     FOnSelectItem: TksVListItemClickEvent;
+    procedure Delay;
     { Private declarations }
   protected
     procedure DoShow; override;
@@ -29,16 +30,24 @@ type
 
 implementation
 
-uses FMX.Ani, ksCommon, ksSlideMenu;
+uses FMX.Ani, ksCommon, ksSlideMenu, DateUtils;
 
 {$R *.fmx}
 
 { TfrmSlideMenuUI }
 
+procedure TfrmSlideMenuUI.Delay;
+var
+  ANow: TDatetime;
+begin
+  ANow := Now;
+  while MilliSecondsBetween(ANow, Now) < 100 do
+    Application.ProcessMessages;
+end;
+
 procedure TfrmSlideMenuUI.CloseMenu;
 begin
-  Application.ProcessMessages;
-  Sleep(50);
+  Delay;
   ksVirtualListView1.HitTest := False;
   TAnimator.AnimateFloatWait(Image1, 'Position.X', 0, 0.2, TAnimationType.InOut, TInterpolationType.Sinusoidal);
   Visible := False;
@@ -47,9 +56,7 @@ end;
 procedure TfrmSlideMenuUI.DoShow;
 begin
   inherited;
-  {$IFDEF IOS}
-  Application.ProcessMessages;
-  {$ENDIF}
+  Delay;
   ksVirtualListView1.HitTest := False;
   TAnimator.AnimateFloatWait(Image1, 'Position.X', C_DEFAULT_MENU_WIDTH, 0.2, TAnimationType.InOut, TInterpolationType.Sinusoidal);
   ksVirtualListView1.HitTest := True;

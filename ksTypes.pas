@@ -250,7 +250,7 @@ begin
   inherited Create(True);
   FImageScale := 0;
   FImageMap := TBitmap.Create;
-  Initialize;
+  //Initialize;
 end;
 
 destructor TksTableViewAccessoryImageList.Destroy;

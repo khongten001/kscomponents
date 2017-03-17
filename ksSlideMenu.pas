@@ -344,7 +344,6 @@ end;
 
 destructor TksSlideMenu.Destroy;
 begin
-
   FMenuForm.DisposeOf;
   FreeAndNil(FItems);
   FreeAndNil(FAppearence);

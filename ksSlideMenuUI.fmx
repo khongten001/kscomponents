@@ -3,7 +3,7 @@ object frmSlideMenuUI: TfrmSlideMenuUI
   Top = 0
   Caption = 'Form3'
   ClientHeight = 364
-  ClientWidth = 372
+  ClientWidth = 364
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]

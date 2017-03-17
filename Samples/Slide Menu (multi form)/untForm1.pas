@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls, FMX.Controls.Presentation,
-  FMX.Objects, ksTypes, FMX.TabControl, ksSlideMenu;
+  FMX.Objects, ksTypes, FMX.TabControl, ksSlideMenu, ksFormTransition;
 
 type
   TForm1 = class(TForm)
@@ -14,6 +14,7 @@ type
     SpeedButton1: TSpeedButton;
     ToolBar2: TToolBar;
     Image1: TImage;
+    ksFormTransition1: TksFormTransition;
     procedure SpeedButton1Click(Sender: TObject);
   private
     { Private declarations }
