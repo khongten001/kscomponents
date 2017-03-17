@@ -481,6 +481,7 @@ type
     function Add: TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
+    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem;
 
     function AddHeader(AText: string): TksVListItem;
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
@@ -1111,10 +1112,8 @@ end;
 
 procedure TksVListItem.ShowDatePicker;
 var
-//  AIndex: integer;
   APicker: TCustomDateTimePicker;
 begin
-  //AIndex := -1;
   if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
   begin
     APicker := FPickerService.CreateDateTimePicker;
@@ -1122,21 +1121,6 @@ begin
     APicker.OnDateChanged := DoDatePickerChanged;
     APicker.Show;
     APicker.OnDateChanged := DoDatePickerChanged;
-   {FOnSelectDate := AOnSelectDate;
-    FPopupDateStart := Trunc(AStart);
-    FListPicker := FPickerService.CreateListPicker;
-    for ICount := Trunc(AStart) to Trunc(AEnd) do
-    begin
-      FListPicker.Values.Add(FormatDateTime('DDDD, D MMM, YYYY', ICount));
-      if ICount = Trunc(ASelected) then
-        AIndex := FListPicker.Values.Count-1;
-
-    end;
-    FListPicker.OnValueChanged := DoSelectDate;
-    FListPicker.OnHide := AOnHide;
-    FListPicker.ItemIndex := AIndex;
-    FListPicker.Show; }
-
   end;
 end;
 
@@ -2384,6 +2368,14 @@ begin
   end;
 end;
 
+function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
+  AImage: TBitmap; ATagStr: string): TksVListItem;
+begin
+  Result := Add(ATitle, ASubTitle, ADetail, AImage, atMore);
+  Result.SelectorType := TksVListItemSelectorType.ksSelectorPicker;
+  Result.TagStr := ATagStr;
+end;
+
 function TksVListItemList.Insert(AIndex: integer;
   ATitle, ASubTitle, ADetail: string;
   const AAccessory: TksAccessoryType = atNone): TksVListItem;
@@ -3167,8 +3159,8 @@ end;
 
 procedure TksVListItemAccessoryObject.DrawToCanvas(ACanvas: TCanvas;
   AItemRect: TRectF);
-//var
-//  ABmp: TBitmap;
+var
+  ABmp: TBitmap;
 begin
   {if FAccessoryType <> atNone then
   begin
@@ -3179,17 +3171,17 @@ begin
   end;  }
   //inherited;
 
-  //ABmp := AAccessories.GetAccessoryImage(FAccessoryType);
+  ABmp := AAccessories.GetAccessoryImage(FAccessoryType);
 
   //if Bitmap <> nil then
   //begin
   //frmMain.imgAvailable.Bitmap := AAccessories.GetAccessoryImage(atMore);
 
-  if (Bitmap.Width > 0) and (Bitmap.Height > 0) then
+  if (ABmp.Width > 0) and (ABmp.Height > 0) then
   begin
-    FWidth := Bitmap.Width/GetScreenScale(False);
-    FHeight := Bitmap.Height/GetScreenScale(False);
-    ACanvas.DrawBitmap(Bitmap, RectF(0, 0, Bitmap.Width, Bitmap.Height), CalcObjectRect(AItemRect), 1, False);
+    FWidth := ABmp.Width/GetScreenScale(False);
+    FHeight := ABmp.Height/GetScreenScale(False);
+    ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), CalcObjectRect(AItemRect), 1, True);
   end;
 
   //end;

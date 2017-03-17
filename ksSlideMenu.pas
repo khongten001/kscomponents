@@ -164,6 +164,7 @@ end;
 
 constructor TksSlideMenuAppearence.Create(ASlideMenu: TksSlideMenu);
 begin
+  inherited Create;
   FSlideMenu := ASlideMenu;
   FHeaderColor := $FF323232;
   FItemColor := $FF222222;
