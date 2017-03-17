@@ -218,6 +218,7 @@ type
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); virtual;
   public
     constructor Create(AItem: TksVListItem); virtual;
+    procedure ClearCache; virtual;
     property Left: single read FLeft write SetLeft;
     property Top: single read FTop write SetTop;
     property Width: single read FWidth write SetWidth;
@@ -256,6 +257,7 @@ type
   public
     constructor Create(AItem: TksVListItem); override;
     destructor Destroy; override;
+    procedure ClearCache; override;
     function CalculateWidth: single;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
     property Text: string read FText write SetText;
@@ -336,6 +338,11 @@ type
     //property Color: TAlphaColor read FColor write SetColor default claNull;
   end;
 
+  TksVListObjectList = class(TObjectList<TksVListItemBaseObject>)
+  public
+    procedure ClearCache;
+  end;
+
   TksVListItem = class // (TFmxObject)
   private
     [weak]FOwner: TksVListItemList;
@@ -365,7 +372,7 @@ type
     FIconSize: integer;
     // events
     FOnClick: TNotifyEvent;
-    FObjects: TObjectList<TksVListItemBaseObject>;
+    FObjects: TksVListObjectList;
     FTagStr: string;
     FCheckBoxVisible: Boolean;
     FPickerService: IFMXPickerService;
@@ -788,7 +795,7 @@ constructor TksVListItem.Create(Owner: TksVListItemList);
 begin
   inherited Create; // (nil);
   FActionButtons := TksVListActionButtons.Create(Self);
-  FObjects := TObjectList<TksVListItemBaseObject>.Create(True);
+  FObjects := TksVListObjectList.Create(True);
   FCheckBoxVisible := True;
   FSelectorType := ksSelectorNone;
   FOffset := 0;
@@ -1033,6 +1040,11 @@ begin
       FSelected := False
     else
       FSelected := Value;
+    FObjects.ClearCache;
+    FTitle.ClearCache;
+    FSubTitle.ClearCache;
+    FDetail.ClearCache;
+    FAccessory.ClearCache;
     //ClearCache;
     //CacheItem;
     Changed;
@@ -1334,8 +1346,8 @@ begin
     end;
 
     ACanvas.Stroke.Color :=  ACanvas.Fill.Color;//FOwner.FOwner.Appearence.SelectedColor;
+ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
 
-    ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
     ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);
 
     if (FPurpose = TksVListItemPurpose.None) and (FCheckBoxVisible) then
@@ -2549,78 +2561,6 @@ procedure TksVListItemTextObject.BeforeRenderText(ACanvas: TCanvas; ARect: TRect
 begin
   //
 end;
-                {
-procedure TksVListItemTextObject.CacheTextToBmp(ASelected: Boolean);
-var
-  ASize: TRectF;
-  AScale: single;
-  AAppearence: TksVirtualListViewAppearence;
-  ATrimming: TTextTrimming;
-  ATextColor: TAlphaColor;
-begin
-  inherited;
-  AScale := GetScreenScale;
-  Exit;
-
-  if FCached = nil then
-    FCached := TBitmap.Create;
-
-  if (FCached.IsEmpty) and (FText <> '') and (FVisible) then
-  begin
-    FActualTextWidth := 0;
-    ASize := CalculateSize;
-
-    ATrimming := FTextSettings.Trimming;
-
-    if FWidth > 0 then
-    begin
-      if FWidth < ASize.Width then
-        ATrimming := TTextTrimming.Character;
-      ASize.Width := FWidth;
-    end;
-
-    if FWidth = 0 then
-      FWidth := ASize.Width;
-    if FHeight = 0 then
-      FHeight := ASize.Height;
-
-    FCached.SetSize(Round(ASize.Width * AScale),
-      Round(ASize.Height * AScale));
-
-    FCached.BitmapScale := AScale;
-
-    FCached.Clear(claNull);
-
-    FCached.Canvas.Fill.Kind := TBrushKind.Solid;
-    FCached.Canvas.BeginScene;
-    try
-      AAppearence := FOwner.FOwner.FOwner.Appearence;
-
-      ATextColor := FTextSettings.FontColor;
-
-      if (ASelected) and (AAppearence.SelectedFontColor <> claNull) then
-        ATextColor := AAppearence.SelectedFontColor;
-
-      FCached.Canvas.Font.Assign(FTextSettings.Font);
-
-      RenderText(FCached.Canvas,
-                 0,
-                 0,
-                 (ASize.Width)-0,
-                 (ASize.Height)-0,
-                 FText,
-                 FCached.Canvas.Font,
-                 ATextColor,
-                 FTextSettings.WordWrap,
-                 FTextSettings.HorzAlign,
-                 FTextSettings.VertAlign,
-                 ATrimming,
-                 0);
-    finally
-      FCached.Canvas.EndScene;
-    end;
-  end;
-end;   }
 
 function TksVListItemTextObject.CalculateSize: TSizeF;
 begin
@@ -2652,6 +2592,15 @@ begin
     FWidth := 0;
   end;   }
   inherited;
+end;
+
+procedure TksVListItemTextObject.ClearCache;
+begin
+  inherited;
+  {$IFDEF IOS}
+  FreeAndNil(FCached);
+  FCached := TBitmap.Create;
+  {$ENDIF}
 end;
 
 {
@@ -2731,14 +2680,17 @@ begin
 
   if (FOwner.Selected) and (FOwner.FOwner.FOwner.Appearence.SelectedFontColor <> claNull) then
     ATextColor := FOwner.FOwner.FOwner.Appearence.SelectedFontColor;
+
   FTextLayout.Color := ATextColor;
 
   {$IFDEF IOS}
-  if FCached.IsEmpty then
+  if (FCached.IsEmpty) then
   begin
     FCached.SetSize(Round(FWidth*GetScreenScale), Round(FHeight*GetScreenScale));
     FCached.BitmapScale := GetScreenScale;
+    FCached.Clear(claNull);
     FCached.Canvas.BeginScene;
+    FTextLayout.Color := ATextColor;
     FTextLayout.TopLeft := PointF(0, 0);
     FTextLayout.RenderLayout(FCached.Canvas);
     FCached.Canvas.EndScene;
@@ -2830,6 +2782,11 @@ begin
     FOnChange(Self);
   if FOwner <> nil then
     FOwner.Changed;
+end;
+
+procedure TksVListItemBaseObject.ClearCache;
+begin
+  //
 end;
 
 constructor TksVListItemBaseObject.Create(AItem: TksVListItem);
@@ -3626,5 +3583,15 @@ begin
   Changed;
 end;
 
+
+{ TksVListObjectList }
+
+procedure TksVListObjectList.ClearCache;
+var
+  ICount: integer;
+begin
+  for ICount := 0 to Count-1 do
+    Items[ICount].ClearCache;
+end;
 
 end.

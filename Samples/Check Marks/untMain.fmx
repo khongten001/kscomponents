@@ -31,19 +31,21 @@ object Form24: TForm24
           Text = 'Right Aligned'
           BadgeValue = 0
         end>
-      Size.Width = 232.000000000000000000
+      Size.Width = 248.000000000000000000
       Size.Height = 44.000000000000000000
       Size.PlatformDefault = False
       OnSelectSegment = ksSegmentButtons1SelectSegment
     end
     object CheckBox1: TCheckBox
       Align = Right
-      Position.X = 232.000000000000000000
-      Size.Width = 97.000000000000000000
+      Margins.Left = 8.000000000000000000
+      Position.X = 256.000000000000000000
+      Size.Width = 73.000000000000000000
       Size.Height = 44.000000000000000000
       Size.PlatformDefault = False
       TabOrder = 1
-      Text = 'Multi Select'
+      Text = 'Multi'
+      OnChange = CheckBox1Change
     end
   end
   object ToolBar1: TToolBar
