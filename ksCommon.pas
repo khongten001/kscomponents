@@ -269,6 +269,7 @@ function CalculateTextWidth(AText: string; AFont: TFont; AWordWrap: Boolean;
 var
   APoint: TPointF;
 begin
+  //ATextLayout.
   ATextLayout.BeginUpdate;
   // Setting the layout MaxSize
   if AMaxWidth > 0 then
@@ -286,7 +287,7 @@ begin
   //ATextLayout.Trimming := ATrimming;
   ATextLayout.EndUpdate;
   //ATextLayout.RenderLayout(ATextLayout.LayoutCanvas);
-  Result := ATextLayout.Width;
+  Result := ATextLayout.Width + (1/GetScreenScale);
 end;
 
 function CalculateTextHeight(AText: string; AFont: TFont; AWordWrap: Boolean; ATrimming: TTextTrimming;
@@ -312,7 +313,7 @@ begin
   ATextLayout.HorizontalAlign := TTextAlign.Leading;
   ATextLayout.VerticalAlign := TTextAlign.Leading;
   ATextLayout.EndUpdate;
-  Result := ATextLayout.Height;
+  Result := ATextLayout.Height+(1/GetScreenScale);
 end;
 
 procedure RenderHhmlText(ACanvas: TCanvas; x, y, AWidth, AHeight: single;
