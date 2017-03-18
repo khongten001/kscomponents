@@ -1307,8 +1307,4 @@ object Form1: TForm1
     Size.Height = 121.000000000000000000
     Size.PlatformDefault = False
   end
-  object ksFormTransition1: TksFormTransition
-    Left = 184
-    Top = 272
-  end
 end

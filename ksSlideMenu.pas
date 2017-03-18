@@ -330,15 +330,14 @@ end;
 procedure TksSlideMenu.AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom);
 begin
   FItems.AddItem(AID, AText, AForm, AIcon);
-  RebuildMenu;
+  //RebuildMenu;
 end;
 
 constructor TksSlideMenu.Create(AOwner: TComponent);
 begin
   inherited;
-  FMenuForm := TfrmSlideMenuUI.Create(nil);
+
   FItems := TksSlideMenuItemList.Create;
-  FMenuForm.OnSelectItem := SelectItem;
   FAppearence := TksSlideMenuAppearence.Create(Self);
 end;
 
@@ -353,6 +352,12 @@ end;
 procedure TksSlideMenu.OpenMenu(ACallingForm: TCommonCustomForm);
 begin
   FCallingForm := ACallingForm;
+  if FMenuForm = nil then
+  begin
+    FMenuForm :=  TfrmSlideMenuUI.Create(nil);
+    FMenuForm.OnSelectItem := SelectItem;
+    RebuildMenu;
+  end;
   FMenuForm.OpenMenu(ACallingForm);
 
 end;
@@ -367,18 +372,17 @@ var
   ABmp: TBitmap;
 begin
   lv := FMenuForm.ksVirtualListView1;
-
-  lv.Items.Clear;
+  lv.Appearence.SelectedColor := FAppearence.SelectedItemColor;
+  lv.Appearence.SelectedFontColor := FAppearence.SelectedFontColor;
+  lv.Appearence.ItemBackground := FAppearence.ItemColor;
+  lv.Appearence.Background := FAppearence.BackgroundColor;
+  lv.ClearItems;
   for ICount := 0 to FItems.Count-1 do
   begin
     AItem := lv.Items.Add(FItems[ICount].FText, '', '', atMore);
     AItem.TagInt := ICount;
     AItem.Title.TextSettings.FontColor := FAppearence.FontColor;
     AItem.Accessory.SetOpaqueColor(FAppearence.AccessoryColor);
-    lv.Appearence.SelectedColor := FAppearence.SelectedItemColor;
-    lv.Appearence.SelectedFontColor := FAppearence.SelectedFontColor;
-    lv.Appearence.ItemBackground := FAppearence.ItemColor;
-    lv.Appearence.Background := FAppearence.BackgroundColor;
 
     aBmp := TBitmap.Create;
     try
@@ -447,6 +451,14 @@ begin
   AItem.FIcon := AIcon;
   Add(AItem);
 end;
+
+initialization
+
+//  frmSlideMenuUI := TfrmSlideMenuUI.Create(nil);
+
+finalization
+
+//  frmSlideMenuUI.DisposeOf;
 
 end.
 
