@@ -1,8 +1,8 @@
 object dmMenu: TdmMenu
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Height = 150
-  Width = 212
+  Height = 115
+  Width = 133
   object ksSlideMenu1: TksSlideMenu
     Appearence.BackgroundColor = xFF545454
     Appearence.HeaderColor = xFF424242

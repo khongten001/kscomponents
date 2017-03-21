@@ -41,6 +41,11 @@ const
   C_FADE_OPACITY = 0.5;
 
 type
+  IksFormTransition = interface
+  ['{34A12E50-B52C-4A49-B081-9CB67CA5FD6E}']
+    procedure BeforeTransition;
+  end;
+
   TksTransitionType = (ksFtSlideInFromLeft,
                        ksFtSlideInFromTop,
                        ksFtSlideInFromRight,
@@ -74,6 +79,7 @@ type
   private
     function GetTransitionList: TksFormTransitionList;
   public
+    function GetFormDepth(AForm: TCommonCustomForm): integer;
     procedure Push(AForm: TCommonCustomForm; ATransition: TksTransitionType);
     procedure Pop;
     property TransitionList: TksFormTransitionList read GetTransitionList;
@@ -86,7 +92,7 @@ type
 
 implementation
 
-uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI;
+uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI, ksToolbar;
 
 var
   _InternalTransitionList: TksFormTransitionList;
@@ -97,6 +103,20 @@ begin
 end;
 
 { TksFormTransition }
+
+function TksFormTransition.GetFormDepth(AForm: TCommonCustomForm): integer;
+var
+  ICount: integer;
+begin
+  Result := 0;
+  for ICount := 0 to TransitionList.Count-1 do
+  begin
+    if TransitionList[ICount].ToForm = AForm then
+    begin
+      Result := ICount+1;
+    end;
+  end;
+end;
 
 function TksFormTransition.GetTransitionList: TksFormTransitionList;
 begin
@@ -146,9 +166,19 @@ var
   AInfo: TksFormTransitionItem;
   AFrom, ATo: TCommonCustomForm;
   AAnimateForm: TfrmFormTransitionUI;
+  ICount: integer;
+  AToolbar: IksToolbar;
+  AFormIntf: IksFormTransition;
 begin
   AFrom := Screen.ActiveForm;
   ATo := AForm;
+
+
+  for ICount := 0 to ATo.ComponentCount-1 do
+  begin
+    if Supports(ATo.Components[ICount], IksToolbar, AToolbar) then
+      AToolbar.SetTransition(ATransition);
+  end;
 
   AAnimateForm := TfrmFormTransitionUI.Create(nil);
   try
@@ -159,6 +189,9 @@ begin
 
     AInfo.FTransition := ATransition;
     _InternalTransitionList.Add(AInfo);
+
+    if Supports(ATo, IksFormTransition, AFormIntf) then
+      AFormIntf.BeforeTransition;
 
     AAnimateForm.Initialise(AFrom, ATo);
     AAnimateForm.Visible := True;

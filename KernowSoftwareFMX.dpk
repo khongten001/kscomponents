@@ -55,7 +55,8 @@ contains
   ksSlideMenuUI in 'ksSlideMenuUI.pas',
   ksFormTransition in 'ksFormTransition.pas',
   ksFormTransitionUI in 'ksFormTransitionUI.pas' {frmFormTransitionUI},
-  ksAppEvents in 'ksAppEvents.pas';
+  ksAppEvents in 'ksAppEvents.pas',
+  ksToolbar in 'ksToolbar.pas';
 
 end.
 
