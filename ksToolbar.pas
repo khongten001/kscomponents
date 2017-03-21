@@ -42,7 +42,7 @@ type
   private
     FButton: TksSpeedButton;
     FText: string;
-    FStyleLookup: string;
+    //FStyleLookup: string;
     procedure SetText(const Value: string);
   public
     constructor Create; virtual;
@@ -64,6 +64,7 @@ type
 
     FText: string;
     FFormTransition: TksFormTransition;
+    FOnRightButtonClicked: TNotifyEvent;
     procedure BackButtonClicked(Sender: TObject);
     procedure RightButtonClicked(Sender: TObject);
     procedure SetText(const Value: string);
@@ -72,11 +73,10 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-
-
   published
     property Text: string read FText write SetText;
     property RightButton: TksToolbarButton read FRightButton write FRightButton;
+    property OnRightButtonClicked: TNotifyEvent read FOnRightButtonClicked write FOnRightButtonClicked;
   end;
 
 
@@ -85,7 +85,7 @@ type
 implementation
 
 uses Math, System.TypInfo, System.Types, ksCommon, SysUtils,
-  Fmx.Forms, FMX.Controls, FMX.DialogService;
+  Fmx.Forms, FMX.Controls;
 
 procedure Register;
 begin
@@ -150,7 +150,8 @@ end;
 
 procedure TksToolbar.RightButtonClicked(Sender: TObject);
 begin
-  TDialogService.ShowMessage('click');
+  if Assigned(FOnRightButtonClicked) then
+    FOnRightButtonClicked(Self);
 end;
 
 procedure TksToolbar.SetText(const Value: string);

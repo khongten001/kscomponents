@@ -44,7 +44,6 @@ type
     FWillBecomeForeground: TNotifyEvent;
     FWillTerminate: TNotifyEvent;
     FLowMemory: TNotifyEvent;
-    FWillBecomeInactive: TNotifyEvent;
     function HandleAppEvent(AAppEvent: TApplicationEvent; AContext: TObject): Boolean;
   public
     constructor Create(AOwner: TComponent); override;
