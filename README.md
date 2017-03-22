@@ -1,8 +1,3 @@
-##### THE KSCOMPONENTS PROJECT IS NOW HOSTED ON BITBUCKET 
-
-https://bitbucket.org/gmurt/kscomponents
-
-
 # KernowSoftwareFMX
 Kernow Software FMX Components for XE7, XE8 & XE10 Seattle. 
 
