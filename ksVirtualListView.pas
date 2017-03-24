@@ -700,6 +700,8 @@ type
     property Size;
     property Width;
 
+    property Ani: TksAniCalc read FAniCalc;
+
     property CanDeleteItem: TksVListDeletingItemEvent read FCanDeleteItem write FCanDeleteItem;
     property OnItemLongTap: TksVListItemLongTapEvent read FOnItemLongTap write FOnItemLongTap;
     property OnItemClick: TksVListItemClickEvent read FOnItemClick write FOnItemClick;
@@ -907,6 +909,7 @@ procedure TksVListItem.DoDatePickerChanged(Sender: TObject;
 begin
   FSelectedDate := ADateTime;
   FDetail.Text := FormatDateTime('d-mmm-yyyy', ADateTime);
+  FDetail.ClearCache;
   if Assigned(FOnDateSelected) then
     FOnDateSelected(Self, Self, ADateTime);
 end;
@@ -918,6 +921,7 @@ begin
   //procedure ()
   //begin
     FDetail.Text := FPicker.Values[AValueIndex];
+    FDetail.ClearCache;
     if Assigned(FOnSelectPickerItem) then
       FOnSelectPickerItem(FOwner.FOwner, Self, FPicker.Values[AValueIndex]);
   //end);

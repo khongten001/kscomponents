@@ -44,12 +44,14 @@ type
     FColor: TAlphaColor;
     FCaptionType: TksCircleProgressCaptionType;
     FText: string;
+    FThickness: integer;
     procedure RecreateBitmap;
     procedure SetValue(const Value: single);
     procedure SetColor(const Value: TAlphaColor);
     procedure SetBackgroundColor(const Value: TAlphaColor);
     procedure SetCaptionType(const Value: TksCircleProgressCaptionType);
     procedure SetText(const Value: string);
+    procedure SetThickness(const Value: integer);
   protected
     procedure Paint; override;
   public
@@ -57,6 +59,7 @@ type
     destructor Destroy; override;
     procedure AnimateToValue(AValue: single; const ADurationSecs: integer = 1);
   published
+    property Align;
     property CaptionType: TksCircleProgressCaptionType read FCaptionType write SetCaptionType default ksCirclePercent;
     property Height;
     property Width;
@@ -66,6 +69,7 @@ type
     property Color: TAlphaColor read FColor write SetColor default claDodgerblue;
     property Value: single read FValue write SetValue;
     property Text: string read FText write SetText;
+    property Thickness: integer read FThickness write SetThickness default 15;
   end;
 
   procedure Register;
@@ -101,6 +105,7 @@ begin
   FValue := 0;
   Width := 150;
   Height := 150;
+  FThickness := 15;
 end;
 
 destructor TksCircleProgress.Destroy;
@@ -144,7 +149,7 @@ begin
     x1 := Round((Width * C_SCALE)/2);
     y1 := Round((Height * C_SCALE)/2);
 
-    AThickness := Round(25 * C_SCALE);
+    AThickness := Round(FThickness * C_SCALE);
 
     FBitmap.Canvas.Stroke.Thickness := 4;
     FBitmap.Canvas.Stroke.Color := FBackgroundColor;
@@ -223,6 +228,12 @@ begin
   end;
 end;
 
+procedure TksCircleProgress.SetThickness(const Value: integer);
+begin
+  FThickness := Value;
+  InvalidateRect(ClipRect);
+end;
+
 procedure TksCircleProgress.SetValue(const Value: single);
 begin
   if FValue <> Value then
@@ -230,7 +241,7 @@ begin
     FValue := Value;
     FValue := Max(FValue, 0);
     FValue := Min(FValue, 100);
-    InvalidateRect(ClipRect);
+    Repaint;
   end;
 end;
 

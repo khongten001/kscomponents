@@ -30,53 +30,61 @@ interface
 
 
 uses Classes, FMX.StdCtrls, FMX.Graphics, ksTypes, FMX.Objects, FMX.Types,
-  System.UITypes, System.UIConsts, ksSpeedButton, ksFormTransition;
+  System.UITypes, System.UIConsts, ksSpeedButton, ksFormTransition,
+  FMX.Controls.Presentation, FMX.Controls, System.Types;
 
 type
-  IksToolbar = interface
-  ['{42609FB8-4DE0-472F-B49C-A6CD636A530D}']
-    procedure SetTransition(ATransition: TksTransitionType);
-  end;
+ // TksToolbar = class;
 
-  TksToolbarButton = class(TPersistent)
-  private
-    FButton: TksSpeedButton;
-    FText: string;
-    //FStyleLookup: string;
-    procedure SetText(const Value: string);
-  public
-    constructor Create; virtual;
-    destructor Destroy; override;
-  published
-    property Text: string read FText write SetText;
-  end;
+  {IksToolbar = interface
+  ['{42609FB8-4DE0-472F-B49C-A6CD636A530D}//]
+    //procedure SetTransition(ATransition: TksTransitionType);
+  //end;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
     {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
-  TksToolbar = class(TToolBar, IksToolbar)
+  TksToolbar = class(TPresentedControl)
   private
-    FLabel: TLabel;
-
-
-    FBackButton: TksToolbarButton;
-    FRightButton: TksToolbarButton;
-
+    FBackBmp: TBitmap;
+    FMenuBmp: TBitmap;
+    FTintColor: TAlphaColor;
+    FFont: TFont;
+    FTextColor: TAlphaColor;
     FText: string;
+    FMouseDown: Boolean;
     FFormTransition: TksFormTransition;
-    FOnRightButtonClicked: TNotifyEvent;
-    procedure BackButtonClicked(Sender: TObject);
-    procedure RightButtonClicked(Sender: TObject);
+    FOnMenuButtonClick: TNotifyEvent;
+    FShowMenuButton: Boolean;
+    FOnBackButtonClick: TNotifyEvent;
+    procedure Changed(Sender: TObject);
+    procedure BackButtonClicked;
+    procedure SetShowMenuButton(const Value: Boolean);
+    procedure SetTintColor(const Value: TAlphaColor);
+    procedure SetTextColor(const Value: TAlphaColor);
     procedure SetText(const Value: string);
+    procedure SetFont(const Value: TFont);
+    function GetButtonOpacity: single;
   protected
-    procedure SetTransition(ATransition: TksTransitionType);
+    //procedure SetTransition(ATransition: TksTransitionType);
+    procedure Paint; override;
+    function GetDefaultSize: TSizeF; override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    procedure DoMouseLeave;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
   published
+    property Font: TFont read FFont write SetFont;
     property Text: string read FText write SetText;
-    property RightButton: TksToolbarButton read FRightButton write FRightButton;
-    property OnRightButtonClicked: TNotifyEvent read FOnRightButtonClicked write FOnRightButtonClicked;
+    property Size;
+    property TabOrder;
+    property TintColor: TAlphaColor read FTintColor write SetTintColor default claWhitesmoke;
+    property TextColor: TAlphaColor read FTextColor write SetTextColor default claBlack;
+    property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
+    property OnMenuButtonClick: TNotifyEvent read FOnMenuButtonClick write FOnMenuButtonClick;
+    property OnBackButtonClick: TNotifyEvent read FOnBackButtonClick write FOnBackButtonClick;
   end;
 
 
@@ -84,8 +92,8 @@ type
 
 implementation
 
-uses Math, System.TypInfo, System.Types, ksCommon, SysUtils,
-  Fmx.Forms, FMX.Controls;
+uses Math, System.TypInfo, ksCommon, SysUtils,
+  Fmx.Forms;
 
 procedure Register;
 begin
@@ -95,111 +103,177 @@ end;
 
 { TksToolbar }
 
-procedure TksToolbar.BackButtonClicked(Sender: TObject);
+procedure TksToolbar.BackButtonClicked;
 begin
-  FFormTransition.Pop;
+  Root.Focused := nil;
+  if FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0 then
+  begin
+    if (Assigned(FOnMenuButtonClick)) and (FShowMenuButton) then
+      FOnMenuButtonClick(Self);
+  end
+  else
+  begin
+    if (Assigned(FOnBackButtonClick)) then
+      FOnBackButtonClick(Self);
+    FFormTransition.Pop;
+  end;
+end;
+
+procedure TksToolbar.Changed(Sender: TObject);
+begin
+  InvalidateRect(ClipRect);
 end;
 
 constructor TksToolbar.Create(AOwner: TComponent);
 begin
   inherited;
+  FMenuBmp := TBitmap.Create;
+  FBackBmp := TBitmap.Create;
+  FFont := TFont.Create;
+  FFont.Size := 14;
+  Align := TAlignLayout.Top;
   FFormTransition := TksFormTransition.Create(nil);
 
-  FLabel := TLabel.Create(Self);
-  FLabel.Align := TAlignLayout.Contents;
-  FLabel.TextSettings.HorzAlign := TTextAlign.Center;
-  FLabel.Stored := False;
-  AddObject(FLabel);
-  Text := 'TITLE';
+  FTintColor := claWhitesmoke;
+  FTextColor := claBlack;
+  FMouseDown := False;
 
-  FBackButton := TksToolbarButton.Create;
-  FBackButton.FButton.Align := TAlignLayout.Left;
-  FBackButton.FButton.Stored := False;
-  FBackButton.FButton.Visible := False;
-  FBackButton.FButton.StyleLookup := 'backtoolbutton';
-  FBackButton.FButton.Text := 'BACK';
-  FBackButton.FButton.OnClick := BackButtonClicked;
+  FFont.OnChanged := Changed;
 
-  //AddObject(FBackButton);
-
-  FRightButton := TksToolbarButton.Create;
-  FRightButton.FButton.Align := TAlignLayout.Right;
-  FRightButton.FButton.Stored := False;
-  FRightButton.FButton.StyleLookup := 'toolbutton';
-  FRightButton.FButton.OnClick := RightButtonClicked;
-
-  AddObject(FRightButton.FButton);
-
-  {FRightButton := TksSpeedButton.Create(Self);
-  FRightButton.Align := TAlignLayout.Right;
-  FRightButton.Stored := False;
-  FRightButton.Text := 'BUTTON';
-  FRightButton.StyledSettings := [TStyledSetting.Family,TStyledSetting.Style,TStyledSetting.FontColor];
-  FRightButton.TextSettings.Font.Size := 14;
-  FRightButton.OnClick := RightButtonClicked;    }
-  //AddObject(FRightButton);
-
+  FShowMenuButton := True;
 end;
 
 destructor TksToolbar.Destroy;
 begin
   FreeAndNil(FFormTransition);
-
+  FreeAndNil(FMenuBmp);
+  FreeAndNil(FBackBmp);
+  FreeAndNil(FFont);
   inherited;
 end;
 
-procedure TksToolbar.RightButtonClicked(Sender: TObject);
+procedure TksToolbar.DoMouseLeave;
 begin
-  if Assigned(FOnRightButtonClicked) then
-    FOnRightButtonClicked(Self);
+  FMouseDown := False;
+  InvalidateRect(ClipRect);
+end;
+
+function TksToolbar.GetButtonOpacity: single;
+begin
+  case FMouseDown of
+    True: Result := 0.5;
+    False: Result := 1;
+  end;
+
+end;
+
+function TksToolbar.GetDefaultSize: TSizeF;
+begin
+  Result := TSizeF.Create(120, 44);
+end;
+
+procedure TksToolbar.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Single);
+begin
+  inherited;
+  FMouseDown := X < 30;
+  InvalidateRect(ClipRect);
+  Application.ProcessMessages;
+  BackButtonClicked;
+end;
+
+procedure TksToolbar.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Single);
+begin
+  inherited;
+  FMouseDown := False;
+  {if FMouseDown then
+  begin
+    FMouseDown := False;
+  end;  }
+end;
+
+procedure TksToolbar.Paint;
+var
+  ABmp: TBitmap;
+  s: single;
+begin
+  inherited;
+  ABmp := nil;
+  s := GetScreenScale(False);
+  if FBackBmp.IsEmpty then
+    FBackBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft));
+
+  if FMenuBmp.IsEmpty then
+    FMenuBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atDetails));
+
+  if (csDesigning in ComponentState) then
+    ABmp := FMenuBmp
+  else
+  begin
+    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) then
+    begin
+      if (FShowMenuButton) then
+        ABmp := FMenuBmp;
+    end
+    else
+      ABmp := FBackBmp;
+  end;
+
+
+
+  Canvas.BeginScene;
+
+  Canvas.Fill.Color := FTintColor;
+  Canvas.Fill.Kind := TBrushKind.Solid;
+  Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
+
+  Canvas.Font.Assign(FFont);
+  Canvas.Fill.Color := FTextColor;
+  Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
+
+  ReplaceOpaqueColor(ABmp, FTextColor);
+  Canvas.DrawBitmap(ABmp,
+                    RectF(0, 0, ABmp.Width, ABmp.Height),
+                    RectF(4, (Height/2)-((ABmp.Height/s)/2), 4+(ABmp.Width/s), (Height/2)+((ABmp.Height/s)/2)),
+                    GetButtonOpacity);
+
+
+  Canvas.EndScene;
+end;
+
+procedure TksToolbar.SetFont(const Value: TFont);
+begin
+  FFont.Assign(Value);
+end;
+
+procedure TksToolbar.SetShowMenuButton(const Value: Boolean);
+begin
+  FShowMenuButton := Value;
+  InvalidateRect(ClipRect);
 end;
 
 procedure TksToolbar.SetText(const Value: string);
 begin
-  FText := Value;
-  FLabel.Text := FText;
-end;
-
-procedure TksToolbar.SetTransition(ATransition: TksTransitionType);
-begin
-  AddObject(FBackButton.FButton);
-
-  FBackButton.FButton.Visible := True;
-  if ATransition = TksTransitionType.ksFtSlideInFromRight then
+  if FText <> Value then
   begin
-    FBackButton.FButton.StyleLookup := 'backtoolbutton';
-    FBackButton.FButton.Text := 'BACK';
-  end
-  else
-  begin
-    FBackButton.FButton.StyleLookup := 'toolbutton';
-    FBackButton.FButton.Text := 'CLOSE';
+    FText := Value;
+    InvalidateRect(ClipRect);
   end;
 end;
 
-{ TksToolbarButton }
-
-constructor TksToolbarButton.Create;
+procedure TksToolbar.SetTextColor(const Value: TAlphaColor);
 begin
-  FButton := TksSpeedButton.Create(nil);
-  FButton.Stored := False;
-  FButton.StyledSettings := [TStyledSetting.Family,TStyledSetting.Style,TStyledSetting.FontColor];
-  FButton.TextSettings.Font.Size := 14;
-  FButton.Locked := True;
-  FButton.Visible := False;
+  FTextColor := Value;
 end;
 
-destructor TksToolbarButton.Destroy;
+procedure TksToolbar.SetTintColor(const Value: TAlphaColor);
 begin
-  FButton.DisposeOf;
-  inherited;
-end;
-
-procedure TksToolbarButton.SetText(const Value: string);
-begin
-  FText := Value;
-  FButton.Text := Value;
-  FButton.Visible := FText <> '';
+  if FTintColor <> Value then
+  begin
+    FTintColor := Value;
+    Repaint;
+  end;
 end;
 
 initialization

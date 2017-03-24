@@ -61,10 +61,12 @@ const
 
 type
   TksSlideMenu = class;
+  TksSlideMenuItemList = class;
   TksMenuPosition = (mpLeft, mpRight);
   TKsMenuStyle = (msOverlap, msReveal);
   TKsMenuTheme = (mtCustom, mtDarkGray, mtDarkBlue, mtDarkOrange, mtDarkGreen, mtLightGray, mtLightBlue, mtLightOrange, mtLightGreen);
 
+  TBuildMenuEvent = procedure(Sender: TObject; AItems: TksSlideMenuItemList) of object;
   TSelectMenuItemEvent = procedure(Sender: TObject; AId: string) of object;
 
   TksSlideMenuAppearence = class(TPersistent)
@@ -114,7 +116,7 @@ type
 
   TksSlideMenuItemList = class(TObjectList<TksSlideMenuItem>)
   public
-    procedure AddItem(AID, AText: string; AForm: TCommonCustomForm; AIcon: TksStandardIcon);
+    procedure AddItem(AID, AText: string; AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom);
   end;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
@@ -129,19 +131,20 @@ type
     FAppearence: TksSlideMenuAppearence;
     FOnSelectMenuItemEvent: TSelectMenuItemEvent;
     FAfterSelectMenuItemEvent: TSelectMenuItemEvent;
+    FOnBuildMenu: TBuildMenuEvent;
     procedure RebuildMenu;
     procedure SelectItem(Sender: TObject; AItem: TksVListItem);
 
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-
-    procedure AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom);
+    procedure AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom); deprecated 'Use OnBuildMenu event instead';
     procedure OpenMenu(ACallingForm: TCommonCustomForm);
   published
     property Appearence: TksSlideMenuAppearence read FAppearence write FAppearence;
     property OnSelectMenuItemEvent: TSelectMenuItemEvent read FOnSelectMenuItemEvent write FOnSelectMenuItemEvent;
     property AfterSelectItemEvent: TSelectMenuItemEvent read FAfterSelectMenuItemEvent write FAfterSelectMenuItemEvent;
+    property OnBuildMenu: TBuildMenuEvent read FOnBuildMenu write FOnBuildMenu;
   end;
 
   //{$R *.dcr}
@@ -330,7 +333,6 @@ end;
 procedure TksSlideMenu.AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom);
 begin
   FItems.AddItem(AID, AText, AForm, AIcon);
-  //RebuildMenu;
 end;
 
 constructor TksSlideMenu.Create(AOwner: TComponent);
@@ -351,6 +353,12 @@ end;
 
 procedure TksSlideMenu.OpenMenu(ACallingForm: TCommonCustomForm);
 begin
+  if FItems.Count = 0 then
+  begin
+    if Assigned(FOnBuildMenu) then
+      FOnBuildMenu(Self, FItems);
+  end;
+
   FCallingForm := ACallingForm;
   if FMenuForm = nil then
   begin
@@ -411,13 +419,18 @@ var
   mi: TksSlideMenuItem;
   AForm: TCommonCustomForm;
 begin
-  mi := FItems[AItem.TagInt];
-  if Assigned(FOnSelectMenuItemEvent) then
-    FOnSelectMenuItemEvent(Self, mi.FID);
+  AForm := nil;
+  mi := nil;
+  if AItem <> nil then
+  begin
+    mi := FItems[AItem.TagInt];
+    if Assigned(FOnSelectMenuItemEvent) then
+      FOnSelectMenuItemEvent(Self, mi.FID);
+    AForm := mi.FForm;
+  end;
 
 
 
-  AForm := mi.FForm;
   if AForm = nil then
     AForm := FCallingForm;
 
@@ -433,14 +446,17 @@ begin
       Screen.ActiveForm := AForm;
     end);
 
-  if Assigned(FAfterSelectMenuItemEvent) then
-    FAfterSelectMenuItemEvent(Self, mi.FID);
+  if mi <> nil then
+  begin
+    if Assigned(FAfterSelectMenuItemEvent) then
+      FAfterSelectMenuItemEvent(Self, mi.FID);
+  end;
 end;
 
 {TksSlideMenuItemExtList }
 
 procedure TksSlideMenuItemList.AddItem(AID, AText: string;
-  AForm: TCommonCustomForm; AIcon: TksStandardIcon);
+  AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom);
 var
   AItem: TksSlideMenuItem;
 begin
@@ -461,5 +477,6 @@ finalization
 //  frmSlideMenuUI.DisposeOf;
 
 end.
+
 
 

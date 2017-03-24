@@ -489,32 +489,28 @@ end;
 procedure TksSegmentSpeedButton.Paint;
 begin
   inherited;
-  //AState := Canvas.SaveState;
-  try
-    //Canvas.IntersectClipRect(ClipRect);
-    Canvas.Stroke.Color := claBlack;
-    if FIsPressed then
-      Canvas.Fill.Color := claDodgerblue
-    else
-      Canvas.Fill.Color := claWhite;
-    Canvas.Stroke.Color := claDodgerblue;
-    Canvas.Stroke.Kind := TBrushKind.Solid;
 
-    Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
-    Canvas.DrawRect(ClipRect, 0, 0, AllCorners, 1);
+  Canvas.Stroke.Color := claBlack;
+  if FIsPressed then
+    Canvas.Fill.Color := GetColorOrDefault(FOwner.TintColor, claDodgerblue)
+  else
+    Canvas.Fill.Color := claWhite;
+  Canvas.Stroke.Color := GetColorOrDefault(FOwner.TintColor, claDodgerblue);
+  Canvas.Stroke.Kind := TBrushKind.Solid;
 
-    if FIsPressed then
-      Canvas.Fill.Color := claWhite
-    else
-      Canvas.Fill.Color := claDodgerblue;
+  Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
+  Canvas.DrawRect(ClipRect, 0, 0, AllCorners, 1);
 
-    Canvas.Font.Size := 14;
-    RenderText(Canvas, ClipRect, FText, Canvas.Font, Canvas.Fill.Color, False, TTextAlign.Center, TTextAlign.Center, TTextTrimming.Character);
+  if FIsPressed then
+    Canvas.Fill.Color := claWhite
+  else
+    Canvas.Fill.Color := GetColorOrDefault(FOwner.TintColor, claDodgerblue);
 
+  Canvas.Font.Size := 14;
+  RenderText(Canvas, ClipRect, FText, Canvas.Font, Canvas.Fill.Color, False, TTextAlign.Center, TTextAlign.Center, TTextTrimming.Character);
 
-  finally
-  //  Canvas.RestoreState(AState);
-  end;
+  if FBadge > 0 then
+    GenerateBadge(Canvas, PointF(ClipRect.Right-20, ClipRect.Top-4), FBadge, claRed, claNull, claWhite);
 end;
 
 procedure TksSegmentSpeedButton.SetBadge(const Value: integer);

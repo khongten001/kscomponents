@@ -103,28 +103,23 @@ function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
 var
   AScale: single;
 begin
-  //{$IFDEF ANDROID}
-  AForm.Visible := True;
-  AForm.Visible := False;
-  //{$ENDIF}
+  //AForm.Visible := True;
+  //AForm.Visible := False;
   Result := TBitmap.Create;
   AScale := GetScreenScale(True);
   Result.BitmapScale := AScale;
   Result.Width := Round(AForm.Width * AScale);
   Result.Height := Round(AForm.Height * AScale);
-  //Result.Clear(claFuchsia);
   Result.Canvas.BeginScene;
   TForm(AForm).PaintTo(Result.Canvas);
   Result.Canvas.EndScene;
   if Result.IsEmpty then
   begin
-    AForm.Visible := True;
-    AForm.Visible := False;
+    //AForm.Visible := True;
+    //AForm.Visible := False;
     FreeAndNil(Result);
     Result := GenerateFormImageExt(AForm);
   end;
-
-  //Result.SaveToFile('C:\Users\Graham\Desktop\screen.bmp');
 end;
 
 
@@ -409,31 +404,29 @@ end;
 
 procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ABackgroundColor, ATextColor: TAlphaColor);
 
-  procedure DrawEllipse(ACanvas: TCanvas; ARect: TRectF; AColor: TAlphaColor);
+ {procedure DrawEllipse(ACanvas: TCanvas; ARect: TRectF; AColor: TAlphaColor);
   begin
     ACanvas.Fill.Color := AColor;
     ACanvas.FillEllipse(ARect, 1);
     ACanvas.Stroke.Color := AColor;
     ACanvas.Stroke.Thickness := 1;
     ACanvas.DrawEllipse(ARect, 1);
-  end;
+  end;    }
 var
   ABmp: TBitmap;
   AOutlineRect: TRectF;
   ARect: TRectF;
-  r, r2: TRectF;
+  r: TRectF;
   s: single;
   AWidth: single;
 begin
   s := GetScreenScale;
-  if AValue = -1 then
-    AWidth := 32
-  else
-    AWidth := 32;
-  //else
+
+  AWidth := 64;
 
   ABmp := TBitmap.Create(Round(AWidth*s), Round(AWidth*s));
   try
+
     ARect := RectF(ATopLeft.X, ATopLeft.Y, ATopLeft.X + 16, ATopLeft.Y + 16);
 
     AOutlineRect := ARect;
@@ -441,18 +434,33 @@ begin
 
     ABmp.Clear(claNull);
     ABmp.Canvas.BeginScene;
-    r := RectF(2, 2, (AWidth-2)*s, (AWidth-2)*s);
-    r2 := RectF(0, 0, AWidth*s, AWidth*s);
+    r := RectF(2, 2, ABmp.Width-2, ABmp.Height-2);
+    //r := RectF(0, 0, ABmp.Width, ABmp.Width);
 
-    if AValue = -1 then
+    {if AValue = -1 then
     begin
       InflateRect(r, -12, -12);
       InflateRect(r2,-12, -12);
       OffsetRect(r, 0, -6);
       OffsetRect(r2, 0, -6);
-    end;
-    DrawEllipse(ABmp.Canvas, r2, ABackgroundColor);
-    DrawEllipse(ABmp.Canvas, r, AColor);
+    end;    }
+
+    //DrawEllipse(ABmp.Canvas, r2, claBlack);//BackgroundColor);
+
+
+    //DrawEllipse(ABmp.Canvas, r, AColor);
+
+    //InflateRect(r, );
+    ABmp.Canvas.Fill.Color := AColor;
+    ABmp.Canvas.Fill.Kind := TBrushKind.Solid;
+    ABmp.Canvas.FillEllipse(r, 1);
+
+    //InflateRect();
+   { ABmp.Canvas.Stroke.Color := claBlack;
+    ABmp.Canvas.Stroke.Thickness := s;
+    ABmp.Canvas.Stroke.Kind := TBrushKind.Solid;
+    ABmp.Canvas.DrawEllipse(r, 1);  }
+
     ABmp.Canvas.EndScene;
 
    {if AValue = -1 then
@@ -466,10 +474,11 @@ begin
 
 
     ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, 1, False);
+    //ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);
     ACanvas.Fill.Color := ATextColor;
-    ACanvas.Font.Size := 9;
+    ACanvas.Font.Size := 11;
     if AValue > 0 then
-      ACanvas.FillText(ARect, IntToStr(AValue), False, 1, [], TTextAlign.Center);
+      ACanvas.FillText(ARect, IntToStr(AValue), False, 1, [], TTextAlign.Center, TTextAlign.Center);
   finally
     FreeAndNil(ABmp);
   end;

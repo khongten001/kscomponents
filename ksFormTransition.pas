@@ -77,10 +77,13 @@ type
 
   TksFormTransition = class(TksComponent)
   private
+    FInTransition: Boolean;
     function GetTransitionList: TksFormTransitionList;
+    function TransitionExists(AFrom, ATo: TCommonCustomForm): Boolean;
   public
+    constructor Create(AOwner: TComponent); override;
     function GetFormDepth(AForm: TCommonCustomForm): integer;
-    procedure Push(AForm: TCommonCustomForm; ATransition: TksTransitionType);
+    procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight);
     procedure Pop;
     property TransitionList: TksFormTransitionList read GetTransitionList;
   end;
@@ -103,6 +106,12 @@ begin
 end;
 
 { TksFormTransition }
+
+constructor TksFormTransition.Create(AOwner: TComponent);
+begin
+  inherited;
+  FInTransition := False;
+end;
 
 function TksFormTransition.GetFormDepth(AForm: TCommonCustomForm): integer;
 var
@@ -161,27 +170,28 @@ begin
   end;
 end;
 
-procedure TksFormTransition.Push(AForm: TCommonCustomForm; ATransition: TksTransitionType);
+procedure TksFormTransition.Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight);
 var
   AInfo: TksFormTransitionItem;
   AFrom, ATo: TCommonCustomForm;
   AAnimateForm: TfrmFormTransitionUI;
   ICount: integer;
-  AToolbar: IksToolbar;
+  //AToolbar: IksToolbar;
   AFormIntf: IksFormTransition;
 begin
-  AFrom := Screen.ActiveForm;
-  ATo := AForm;
-
-
-  for ICount := 0 to ATo.ComponentCount-1 do
-  begin
-    if Supports(ATo.Components[ICount], IksToolbar, AToolbar) then
-      AToolbar.SetTransition(ATransition);
-  end;
-
-  AAnimateForm := TfrmFormTransitionUI.Create(nil);
+  if FInTransition then
+    Exit;
+  FInTransition := True;
   try
+    AFrom := Screen.ActiveForm;
+    ATo := AForm;
+
+    if (AFrom = ATo) then
+      Exit;
+
+    if TransitionExists(AFrom, ATo) then
+      Exit;
+
     AInfo := TksFormTransitionItem.Create;
     AInfo.FFromForm := AFrom;
     AInfo.FToForm := ATo;
@@ -190,21 +200,53 @@ begin
     AInfo.FTransition := ATransition;
     _InternalTransitionList.Add(AInfo);
 
-    if Supports(ATo, IksFormTransition, AFormIntf) then
-      AFormIntf.BeforeTransition;
+   { for ICount := 0 to ATo.ComponentCount-1 do
+    begin
+      if Supports(ATo.Components[ICount], IksToolbar, AToolbar) then
+        AToolbar.SetTransition(ATransition);
+    end;  }
 
-    AAnimateForm.Initialise(AFrom, ATo);
-    AAnimateForm.Visible := True;
-    AAnimateForm.Animate(AInfo.FTransition, False);
-    AForm.Visible := True;
-    AAnimateForm.Visible := False;
-    AFrom.Visible := False;
-    AForm.Activate;
-    {$IFDEF MSWINDOWS}
-    AForm.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
-    {$ENDIF}
+    AAnimateForm := TfrmFormTransitionUI.Create(nil);
+    try
+
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition;
+
+
+      AAnimateForm.Initialise(AFrom, ATo);
+      AAnimateForm.Visible := True;
+      AAnimateForm.Animate(AInfo.FTransition, False);
+      AForm.Visible := True;
+      AAnimateForm.Visible := False;
+      AFrom.Visible := False;
+      AForm.Activate;
+      {$IFDEF MSWINDOWS}
+      AForm.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
+      {$ENDIF}
+    finally
+      AAnimateForm.DisposeOf;
+    end;
+
   finally
-    AAnimateForm.DisposeOf;
+    FInTransition := False;
+  end;
+end;
+
+function TksFormTransition.TransitionExists(AFrom,
+  ATo: TCommonCustomForm): Boolean;
+var
+  ICount: integer;
+  AItem: TksFormTransitionItem;
+begin
+  Result := False;
+  for ICount := 0 to GetTransitionList.Count-1 do
+  begin
+    AItem := GetTransitionList.Items[ICount];
+    if (AItem.FromForm = AFrom) and (AItem.ToForm = ATo) then
+    begin
+      Result := True;
+      Exit;
+    end;
   end;
 end;
 

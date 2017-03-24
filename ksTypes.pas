@@ -526,7 +526,7 @@ begin
       atDetail: Add(GetAccessoryFromResource(['listviewstyle','accessorydetail']));
       atEllipses: AddEllipsesAccessory;
       atFlag: AddFlagAccessory;
-      atBack: Add(GetAccessoryFromResource(['backtoolbutton',')']));
+      atBack: Add(GetAccessoryFromResource(['backtoolbutton','icon']));
       atRefresh: Add(GetAccessoryFromResource(['refreshtoolbutton','icon']));
       atAction: Add(GetAccessoryFromResource(['actiontoolbutton','icon']));
       atPlay: Add(GetAccessoryFromResource(['playtoolbutton','icon']));
