@@ -119,12 +119,15 @@ type
     procedure AddItem(AID, AText: string; AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom);
   end;
 
+  //TksSlideMenuState = (ksMsOpening, ksMsOpen, ksMsClosing, ksMsClosed);
+
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
     {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
 
   TksSlideMenu = class(TComponent)
   private
+    FInitalizedForms: TList<TCommonCustomForm>;
     FItems: TksSlideMenuItemList;
     FCallingForm: TCommonCustomForm;
     FMenuForm: TfrmSlideMenuUI;
@@ -338,9 +341,9 @@ end;
 constructor TksSlideMenu.Create(AOwner: TComponent);
 begin
   inherited;
-
   FItems := TksSlideMenuItemList.Create;
   FAppearence := TksSlideMenuAppearence.Create(Self);
+  FInitalizedForms := TList<TCommonCustomForm>.Create;
 end;
 
 destructor TksSlideMenu.Destroy;
@@ -348,6 +351,7 @@ begin
   FMenuForm.DisposeOf;
   FreeAndNil(FItems);
   FreeAndNil(FAppearence);
+  FreeAndNil(FInitalizedForms);
   inherited;
 end;
 
@@ -363,11 +367,12 @@ begin
   if FMenuForm = nil then
   begin
     FMenuForm :=  TfrmSlideMenuUI.Create(nil);
+    FMenuForm.Caption := ACallingForm.Caption;
     FMenuForm.OnSelectItem := SelectItem;
     RebuildMenu;
   end;
+  ACallingForm.Visible := False;
   FMenuForm.OpenMenu(ACallingForm);
-
 end;
 
 procedure TksSlideMenu.RebuildMenu;
@@ -431,20 +436,57 @@ begin
 
 
 
-  if AForm = nil then
+  if (AForm = nil) or (AForm = FCallingForm) then
+  begin
     AForm := FCallingForm;
+    FMenuForm.CloseMenu;
+    AForm.Visible := True;
+    Exit;
+  end;
 
-  AForm.SetBounds(0, 0, FCallingForm.Width, FCallingForm.Height);
+  if FCallingForm <> nil then
+  begin
+    if FInitalizedForms.IndexOf(FCallingForm) = -1 then
+      FInitalizedForms.Add(FCallingForm);
+  end;
+
+  {$IFDEF ANDROID}
+  // fix for Android initial form size
+  if FInitalizedForms.IndexOf(AForm) = -1 then
+  begin
+    AForm.Visible := True;
+    AForm.Visible := False;
+    FInitalizedForms.Add(AForm);
+  end;
+  {$ENDIF}
+
+  //AForm.SetBounds(0, 0, FCallingForm.Width, FCallingForm.Height);
+  {$IFDEF XE10_OR_NEWER}
+  AForm.SetBounds(FMenuForm.Bounds);
+  {$ELSE}
+  AForm.SetBounds(FMenuForm.Left, FMenuForm.Top, FMenuForm.Width, FMenuForm.Height);
+  {$ENDIF}
   FMenuForm.Image1.Bitmap := GenerateFormImageExt(AForm);
   FMenuForm.CloseMenu;
 
-  TThread.Synchronize (TThread.CurrentThread,
+  AForm.Visible := True;
+  AForm.BringToFront;
+
+  //Screen.ActiveForm := AForm;
+
+  if FCallingForm <> AForm then
+    FCallingForm.Visible := False;
+
+
+  {TThread.Synchronize (TThread.CurrentThread,
     procedure ()
     begin
       AForm.Visible := True;
       AForm.BringToFront;
       Screen.ActiveForm := AForm;
-    end);
+      if FCallingForm <> AForm then
+        FCallingForm.Visible := False;
+    end);}
 
   if mi <> nil then
   begin

@@ -375,7 +375,7 @@ type
     FObjects: TksVListObjectList;
     FTagStr: string;
     FCheckBoxVisible: Boolean;
-    FPickerService: IFMXPickerService;
+    //FPickerService: IFMXPickerService;
     FPicker: TCustomListPicker;
     FOnEditInput: TksItemEditInputEvent;
     FOnSelectPickerItem: TksItemSelectPickerItemEvent;
@@ -414,7 +414,6 @@ type
     procedure ShowEditInput;
     procedure ShowDatePicker;
     procedure ShowPicker;
-
   public
     constructor Create(Owner: TksVListItemList); virtual;
     destructor Destroy; override;
@@ -490,7 +489,7 @@ type
 
     procedure Clear;
     procedure Delete(AIndex: integer; AAnimate: Boolean); overload;
-    procedure Delete(AItem: TksVListItem); overload;
+    procedure Delete(AItem: TksVListItem; const AAnimate: Boolean = False); overload;
     property Count: integer read GetCount;
     property CheckedCount: integer read GetCheckedCount;
     property Items[index: integer]: TksVListItem read GetItem; default;
@@ -731,6 +730,7 @@ uses SysUtils, Math, System.Math.Vectors, ksCommon,
   ;
 
 
+
 procedure Register;
 begin
   RegisterComponents('Kernow Software FMX', [TksVirtualListView]);
@@ -835,7 +835,8 @@ begin
     FDetail := TksVListItemTextObject.Create(Self);
     FDetail.VertAlign := TVerticalAlignment.taVerticalCenter;
     FDetail.HorzAlign := TAlignment.taRightJustify;
-    //FDetail.TextSettings.HorzAlign := TTextAlign.Trailing;
+
+    FDetail.TextSettings.HorzAlign := TTextAlign.Trailing;
     {$IFDEF IOS}
     FDetail.TextSettings.FontColor := claDodgerblue;
     {$ELSE}
@@ -1090,12 +1091,14 @@ var
   ASelected: string;
 begin
   //AIndex := -1;
-  if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
+  //if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
   begin
-    FPickerService.CloseAllPickers;
+    //FPickerService.CloseAllPickers;
     AItems := TStringList.Create;
     try
-      FPicker := FPickerService.CreateListPicker;
+      FPicker := CreateListPicker;
+      //FPicker := FPickerService.CreateListPicker;
+      //_Pickers.Add(FPicker);
       if Assigned(FOwner.FOwner.OnGetPickerItems) then
         FOwner.FOwner.OnGetPickerItems(FOwner.FOwner, Self, ASelected, AItems);
       FPicker.Values.Assign(AItems);
@@ -1118,9 +1121,10 @@ procedure TksVListItem.ShowDatePicker;
 var
   APicker: TCustomDateTimePicker;
 begin
-  if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
+  //if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
   begin
-    APicker := FPickerService.CreateDateTimePicker;
+    APicker := CreateDatePicker;// FPickerService.CreateDateTimePicker;
+    //_Pickers.Add(APicker);
     APicker.Date := FSelectedDate;
     APicker.OnDateChanged := DoDatePickerChanged;
     APicker.Show;
@@ -1568,7 +1572,7 @@ begin
   SelectItem(AItem);
   Invalidate;
 
-  Application.ProcessMessages;
+  //Application.ProcessMessages;
 
   AItem.DoClicked;
 
@@ -2029,6 +2033,7 @@ begin
   //if Value <> FScrollPos then
   begin
     UnfocusControl;
+    HidePickers(False);
 
     FItems.UpdateItemRects;
     FScrollBar.Visible := True;
@@ -2437,9 +2442,10 @@ begin
   end;
 end;
 
-procedure TksVListItemList.Delete(AItem: TksVListItem);
+procedure TksVListItemList.Delete(AItem: TksVListItem; const AAnimate: Boolean = False);
 begin
-  FItems.Delete(FItems.IndexOf(AItem));
+  //FItems.Delete(FItems.IndexOf(AItem));
+  Delete(FItems.IndexOf(AItem), AAnimate);
 end;
 
 destructor TksVListItemList.Destroy;
@@ -3092,30 +3098,13 @@ begin
       FRenderImage.Clear(claNull);
       ABmp := TBitmap.Create(FBitmap.Width, FBitmap.Height);
       try
+        ABmp.Clear(claNull);
         ABmp.Canvas.BeginScene;
         ABmp.Canvas.Fill.Bitmap.Bitmap := FBitmap;
         ABmp.Canvas.Fill.Kind := TBrushKind.Bitmap;
         ABmp.Canvas.FillEllipse(RectF(0, 0, FBitmap.Width, FBitmap.Height), 1);
         ABmp.Canvas.EndScene;
         FRenderImage.Assign(ABmp);
-        //ACanvas.DrawBitmap(ABmp, RectF(0, 0, FBitmap.Width, FBitmap.Height), ARect, FOpacity, True);
-        //ABmp.Free;
-
-      {  ABmp := TBitmap.Create(Round(ARect.Width*4), Round(ARect.Height*4));
-
-        ABmp.Clear(claNull);
-        ABmp.Canvas.BeginScene;
-        ABmp.Canvas.Stroke.Thickness := 2;
-        ABmp.Canvas.Stroke.Color := claDimgray;
-        ABmp.Canvas.Stroke.Kind := TBrushKind.Solid;
-        ABmp.Canvas.DrawEllipse(RectF(1, 1, ABmp.Width-1, ABmp.Height-1), 1);
-        ABmp.Canvas.EndScene;    }
-
-      //  ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, FOpacity, True);
-        //ACanvas.Stroke.Color := claDimgray;
-        //ACanvas.Stroke.Kind := TBrushKind.Solid;
-        //ACanvas.DrawEllipse(ARect, 1);
-
       finally
         ABmp.Free;
       end;
@@ -3590,4 +3579,6 @@ begin
     Items[ICount].ClearCache;
 end;
 
+
 end.
+

@@ -41,9 +41,11 @@ const
   C_FADE_OPACITY = 0.5;
 
 type
+  TksTransitionMethod = (ksTmPush, ksTmPop);
+
   IksFormTransition = interface
   ['{34A12E50-B52C-4A49-B081-9CB67CA5FD6E}']
-    procedure BeforeTransition;
+    procedure BeforeTransition(AType: TksTransitionMethod);
   end;
 
   TksTransitionType = (ksFtSlideInFromLeft,
@@ -77,14 +79,17 @@ type
 
   TksFormTransition = class(TksComponent)
   private
+    FInitalizedForms: TList<TCommonCustomForm>;
     FInTransition: Boolean;
     function GetTransitionList: TksFormTransitionList;
     function TransitionExists(AFrom, ATo: TCommonCustomForm): Boolean;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     function GetFormDepth(AForm: TCommonCustomForm): integer;
     procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight);
     procedure Pop;
+    procedure PopAllForms;
     property TransitionList: TksFormTransitionList read GetTransitionList;
   end;
 
@@ -110,7 +115,14 @@ end;
 constructor TksFormTransition.Create(AOwner: TComponent);
 begin
   inherited;
+  FInitalizedForms := TList<TCommonCustomForm>.Create;
   FInTransition := False;
+end;
+
+destructor TksFormTransition.Destroy;
+begin
+  FreeAndNil(FInitalizedForms);
+  inherited;
 end;
 
 function TksFormTransition.GetFormDepth(AForm: TCommonCustomForm): integer;
@@ -137,36 +149,102 @@ var
   AInfo: TksFormTransitionItem;
   AFrom, ATo: TCommonCustomForm;
   AAnimateForm: TfrmFormTransitionUI;
+  AFormIntf: IksFormTransition;
+begin
+
+  if _InternalTransitionList.Count = 0 then
+    Exit;
+
+  if FInTransition then
+    Exit;
+  FInTransition := True;
+  try
+
+    AAnimateForm := TfrmFormTransitionUI.Create(nil);
+    try
+
+      AInfo := _InternalTransitionList.Last;
+
+      AFrom := AInfo.FToForm;
+      ATo := AInfo.FFromForm;
+
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);
+
+      AAnimateForm.Initialise(AFrom, ATo);
+      AAnimateForm.Visible := True;
+
+
+
+      AAnimateForm.Animate(AInfo.FTransition, True);
+      ATo.Visible := True;
+      AAnimateForm.Visible := False;
+
+
+      AFrom.Visible := False;
+      ATo.Activate;
+
+      {$IFDEF MSWINDOWS}
+      ATo.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
+      {$ENDIF}
+
+      _InternalTransitionList.Delete(_InternalTransitionList.Count-1);
+    finally
+      AAnimateForm.DisposeOf;
+    end;
+  finally
+    FInTransition := False;
+  end;
+end;
+
+procedure TksFormTransition.PopAllForms;
+var
+  AInfo: TksFormTransitionItem;
+  AFrom, ATo: TCommonCustomForm;
+  AAnimateForm: TfrmFormTransitionUI;
+  AFormIntf: IksFormTransition;
 begin
   if _InternalTransitionList.Count = 0 then
     Exit;
 
-  AAnimateForm := TfrmFormTransitionUI.Create(nil);
+  if FInTransition then
+    Exit;
+  FInTransition := True;
   try
+    AAnimateForm := TfrmFormTransitionUI.Create(nil);
+    try
 
-    AInfo := _InternalTransitionList.Last;
+      AInfo := _InternalTransitionList.Last;
 
-    AFrom := AInfo.FToForm;
-    ATo := AInfo.FFromForm;
+      AFrom := AInfo.FToForm;
+      ATo := _InternalTransitionList.First.FFromForm;
+
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);
+
+      AAnimateForm.Initialise(AFrom, ATo);
+      AAnimateForm.Visible := True;
 
 
-    AAnimateForm.Initialise(AFrom, ATo);
-    AAnimateForm.Visible := True;
-    AAnimateForm.Animate(AInfo.FTransition, True);
-    ATo.Visible := True;
-    AAnimateForm.Visible := False;
+
+      AAnimateForm.Animate(AInfo.FTransition, True);
+      ATo.Visible := True;
+      AAnimateForm.Visible := False;
 
 
-    AFrom.Visible := False;
-    ATo.Activate;
+      AFrom.Visible := False;
+      ATo.Activate;
 
-    {$IFDEF MSWINDOWS}
-    ATo.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
-    {$ENDIF}
+      {$IFDEF MSWINDOWS}
+      ATo.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
+      {$ENDIF}
 
-    _InternalTransitionList.Delete(_InternalTransitionList.Count-1);
+      _InternalTransitionList.Clear;//(_InternalTransitionList.Count-1);
+    finally
+      AAnimateForm.DisposeOf;
+    end;
   finally
-    AAnimateForm.DisposeOf;
+    FInTransition := False;
   end;
 end;
 
@@ -175,8 +253,6 @@ var
   AInfo: TksFormTransitionItem;
   AFrom, ATo: TCommonCustomForm;
   AAnimateForm: TfrmFormTransitionUI;
-  ICount: integer;
-  //AToolbar: IksToolbar;
   AFormIntf: IksFormTransition;
 begin
   if FInTransition then
@@ -186,11 +262,27 @@ begin
     AFrom := Screen.ActiveForm;
     ATo := AForm;
 
+
+    {$IFDEF ANDROID}
+    // fix for Android initial form size
+    if FInitalizedForms.IndexOf(AFrom) = -1 then
+      FInitalizedForms.Add(AFrom);
+
+    if FInitalizedForms.IndexOf(ATo) = -1 then
+    begin
+      ATo.Visible := True;
+      ATo.Visible := False;
+      FInitalizedForms.Add(ATo);
+    end;
+    {$ENDIF}
+
+
     if (AFrom = ATo) then
       Exit;
 
     if TransitionExists(AFrom, ATo) then
       Exit;
+
 
     AInfo := TksFormTransitionItem.Create;
     AInfo.FFromForm := AFrom;
@@ -210,7 +302,7 @@ begin
     try
 
       if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition;
+        AFormIntf.BeforeTransition(ksTmPush);
 
 
       AAnimateForm.Initialise(AFrom, ATo);
@@ -259,5 +351,6 @@ finalization
   FreeAndNil(_InternalTransitionList);
 
 end.
+
 
 

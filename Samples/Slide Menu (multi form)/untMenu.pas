@@ -8,7 +8,8 @@ uses
 type
   TdmMenu = class(TDataModule)
     ksSlideMenu1: TksSlideMenu;
-    procedure DataModuleCreate(Sender: TObject);
+    procedure ksSlideMenu1BuildMenu(Sender: TObject;
+      AItems: TksSlideMenuItemList);
   private
     { Private declarations }
   public
@@ -26,11 +27,13 @@ uses untForm1, untForm2, untForm3, ksTypes;
 
 {$R *.dfm}
 
-procedure TdmMenu.DataModuleCreate(Sender: TObject);
+procedure TdmMenu.ksSlideMenu1BuildMenu(Sender: TObject;
+  AItems: TksSlideMenuItemList);
 begin
-  dmMenu.ksSlideMenu1.AddMenuItem('','First Form', Form1, TksStandardIcon.Calendar);
-  dmMenu.ksSlideMenu1.AddMenuItem('','Second Form', Form2, TksStandardIcon.BarChart);
-  dmMenu.ksSlideMenu1.AddMenuItem('','Third Form', Form3, TksStandardIcon.Settings);
+  AItems.AddItem('','First Form', Form1, TksStandardIcon.Calendar);
+  AItems.AddItem('','Second Form', Form2, TksStandardIcon.BarChart);
+  AItems.AddItem('','Third Form', Form3, TksStandardIcon.Settings);
+
 end;
 
 end.

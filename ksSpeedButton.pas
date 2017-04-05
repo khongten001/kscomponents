@@ -98,6 +98,7 @@ begin
   FIcon := Custom;
   FBitmap := TBitmap.Create;
   FIconColor := claNull;
+  RepeatClick := False;
   ///FImage := TImage.Create(Self);
   //FImage.HitTest := False;
   //FImage.Locked := True;
@@ -243,7 +244,7 @@ begin
   inherited;
   FMouseDown := True;
   Invalidate;
-  Application.ProcessMessages;
+  //Application.ProcessMessages;
 end;
 
 
@@ -252,7 +253,7 @@ procedure TksSpeedButton.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
 begin
   FMouseDown := False;
   Invalidate;
-  Application.ProcessMessages;
+  //Application.ProcessMessages;
   inherited;
 end;
 

@@ -57,6 +57,7 @@ type
     FOnMenuButtonClick: TNotifyEvent;
     FShowMenuButton: Boolean;
     FOnBackButtonClick: TNotifyEvent;
+    FBackButtonEnabled: Boolean;
     procedure Changed(Sender: TObject);
     procedure BackButtonClicked;
     procedure SetShowMenuButton(const Value: Boolean);
@@ -71,10 +72,12 @@ type
     function GetDefaultSize: TSizeF; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    procedure DoMouseLeave;
+    procedure DoMouseLeave; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure DisableBackButton;
+    procedure EnableBackButton;
   published
     property Font: TFont read FFont write SetFont;
     property Text: string read FText write SetText;
@@ -83,6 +86,9 @@ type
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claWhitesmoke;
     property TextColor: TAlphaColor read FTextColor write SetTextColor default claBlack;
     property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
+
+
+    property OnClick;
     property OnMenuButtonClick: TNotifyEvent read FOnMenuButtonClick write FOnMenuButtonClick;
     property OnBackButtonClick: TNotifyEvent read FOnBackButtonClick write FOnBackButtonClick;
   end;
@@ -105,7 +111,10 @@ end;
 
 procedure TksToolbar.BackButtonClicked;
 begin
-  Root.Focused := nil;
+  HidePickers(True);
+  HideKeyboard;
+  //Root.Focused := nil;
+  Application.ProcessMessages;
   if FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0 then
   begin
     if (Assigned(FOnMenuButtonClick)) and (FShowMenuButton) then
@@ -115,6 +124,7 @@ begin
   begin
     if (Assigned(FOnBackButtonClick)) then
       FOnBackButtonClick(Self);
+
     FFormTransition.Pop;
   end;
 end;
@@ -141,6 +151,7 @@ begin
   FFont.OnChanged := Changed;
 
   FShowMenuButton := True;
+  FBackButtonEnabled := True;
 end;
 
 destructor TksToolbar.Destroy;
@@ -152,19 +163,30 @@ begin
   inherited;
 end;
 
+procedure TksToolbar.DisableBackButton;
+begin
+  FBackButtonEnabled := False;
+end;
+
 procedure TksToolbar.DoMouseLeave;
 begin
+  inherited;
   FMouseDown := False;
   InvalidateRect(ClipRect);
 end;
 
+procedure TksToolbar.EnableBackButton;
+begin
+  FBackButtonEnabled := True;
+end;
+
 function TksToolbar.GetButtonOpacity: single;
 begin
+  Result := 1;
   case FMouseDown of
     True: Result := 0.5;
     False: Result := 1;
   end;
-
 end;
 
 function TksToolbar.GetDefaultSize: TSizeF;
@@ -177,20 +199,26 @@ procedure TksToolbar.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
 begin
   inherited;
   FMouseDown := X < 30;
-  InvalidateRect(ClipRect);
-  Application.ProcessMessages;
-  BackButtonClicked;
+  if FMouseDown then
+  begin
+    if FBackButtonEnabled = False then
+      Exit;
+    InvalidateRect(ClipRect);
+    Application.ProcessMessages;
+    BackButtonClicked;
+  end;
 end;
 
 procedure TksToolbar.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Single);
 begin
   inherited;
-  FMouseDown := False;
-  {if FMouseDown then
+  if FMouseDown then
   begin
     FMouseDown := False;
-  end;  }
+    InvalidateRect(ClipRect);
+    Application.ProcessMessages;
+  end;
 end;
 
 procedure TksToolbar.Paint;

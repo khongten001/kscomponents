@@ -14,6 +14,7 @@ type
     ShadowEffect1: TShadowEffect;
     procedure Image1Click(Sender: TObject);
   private
+    FCanSelect: Boolean;
     FOnSelectItem: TksVListItemClickEvent;
     procedure Delay;
     { Private declarations }
@@ -48,7 +49,6 @@ end;
 procedure TfrmSlideMenuUI.CloseMenu;
 begin
   Delay;
-  ksVirtualListView1.HitTest := False;
   TAnimator.AnimateFloatWait(Image1, 'Position.X', 0, 0.2, TAnimationType.InOut, TInterpolationType.Sinusoidal);
   Visible := False;
 end;
@@ -57,9 +57,8 @@ procedure TfrmSlideMenuUI.DoShow;
 begin
   inherited;
   Delay;
-  ksVirtualListView1.HitTest := False;
   TAnimator.AnimateFloatWait(Image1, 'Position.X', C_DEFAULT_MENU_WIDTH, 0.2, TAnimationType.InOut, TInterpolationType.Sinusoidal);
-  ksVirtualListView1.HitTest := True;
+  FCanSelect := True;
 end;
 
 procedure TfrmSlideMenuUI.Image1Click(Sender: TObject);
@@ -69,17 +68,30 @@ end;
 
 procedure TfrmSlideMenuUI.OpenMenu(ACallingForm: TCommonCustomForm);
 begin
+  FCanSelect := False;
   if ksVirtualListView1.ItemIndex = -1 then
     ksVirtualListView1.ItemIndex := 0;
   ksVirtualListView1.OnItemClick := SelectItem;
   ksVirtualListView1.Width := C_DEFAULT_MENU_WIDTH;
   Image1.Bitmap := GenerateFormImageExt(ACallingForm);
   Image1.SetBounds(0, 0, ACallingForm.Width, ACallingForm.Height);
+
+
+  {$IFDEF XE10_OR_NEWER}
+  SetBounds(ACallingForm.Bounds);
+  {$ELSE}
+  SetBounds(ACallingForm.Left, ACallingForm.Top, ACallingForm.Width, ACallingForm.Height);
+  {$ENDIF}
+
+
   Visible := True;
 end;
 
 procedure TfrmSlideMenuUI.SelectItem(Sender: TObject; AItem: TksVListItem);
 begin
+  if FCanSelect = False then
+    Exit;
+  FCanSelect := False;
   if Assigned(FOnSelectItem) then
     FOnSelectItem(Self, AItem);
 end;

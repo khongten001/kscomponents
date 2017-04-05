@@ -9,38 +9,14 @@ object Form24: TForm24
   FormFactor.Devices = [Desktop]
   OnCreate = FormCreate
   DesignerMasterStyle = 2
-  object ToolBar1: TToolBar
-    Size.Width = 356.000000000000000000
-    Size.Height = 44.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 0
-    object Label1: TLabel
-      Align = Contents
-      StyledSettings = [Family, Style, FontColor]
-      Size.Width = 356.000000000000000000
-      Size.Height = 44.000000000000000000
-      Size.PlatformDefault = False
-      TextSettings.Font.Size = 16.000000000000000000
-      TextSettings.HorzAlign = Center
-      Text = 'TksSlideMenu Demo'
-    end
-    object SpeedButton1: TSpeedButton
-      Align = Left
-      Size.Width = 44.000000000000000000
-      Size.Height = 44.000000000000000000
-      Size.PlatformDefault = False
-      StyleLookup = 'detailstoolbutton'
-      Text = 'SpeedButton1'
-    end
-  end
   object TabControl1: TTabControl
     Align = Client
     Size.Width = 356.000000000000000000
     Size.Height = 392.000000000000000000
     Size.PlatformDefault = False
     TabHeight = 49.000000000000000000
-    TabIndex = 2
-    TabOrder = 1
+    TabIndex = 0
+    TabOrder = 0
     TabPosition = PlatformDefault
     Sizes = (
       356s
@@ -53,7 +29,7 @@ object Form24: TForm24
       CustomIcon = <
         item
         end>
-      IsSelected = False
+      IsSelected = True
       Size.Width = 118.000000000000000000
       Size.Height = 49.000000000000000000
       Size.PlatformDefault = False
@@ -2232,7 +2208,7 @@ object Form24: TForm24
       CustomIcon = <
         item
         end>
-      IsSelected = True
+      IsSelected = False
       Size.Width = 120.000000000000000000
       Size.Height = 49.000000000000000000
       Size.PlatformDefault = False
@@ -4277,12 +4253,22 @@ object Form24: TForm24
     Size.Height = 44.000000000000000000
     Size.PlatformDefault = False
     StyleLookup = 'bottomtoolbar'
-    TabOrder = 4
+    TabOrder = 3
+  end
+  object ksToolbar1: TksToolbar
+    Font.Size = 14.000000000000000000
+    Text = 'TksSlideMenu Demo'
+    Size.Width = 356.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    OnMenuButtonClick = ksToolbar1MenuButtonClick
   end
   object ksSlideMenu1: TksSlideMenu
-    ToggleButton = SpeedButton1
+    Appearence.HeaderFontColor = claNull
     OnSelectMenuItemEvent = ksSlideMenu1SelectMenuItemEvent
-    Left = 64
-    Top = 72
+    OnBuildMenu = ksSlideMenu1BuildMenu
+    Left = 40
+    Top = 240
   end
 end

@@ -12,13 +12,11 @@ type
   TForm24 = class(TForm)
     ToolBar1: TToolBar;
     Label1: TLabel;
-    ToolBar2: TToolBar;
-    ksSegmentButtons1: TksSegmentButtons;
     ksVirtualListView1: TksVirtualListView;
+    ToolBar2: TToolBar;
     procedure FormCreate(Sender: TObject);
     procedure ksSegmentButtons1Change(Sender: TObject);
   private
-    function GetSelectedColor: TAlphaColor;
     procedure PopulateList;
 
     { Private declarations }
@@ -40,16 +38,6 @@ begin
   PopulateList;
 end;
 
-function TForm24.GetSelectedColor: TAlphaColor;
-begin
-  Result := claNull;
-  case ksSegmentButtons1.ItemIndex of
-    0: Result := claSilver;
-    1: Result := claRed;
-    2: Result := claGreen;
-    3: Result := claDodgerblue;
-  end;
-end;
 
 procedure TForm24.ksSegmentButtons1Change(Sender: TObject);
 begin
@@ -60,7 +48,6 @@ procedure TForm24.PopulateList;
 var
   ICount: TksAccessoryType;
   AEnumName: string;
-  AItem: TksVListItem;
 begin
   ksVirtualListView1.BeginUpdate;
   try
@@ -68,8 +55,7 @@ begin
     for ICount := Low(TksAccessoryType) to High(TksAccessoryType) do
     begin
       AEnumName := GetENumName(TypeInfo(TksAccessoryType), Ord(ICount));
-      AItem := ksVirtualListView1.Items.Add(AEnumName, '', '', ICount);
-      AItem.Accessory.SetOpaqueColor(GetSelectedColor);
+      ksVirtualListView1.Items.Add(AEnumName, '', '', ICount);
     end;
   finally
     ksVirtualListView1.EndUpdate;

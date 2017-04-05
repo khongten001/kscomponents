@@ -314,7 +314,8 @@ begin
 
     ACanvas.DrawBitmap(ABmp, RectF(0,0,ABmp.Width,ABmp.Height), ADestRect, 1, True);
 
-    if FBadgeValue <> 0 then
+
+    if (FBadgeValue <> 0) and (FBadge <> nil) then
     begin
       ABadgeRect := RectF(ADestRect.Left, ADestRect.Top, ADestRect.Left+ 16, ADestRect.Top+16);
       OffsetRect(ABadgeRect, ADestRect.Width-7, -2);
@@ -325,7 +326,6 @@ begin
       if FBadgeValue > 0 then
         ACanvas.FillText(ABadgeRect, IntToStr(FBadgeValue), False, 1, [], TTextAlign.Center);
     end;
-
 
   finally
     FreeAndNil(ABmp);
@@ -352,6 +352,7 @@ begin
   begin
     s := GetScreenScale(False);
     FBadge := TBitmap.Create(Round(32*s), Round(32*s));
+    FBadge.Clear(claNull);
     FBadge.Canvas.Fill.Color := claRed;
     FBadge.Canvas.Fill.Kind := TBrushKind.Solid;
     FBadge.Canvas.BeginScene;
@@ -771,6 +772,9 @@ begin
     ATab.Realign;
   end;
   InvalidateRect(ClipRect);
+  {$IFDEF ANDROID}
+  Application.ProcessMessages;
+  {$ENDIF}
 end;
 
 { TksTabBar }

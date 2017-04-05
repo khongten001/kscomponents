@@ -27,7 +27,8 @@ unit ksCommon;
 
 interface
 
-uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, System.UIConsts, ksTypes, FMX.Forms;
+uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, FMX.Pickers,
+  System.UIConsts, ksTypes, FMX.Forms;
 
 {$I ksComponents.inc}
 
@@ -72,9 +73,18 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, System.UICons
 
   function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
 
+  procedure HideKeyboard;
+  procedure HidePickers(AInstantClose: Boolean);
+
+  function CreateListPicker: TCustomListPicker;
+  function CreateDatePicker: TCustomDateTimePicker;
+
+
+
 implementation
 
-uses FMX.Platform, SysUtils, FMX.TextLayout, Math, FMX.Utils,
+uses FMX.Platform, SysUtils, FMX.TextLayout, Math, FMX.Utils, FMX.VirtualKeyboard,
+  System.Generics.Collections,
   {$IFDEF VER290}
   FMX.Dialogs
   {$ELSE}
@@ -89,6 +99,9 @@ uses FMX.Platform, SysUtils, FMX.TextLayout, Math, FMX.Utils,
 var
   AScreenScale: single;
   ATextLayout: TTextLayout;
+  APickerService: IFMXPickerService;
+
+  _Picker: TCustomPicker;
 
 procedure ShowMessage(AText: string);
 begin
@@ -99,12 +112,81 @@ begin
   {$ENDIF}
 end;
 
+procedure HidePickers(AInstantClose: Boolean);
+begin
+  //TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, APickerService);
+  //if APickerService <> nil then
+  //  APickerService.CloseAllPickers;
+  if not AInstantClose then
+    APickerService.CloseAllPickers
+  else
+  begin
+    if _Picker <> nil then
+    begin
+      _Picker.DisposeOf;
+      _Picker := nil;
+
+    end;
+  end;
+  {if _Pickers.Count > 0 then
+  begin
+    for ICount := 0 to _Pickers.Count-1 do
+    begin
+      if TCustomPicker(_Pickers[ICount]) <> nil then
+        TCustomPicker(_Pickers[ICount]).DisposeOf;
+    end;
+    _Pickers.Clear;
+  end;}
+end;
+
+function CreateListPicker: TCustomListPicker;
+begin
+  HidePickers(False);
+  Result := APickerService.CreateListPicker;
+  _Picker := Result;
+end;
+
+function CreateDatePicker: TCustomDateTimePicker;
+begin
+  HidePickers(False);
+
+  Result := APickerService.CreateDateTimePicker;
+  _Picker := Result;
+end;
+
+
+  {
+procedure ReleasePickers;
+begin
+  HidePickers;
+  if _Pickers.Count > 0 then
+  begin
+    for ICount := 0 to _Pickers.Count-1 do
+      TCustomPicker(_Pickers[ICount]).DisposeOf;
+    _Pickers.Clear;
+  end;
+end; }
+
+
+
+procedure HideKeyboard;
+var
+  AKeyboard: IFMXVirtualKeyboardService;
+begin
+  if TPlatformServices.Current.SupportsPlatformService(IFMXVirtualKeyboardService, AKeyboard) then
+    AKeyboard.HideVirtualKeyboard;
+end;
+
 function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
 var
   AScale: single;
 begin
+  {$IFDEF ANDDROID}
   //AForm.Visible := True;
   //AForm.Visible := False;
+  //Application.ProcessMessages;
+  {$ENDIF}
+
   Result := TBitmap.Create;
   AScale := GetScreenScale(True);
   Result.BitmapScale := AScale;
@@ -486,14 +568,21 @@ end;
 
 initialization
 
+  TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, APickerService);
+
   AScreenScale := 0;
   ATextLayout := TTextLayoutManager.DefaultTextLayout.Create;
+  //_Pickers := TList<TCustomPicker>.Create;
 
 finalization
 
+  HidePickers(True);
+  //FreeAndNil(_Pickers);
   FreeAndNil(ATextLayout);
 
 
 end.
+
+
 
 

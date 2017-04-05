@@ -13,6 +13,7 @@ type
     Image2: TImage;
     Fade: TRectangle;
   private
+
     //function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
     procedure Delay;
     { Private declarations }
@@ -43,6 +44,15 @@ end;
 
 procedure TfrmFormTransitionUI.Initialise(AFrom, ATo: TCommonCustomForm);
 begin
+  {$IFDEF ANDROID}
+  // fix for Android initial form size
+  //if (AFrom.Width <> ATo.Width) or (AFrom.Height <> ATo.Height) then
+  //begin
+   // ATo.Visible := True;
+  //  ATo.Visible := False;
+  //end;
+  {$ENDIF}
+
   ATo.SetBounds(0, 0, AFrom.Width, AFrom.Height);
   Image1.WrapMode := TImageWrapMode.Original;
   Image2.WrapMode := TImageWrapMode.Original;
