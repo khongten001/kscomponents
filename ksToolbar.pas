@@ -83,6 +83,7 @@ type
     property Text: string read FText write SetText;
     property Size;
     property TabOrder;
+
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claWhitesmoke;
     property TextColor: TAlphaColor read FTextColor write SetTextColor default claBlack;
     property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
@@ -98,8 +99,8 @@ type
 
 implementation
 
-uses Math, System.TypInfo, ksCommon, SysUtils,
-  Fmx.Forms;
+uses Math, System.TypInfo, ksCommon, SysUtils, ksPickers,
+  Fmx.Forms, FMX.Platform;
 
 procedure Register;
 begin
@@ -111,10 +112,10 @@ end;
 
 procedure TksToolbar.BackButtonClicked;
 begin
-  HidePickers(True);
+  PickerService.HidePickers;
   HideKeyboard;
-  //Root.Focused := nil;
   Application.ProcessMessages;
+
   if FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0 then
   begin
     if (Assigned(FOnMenuButtonClick)) and (FShowMenuButton) then
@@ -205,7 +206,7 @@ begin
       Exit;
     InvalidateRect(ClipRect);
     Application.ProcessMessages;
-    BackButtonClicked;
+    //BackButtonClicked;
   end;
 end;
 
@@ -218,6 +219,13 @@ begin
     FMouseDown := False;
     InvalidateRect(ClipRect);
     Application.ProcessMessages;
+
+    TThread.Synchronize (TThread.CurrentThread,
+      procedure ()
+      begin
+        BackButtonClicked;
+      end);
+
   end;
 end;
 

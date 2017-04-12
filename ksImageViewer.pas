@@ -207,14 +207,14 @@ begin
 end;
 
 procedure TksImageViewer.CMGesture(var EventInfo: TGestureEventInfo);
+{$IFDEF IOS}
 var
   ADistance: integer;
   ANewZoom: single;
+{$ENDIF}
 begin
   inherited;
-  if EventInfo.GestureID = igiDoubleTap then
-    FitHeightAndWidth;
-
+  {$IFDEF IOS}
   if EventInfo.GestureID = igiZoom then
   begin
     if TInteractiveGestureFlag.gfEnd in EventInfo.Flags then
@@ -239,6 +239,7 @@ begin
     ANewZoom := Max(ANewZoom, 10);
     Zoom := ANewZoom;
   end;
+  {$ENDIF}
 end;
 
 
@@ -289,7 +290,7 @@ begin
     if ADestRect.Height < Height then
       OffsetRect(ADestRect, 0, (Height-ADestRect.Height) / 2);
 
-    //InflateRect(ADestRect, -10, -10);
+    InflateRect(ADestRect, -10, -10);
     Canvas.DrawBitmap(FBitmap,
                       RectF(0, 0, FBitmap.Width, FBitmap.Height),
                       ADestRect,

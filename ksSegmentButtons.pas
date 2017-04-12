@@ -53,7 +53,7 @@ type
     procedure SetText(const Value: string);
   protected
     procedure Paint; override;
-    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    //procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
 
   public
     constructor Create(AOwner: TComponent); override;
@@ -71,13 +71,17 @@ type
     procedure SetText(const Value: string);
     function GetBadgeValue: integer;
     procedure SetBadgeValue(const Value: integer);
-  public
+    function GetBoundsRect: TRectF;
+
+    function GetIndex: integer;  public
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
   published
     property ID: string read FID write FID;
     property Text: string read FText write SetText;
+    property BoundsRect: TRectF read GetBoundsRect;
+    property Index: integer read GetIndex;
     property BadgeValue: integer read GetBadgeValue write SetBadgeValue;
   end;
 
@@ -118,11 +122,12 @@ type
     function GetSelected: TKsSegmentButton;
     function GetSelectedID: string;
     procedure SetSelectedID(const Value: string);
+    function ButtonFromPos(x,y: single): TksSegmentButton;
   protected
     procedure Resize; override;
-    {procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    procedure DoMouseLeave; override;                }
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    //procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    {procedure DoMouseLeave; override;                }
     procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -150,6 +155,8 @@ type
   {$R *.dcr}
 
   procedure Register;
+
+  {}
 
 
 implementation
@@ -194,6 +201,16 @@ begin
   Result := FButton.Badge;
 end;
 
+function TKsSegmentButton.GetBoundsRect: TRectF;
+begin
+  Result := FButton.BoundsRect;
+end;
+
+function TKsSegmentButton.GetIndex: integer;
+begin
+  Result := FButton.Index;
+end;
+
 procedure TKsSegmentButton.SetBadgeValue(const Value: integer);
 begin
   FButton.Badge := Value;
@@ -224,6 +241,23 @@ begin
   end;
 end;
 
+function TksSegmentButtons.ButtonFromPos(x, y: single): TksSegmentButton;
+var
+  ICount: integer;
+  ABtn: TksSegmentButton;
+begin
+  Result := nil;
+  for ICount := 0 to FSegments.Count-1 do
+  begin
+    ABtn := FSegments.Items[ICount] as TksSegmentButton;
+    if PtInRect(ABtn.BoundsRect, PointF(x, y)) then
+    begin
+      Result := ABtn;
+      Exit;
+    end;
+  end;
+end;
+
 constructor TksSegmentButtons.Create(AOwner: TComponent);
 var
   AGuid: TGUID;
@@ -247,7 +281,9 @@ begin
   FreeAndNil(FSegments);
   inherited;
 end;
-                {
+
+
+{
 procedure TksSegmentButtons.DoMouseLeave;
 begin
   inherited;
@@ -271,7 +307,29 @@ begin
   if Selected <> nil then
     Result := Selected.ID;
 end;
-         {
+
+procedure TksSegmentButtons.MouseDown(Button: TMouseButton; Shift: TShiftState;
+  X, Y: Single);
+var
+  ASegment: TksSegmentButton;
+begin
+  inherited;
+  HitTest := False;
+  ASegment := ButtonFromPos(x, y);
+  if ASegment <> nil then
+  begin
+    if ASegment.Index <> FItemIndex then
+    begin
+      ItemIndex := ASegment.Index;
+      if Assigned(FOnSelectSegment) then
+        FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]);
+    end;
+  end;
+  Application.ProcessMessages;
+  HitTest := True;
+end;
+
+{
 procedure TksSegmentButtons.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single);
 begin
   inherited;
@@ -384,15 +442,15 @@ begin
 
     if Assigned(FOnChange) then
       FOnChange(Self);
-    if FItemIndex > -1 then
+    {if FItemIndex > -1 then
     begin
       TThread.Synchronize (TThread.CurrentThread,
       procedure ()
       begin
         if Assigned(FOnSelectSegment) then
         FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]);
-      end);
-    end;
+      end); }
+
   end;
 end;
 
@@ -475,16 +533,25 @@ begin
   inherited;
   FOwner := (AOwner as TksSegmentButtons);
   Stored := False;
+  HitTest := False;
 end;
-
+              (*
 procedure TksSegmentSpeedButton.MouseDown(Button: TMouseButton;
   Shift: TShiftState; X, Y: Single);
 begin
   inherited;
-  if FOwner.HitTest = False then
-    Exit;
-  FOwner.ItemIndex := FIndex;
-end;
+  //if HitTest = False then
+  //  Exit;
+
+  {if FOwner.ItemIndex <> FIndex then
+  begin
+    HitTest := False;
+    Application.ProcessMessages;
+    FOwner.ItemIndex := FIndex;
+    FOwner.DoSelectSegment;
+    HitTest := True;
+  end;  }
+end;    *)
 
 procedure TksSegmentSpeedButton.Paint;
 begin

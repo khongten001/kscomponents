@@ -59,8 +59,8 @@ type
                        ksFtNoTransition);
 
   TksFormTransitionItem = class
-    FFromForm: TCommonCustomForm;
-    FToForm: TCommonCustomForm;
+    [weak]FFromForm: TCommonCustomForm;
+    [weak]FToForm: TCommonCustomForm;
     FTransition: TksTransitionType;
   public
     property FromForm: TCommonCustomForm read FFromForm;
@@ -87,7 +87,9 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetFormDepth(AForm: TCommonCustomForm): integer;
-    procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight);
+    procedure Push(AForm: TCommonCustomForm;
+                   const ATransition: TksTransitionType = ksFtSlideInFromRight;
+                   const ARecordPush: Boolean = True);
     procedure Pop;
     procedure PopAllForms;
     property TransitionList: TksFormTransitionList read GetTransitionList;
@@ -95,12 +97,16 @@ type
 
   //{$R *.dcr}
 
+  procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight; const ARecordPush: Boolean = True);
+  procedure ClearFormTransitionStack;
+
   procedure Register;
 
 
 implementation
 
-uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI, ksToolbar;
+uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI, ksToolbar,
+  ksPickers;
 
 var
   _InternalTransitionList: TksFormTransitionList;
@@ -108,6 +114,23 @@ var
 procedure Register;
 begin
   RegisterComponents('Kernow Software FMX', [TksFormTransition]);
+end;
+
+procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight; const ARecordPush: Boolean = True);
+var
+  ATran: TksFormTransition;
+begin
+  ATran := TksFormTransition.Create(nil);
+  try
+    ATran.Push(AForm, ATransition, ARecordPush);
+  finally
+    FreeAndNil(ATran);
+  end;
+end;
+
+procedure ClearFormTransitionStack;
+begin
+  _InternalTransitionList.Clear;
 end;
 
 { TksFormTransition }
@@ -151,6 +174,7 @@ var
   AAnimateForm: TfrmFormTransitionUI;
   AFormIntf: IksFormTransition;
 begin
+  Screen.ActiveForm.Focused := nil;
 
   if _InternalTransitionList.Count = 0 then
     Exit;
@@ -195,6 +219,10 @@ begin
   finally
     FInTransition := False;
   end;
+
+
+
+
 end;
 
 procedure TksFormTransition.PopAllForms;
@@ -248,7 +276,9 @@ begin
   end;
 end;
 
-procedure TksFormTransition.Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight);
+procedure TksFormTransition.Push(AForm: TCommonCustomForm;
+  const ATransition: TksTransitionType = ksFtSlideInFromRight;
+  const ARecordPush: Boolean = True);
 var
   AInfo: TksFormTransitionItem;
   AFrom, ATo: TCommonCustomForm;
@@ -257,8 +287,16 @@ var
 begin
   if FInTransition then
     Exit;
+
   FInTransition := True;
   try
+    {if PickerService.PickerCount > 0 then
+    begin
+      PickerService.HidePickers;
+      Sleep(1000);
+    end;  }
+    PickerService.HidePickers;
+
     AFrom := Screen.ActiveForm;
     ATo := AForm;
 
@@ -287,23 +325,15 @@ begin
     AInfo := TksFormTransitionItem.Create;
     AInfo.FFromForm := AFrom;
     AInfo.FToForm := ATo;
-
-
     AInfo.FTransition := ATransition;
-    _InternalTransitionList.Add(AInfo);
-
-   { for ICount := 0 to ATo.ComponentCount-1 do
-    begin
-      if Supports(ATo.Components[ICount], IksToolbar, AToolbar) then
-        AToolbar.SetTransition(ATransition);
-    end;  }
+    if ARecordPush then
+      _InternalTransitionList.Add(AInfo);
 
     AAnimateForm := TfrmFormTransitionUI.Create(nil);
     try
 
       if Supports(ATo, IksFormTransition, AFormIntf) then
         AFormIntf.BeforeTransition(ksTmPush);
-
 
       AAnimateForm.Initialise(AFrom, ATo);
       AAnimateForm.Visible := True;
@@ -320,6 +350,8 @@ begin
     end;
 
   finally
+    if not ARecordPush then
+      FreeAndNil(AInfo);
     FInTransition := False;
   end;
 end;

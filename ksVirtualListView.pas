@@ -31,7 +31,7 @@ interface
 
 uses System.Classes, System.Types, ksTypes, FMX.Graphics, System.UITypes,
   System.Generics.Collections, FMX.Types, FMX.InertialMovement, System.UIConsts,
-  FMX.StdCtrls, FMX.Controls, FMX.Platform, FMX.Objects, FMX.Edit, FMX.Pickers,
+  FMX.StdCtrls, FMX.Controls, FMX.Platform, FMX.Objects, FMX.Edit,
   FMX.TextLayout;
 
 const
@@ -376,7 +376,7 @@ type
     FTagStr: string;
     FCheckBoxVisible: Boolean;
     //FPickerService: IFMXPickerService;
-    FPicker: TCustomListPicker;
+    //FPicker: TCustomListPicker;
     FOnEditInput: TksItemEditInputEvent;
     FOnSelectPickerItem: TksItemSelectPickerItemEvent;
     FSelectedDate: TDateTime;
@@ -408,8 +408,8 @@ type
     procedure SetOffset(const Value: integer);
     procedure SetCanSelect(const Value: Boolean);
     procedure SetIconSize(const Value: integer);
-    procedure DoDatePickerChanged(Sender: TObject; const ADateTime: TDateTime);
-    procedure DoItemPickerChanged(Sender: TObject; const AValueIndex: Integer);
+    //procedure DoDatePickerChanged(Sender: TObject; const ADateTime: TDateTime);
+    procedure DoItemPickerChanged(Sender: TObject; AItem: string; AValueIndex: Integer);
 
     procedure ShowEditInput;
     procedure ShowDatePicker;
@@ -724,7 +724,7 @@ procedure Register;
 
 implementation
 
-uses SysUtils, Math, System.Math.Vectors, ksCommon,
+uses SysUtils, Math, System.Math.Vectors, ksCommon, ksPickers,
   DateUtils, FMX.Forms, FMX.Ani, FMX.Dialogs
   {$IFDEF XE10_OR_NEWER} , FMX.DialogService {$ENDIF}
   ;
@@ -904,7 +904,7 @@ begin
 
   end;
 end;
-
+             {
 procedure TksVListItem.DoDatePickerChanged(Sender: TObject;
   const ADateTime: TDateTime);
 begin
@@ -913,19 +913,15 @@ begin
   FDetail.ClearCache;
   if Assigned(FOnDateSelected) then
     FOnDateSelected(Self, Self, ADateTime);
-end;
+end;        }
 
 procedure TksVListItem.DoItemPickerChanged(Sender: TObject;
-  const AValueIndex: Integer);
+  AItem: string; AValueIndex: Integer);
 begin
-  //TThread.Synchronize (TThread.CurrentThread,
-  //procedure ()
-  //begin
-    FDetail.Text := FPicker.Values[AValueIndex];
-    FDetail.ClearCache;
-    if Assigned(FOnSelectPickerItem) then
-      FOnSelectPickerItem(FOwner.FOwner, Self, FPicker.Values[AValueIndex]);
-  //end);
+  FDetail.Text := AItem;// (Sender as TCustomListPicker).Values[AValueIndex];// FPicker.Values[AValueIndex];
+  FDetail.ClearCache;
+  if Assigned(FOnSelectPickerItem) then
+    FOnSelectPickerItem(FOwner.FOwner, Self, AItem);
 end;
 
 procedure TksVListItem.SelectItem(ADeselectAfter: integer);
@@ -1089,6 +1085,8 @@ procedure TksVListItem.ShowPicker;
 var
   AItems: TStrings;
   ASelected: string;
+  //APicker: TCustomListPicker;
+  AIndex: integer;
 begin
   //AIndex := -1;
   //if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
@@ -1096,20 +1094,21 @@ begin
     //FPickerService.CloseAllPickers;
     AItems := TStringList.Create;
     try
-      FPicker := CreateListPicker;
+      //APicker := PickerService.CreateListPicker;
       //FPicker := FPickerService.CreateListPicker;
       //_Pickers.Add(FPicker);
       if Assigned(FOwner.FOwner.OnGetPickerItems) then
         FOwner.FOwner.OnGetPickerItems(FOwner.FOwner, Self, ASelected, AItems);
-      FPicker.Values.Assign(AItems);
+      //APicker.Values.Assign(AItems);
 
-      if AItems.IndexOf(FDetail.Text) > -1 then
-        FPicker.ItemIndex := AItems.IndexOf(FDetail.Text)
+      if AItems.IndexOf(ASelected) > -1 then
+        AIndex := AItems.IndexOf(ASelected)
       else
-        FPicker.ItemIndex := 0;
+        AIndex := 0;
 
-      FPicker.OnValueChanged := DoItemPickerChanged;
-      FPicker.Show;
+      PickerService.ShowItemPicker(AItems, '',  AIndex, DoItemPickerChanged);
+      //APicker.OnValueChanged := DoItemPickerChanged;
+      //APicker.Show;
 
     finally
       FreeAndNil(AItems);
@@ -1118,18 +1117,19 @@ begin
 end;
 
 procedure TksVListItem.ShowDatePicker;
-var
-  APicker: TCustomDateTimePicker;
+{var
+  APicker: TCustomDateTimePicker;     }
 begin
+  { TODO : TO DO }
   //if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
-  begin
-    APicker := CreateDatePicker;// FPickerService.CreateDateTimePicker;
+ { begin
+    APicker := PickerService.CreateDatePicker;// FPickerService.CreateDateTimePicker;
     //_Pickers.Add(APicker);
     APicker.Date := FSelectedDate;
     APicker.OnDateChanged := DoDatePickerChanged;
     APicker.Show;
     APicker.OnDateChanged := DoDatePickerChanged;
-  end;
+  end; }
 end;
 
 procedure TksVListItem.SlideOut(ADirection: TksVListSwipeDirection);
@@ -2033,7 +2033,7 @@ begin
   //if Value <> FScrollPos then
   begin
     UnfocusControl;
-    HidePickers(False);
+    PickerService.HidePickers;//HidePickers(False);
 
     FItems.UpdateItemRects;
     FScrollBar.Visible := True;

@@ -27,7 +27,7 @@ unit ksCommon;
 
 interface
 
-uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, FMX.Pickers,
+uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types,
   System.UIConsts, ksTypes, FMX.Forms;
 
 {$I ksComponents.inc}
@@ -73,12 +73,10 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types, FMX.Pickers,
 
   function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
 
+
   procedure HideKeyboard;
-  procedure HidePickers(AInstantClose: Boolean);
 
-  function CreateListPicker: TCustomListPicker;
-  function CreateDatePicker: TCustomDateTimePicker;
-
+  // pickers
 
 
 implementation
@@ -99,9 +97,9 @@ uses FMX.Platform, SysUtils, FMX.TextLayout, Math, FMX.Utils, FMX.VirtualKeyboar
 var
   AScreenScale: single;
   ATextLayout: TTextLayout;
-  APickerService: IFMXPickerService;
+  //APickerService: IFMXPickerService;
 
-  _Picker: TCustomPicker;
+//  _Picker: TCustomPicker;
 
 procedure ShowMessage(AText: string);
 begin
@@ -111,7 +109,7 @@ begin
   TDialogService.ShowMessage(AText);
   {$ENDIF}
 end;
-
+         (*
 procedure HidePickers(AInstantClose: Boolean);
 begin
   //TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, APickerService);
@@ -119,15 +117,15 @@ begin
   //  APickerService.CloseAllPickers;
   if not AInstantClose then
     APickerService.CloseAllPickers
-  else
-  begin
-    if _Picker <> nil then
+  //else
+  //begin
+    {if _Picker <> nil then
     begin
       _Picker.DisposeOf;
       _Picker := nil;
-
+          }
     end;
-  end;
+  //end;
   {if _Pickers.Count > 0 then
   begin
     for ICount := 0 to _Pickers.Count-1 do
@@ -137,8 +135,9 @@ begin
     end;
     _Pickers.Clear;
   end;}
-end;
+end;    *)
 
+         {
 function CreateListPicker: TCustomListPicker;
 begin
   HidePickers(False);
@@ -152,7 +151,7 @@ begin
 
   Result := APickerService.CreateDateTimePicker;
   _Picker := Result;
-end;
+end;          }
 
 
   {
@@ -568,7 +567,7 @@ end;
 
 initialization
 
-  TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, APickerService);
+//  TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, APickerService);
 
   AScreenScale := 0;
   ATextLayout := TTextLayoutManager.DefaultTextLayout.Create;
@@ -576,7 +575,7 @@ initialization
 
 finalization
 
-  HidePickers(True);
+//  HidePickers(True);
   //FreeAndNil(_Pickers);
   FreeAndNil(ATextLayout);
 
