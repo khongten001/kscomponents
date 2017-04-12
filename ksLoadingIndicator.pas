@@ -40,6 +40,14 @@ uses System.UIConsts, FMX.Types, SysUtils, Types, FMX.Ani;
 var
   APos: TPointF;
 
+
+procedure Register;
+begin
+  RegisterComponents('Kernow Software FMX', [TksLoadingIndicator]);
+end;
+
+
+
 function FindLoadingIndicator(AForm: TCommonCustomForm): TksLoadingIndicator;
 var
   ICount: integer;
