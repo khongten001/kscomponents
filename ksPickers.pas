@@ -82,8 +82,8 @@ begin
   {$IFDEF DPF}
   FActionSheet := TDPFUIActionSheet.Create(nil);
   {$ENDIF}
-  TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService);
-  FPicker := CreateListPicker;
+  if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
+    FPicker := CreateListPicker;
 end;
 
 function TksPickerService.CreateDatePicker: TCustomDateTimePicker;

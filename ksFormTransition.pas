@@ -98,6 +98,7 @@ type
   //{$R *.dcr}
 
   procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight; const ARecordPush: Boolean = True);
+  procedure Pop;
   procedure ClearFormTransitionStack;
 
   procedure Register;
@@ -123,6 +124,18 @@ begin
   ATran := TksFormTransition.Create(nil);
   try
     ATran.Push(AForm, ATransition, ARecordPush);
+  finally
+    FreeAndNil(ATran);
+  end;
+end;
+
+procedure Pop;
+var
+  ATran: TksFormTransition;
+begin
+  ATran := TksFormTransition.Create(nil);
+  try
+    ATran.Pop;
   finally
     FreeAndNil(ATran);
   end;
@@ -176,7 +189,7 @@ var
 begin
   Screen.ActiveForm.Focused := nil;
 
-  if _InternalTransitionList.Count = 0 then
+  if _InternalTransitionList.Count < 1 then
     Exit;
 
   if FInTransition then

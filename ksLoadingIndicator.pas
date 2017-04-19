@@ -33,6 +33,9 @@ type
   procedure HideLoadingIndicator(AForm: TCommonCustomForm);
 
 
+
+procedure Register;
+
 implementation
 
 uses System.UIConsts, FMX.Types, SysUtils, Types, FMX.Ani;

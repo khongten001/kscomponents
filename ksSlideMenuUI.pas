@@ -13,6 +13,8 @@ type
     Image1: TImage;
     ShadowEffect1: TShadowEffect;
     procedure Image1Click(Sender: TObject);
+    procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
+      Shift: TShiftState);
   private
     FCanSelect: Boolean;
     FOnSelectItem: TksVListItemClickEvent;
@@ -59,6 +61,14 @@ begin
   Delay;
   TAnimator.AnimateFloatWait(Image1, 'Position.X', C_DEFAULT_MENU_WIDTH, 0.2, TAnimationType.InOut, TInterpolationType.Sinusoidal);
   FCanSelect := True;
+end;
+
+procedure TfrmSlideMenuUI.FormKeyUp(Sender: TObject; var Key: Word;
+  var KeyChar: Char; Shift: TShiftState);
+begin
+  if Key = vkHardwareBack then
+    Image1Click(Self);
+  Key := 0;
 end;
 
 procedure TfrmSlideMenuUI.Image1Click(Sender: TObject);

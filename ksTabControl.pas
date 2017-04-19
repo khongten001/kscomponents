@@ -205,13 +205,11 @@ type
 
   {$R *.dcr}
 
-
   procedure Register;
-
 
 implementation
 
-uses SysUtils,  Math, FMX.Forms, ksCommon, TypInfo, FMX.Ani, fmx.dialogs;
+uses SysUtils, Math, FMX.Forms, ksCommon, TypInfo, FMX.Ani;
 
 procedure Register;
 begin
@@ -644,7 +642,7 @@ var
   ARect: TRectF;
 begin
   inherited;
-  Canvas.Fill.Color := FAppearence.BackgroundColor;
+(*  Canvas.Fill.Color := FAppearence.BackgroundColor;
   if (SelectedTab <> nil) then
   begin
     if SelectedTab.Background <> claNull then
@@ -671,7 +669,7 @@ begin
     end;
   {$ENDIF}
   end;
-
+           *)
 end;
 
 procedure TksTabControl.PrevTab;

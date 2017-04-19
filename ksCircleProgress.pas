@@ -142,7 +142,7 @@ var
   AThickness: integer;
   AScale: single;
 begin
-  AScale := C_SCALE;// GetScreenScale(False);
+  AScale := Min(C_SCALE, 2);// GetScreenScale(False);
   FBitmap.SetSize(Round(Width*AScale), Round(Height*AScale));
   FBitmap.Clear(claNull);
   FBitmap.Canvas.BeginScene;

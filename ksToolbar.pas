@@ -46,8 +46,8 @@ type
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
   TksToolbar = class(TPresentedControl)
   private
-    FBackBmp: TBitmap;
-    FMenuBmp: TBitmap;
+    //BackBmp: TBitmap;
+    //FMenuBmp: TBitmap;
     FTintColor: TAlphaColor;
     FFont: TFont;
     FTextColor: TAlphaColor;
@@ -138,8 +138,8 @@ end;
 constructor TksToolbar.Create(AOwner: TComponent);
 begin
   inherited;
-  FMenuBmp := TBitmap.Create;
-  FBackBmp := TBitmap.Create;
+  //FMenuBmp := TBitmap.Create;
+  //FBackBmp := TBitmap.Create;
   FFont := TFont.Create;
   FFont.Size := 14;
   Align := TAlignLayout.Top;
@@ -158,8 +158,8 @@ end;
 destructor TksToolbar.Destroy;
 begin
   FreeAndNil(FFormTransition);
-  FreeAndNil(FMenuBmp);
-  FreeAndNil(FBackBmp);
+  //FreeAndNil(FMenuBmp);
+  //FreeAndNil(FBackBmp);
   FreeAndNil(FFont);
   inherited;
 end;
@@ -235,47 +235,48 @@ var
   s: single;
 begin
   inherited;
-  ABmp := nil;
+  //ABmp := nil;
   s := GetScreenScale(False);
-  if FBackBmp.IsEmpty then
-    FBackBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft));
+  //if FBackBmp.IsEmpty then
+  //  FBackBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft));
 
-  if FMenuBmp.IsEmpty then
-    FMenuBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atDetails));
+  //if FMenuBmp.IsEmpty then
+  //  FMenuBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atDetails));
 
   if (csDesigning in ComponentState) then
-    ABmp := FMenuBmp
+    ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atDetails)
   else
   begin
     if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) then
     begin
       if (FShowMenuButton) then
-        ABmp := FMenuBmp;
+        ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atDetails);
     end
     else
-      ABmp := FBackBmp;
+      ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft);
   end;
 
 
 
   Canvas.BeginScene;
+  try
+    Canvas.Fill.Color := FTintColor;
+    Canvas.Fill.Kind := TBrushKind.Solid;
+    Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
 
-  Canvas.Fill.Color := FTintColor;
-  Canvas.Fill.Kind := TBrushKind.Solid;
-  Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
+    Canvas.Font.Assign(FFont);
+    Canvas.Fill.Color := FTextColor;
+    Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
 
-  Canvas.Font.Assign(FFont);
-  Canvas.Fill.Color := FTextColor;
-  Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
+    ReplaceOpaqueColor(ABmp, FTextColor);
+    Canvas.DrawBitmap(ABmp,
+                      RectF(0, 0, ABmp.Width, ABmp.Height),
+                      RectF(4, (Height/2)-((ABmp.Height/s)/2), 4+(ABmp.Width/s), (Height/2)+((ABmp.Height/s)/2)),
+                      GetButtonOpacity);
 
-  ReplaceOpaqueColor(ABmp, FTextColor);
-  Canvas.DrawBitmap(ABmp,
-                    RectF(0, 0, ABmp.Width, ABmp.Height),
-                    RectF(4, (Height/2)-((ABmp.Height/s)/2), 4+(ABmp.Width/s), (Height/2)+((ABmp.Height/s)/2)),
-                    GetButtonOpacity);
-
-
-  Canvas.EndScene;
+  finally
+    Canvas.EndScene;
+  end;
 end;
 
 procedure TksToolbar.SetFont(const Value: TFont);

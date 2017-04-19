@@ -177,11 +177,13 @@ end;
 procedure TksProgressIndicator.Paint;
 begin
   inherited;
+  Canvas.BeginScene;
   Canvas.DrawBitmap(FBitmap,
                     RectF(0, 0, FBitmap.Width, FBitmap.Height),
                     ClipRect,
                     1,
                     False);
+  Canvas.EndScene;
 end;
 
 procedure TksProgressIndicator.Redraw;
