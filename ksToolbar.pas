@@ -46,8 +46,6 @@ type
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
   TksToolbar = class(TPresentedControl)
   private
-    //BackBmp: TBitmap;
-    //FMenuBmp: TBitmap;
     FTintColor: TAlphaColor;
     FFont: TFont;
     FTextColor: TAlphaColor;
@@ -67,7 +65,6 @@ type
     procedure SetFont(const Value: TFont);
     function GetButtonOpacity: single;
   protected
-    //procedure SetTransition(ATransition: TksTransitionType);
     procedure Paint; override;
     function GetDefaultSize: TSizeF; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
@@ -138,8 +135,6 @@ end;
 constructor TksToolbar.Create(AOwner: TComponent);
 begin
   inherited;
-  //FMenuBmp := TBitmap.Create;
-  //FBackBmp := TBitmap.Create;
   FFont := TFont.Create;
   FFont.Size := 14;
   Align := TAlignLayout.Top;

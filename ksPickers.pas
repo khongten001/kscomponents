@@ -110,8 +110,6 @@ end;
 {$IFDEF DPF}
 procedure TksPickerService.DoActionSheetButtonClick(Sender: TObject;
   ButtonIndex: Integer);
-var
-  t: itask;
 begin
   if ButtonIndex < FPickerITems.Count then
     DoSelectItem(Sender, ButtonIndex);
