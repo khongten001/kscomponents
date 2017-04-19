@@ -642,7 +642,7 @@ var
   ARect: TRectF;
 begin
   inherited;
-(*  Canvas.Fill.Color := FAppearence.BackgroundColor;
+  Canvas.Fill.Color := FAppearence.BackgroundColor;
   if (SelectedTab <> nil) then
   begin
     if SelectedTab.Background <> claNull then
@@ -669,7 +669,7 @@ begin
     end;
   {$ENDIF}
   end;
-           *)
+
 end;
 
 procedure TksTabControl.PrevTab;

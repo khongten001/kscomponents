@@ -183,7 +183,7 @@ end;
 
 function TksToolbar.GetButtonOpacity: single;
 begin
-  Result := 1;
+  //esult := 1;
   case FMouseDown of
     True: Result := 0.5;
     False: Result := 1;
@@ -235,7 +235,7 @@ var
   s: single;
 begin
   inherited;
-  //ABmp := nil;
+  ABmp := nil;
   s := GetScreenScale(False);
   //if FBackBmp.IsEmpty then
   //  FBackBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft));
