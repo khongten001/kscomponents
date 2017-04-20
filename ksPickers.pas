@@ -38,10 +38,14 @@ uses FMX.Pickers, Classes
 
 type
   TksSelectPickerItemEvent = procedure(Sender: TObject; AItem: string; AIndex: integer) of object;
+  TksSelectPickerDateEvent = procedure(Sender: TObject; ADate: TDateTime) of object;
+  TksSelectPickerTimeEvent = procedure(Sender: TObject; ATime: TDateTime) of object;
 
   TksPickerService = class
   private
     [weak]FPicker: TCustomListPicker;
+    [weak]FDatePicker: TCustomDateTimePicker;
+    [weak]FTimePicker: TCustomDateTimePicker;
     FPickerItems: TStrings;
     {$IFDEF DPF}
     FActionSheet: TDPFUIActionSheet;
@@ -49,13 +53,17 @@ type
     FPickerService: IFMXPickerService;
 
     FOnItemSelected: TksSelectPickerItemEvent;
+    FOnDateSelected: TksSelectPickerDateEvent;
+    FOnTimeSelected: TksSelectPickerDateEvent;
     //FOnItemSelected: TOnValueChanged;
     {$IFDEF DPF}
     procedure DoActionSheetButtonClick(Sender: TObject; ButtonIndex: Integer);
     procedure DoSelectItem(Sender: TObject; const AItemIndex: integer);
     {$ENDIF}
     procedure DoItemSelected(Sender: TObject; const AValueIndex: Integer);
+    procedure DoDateSelected(Sender: TObject; const ADate: TDateTime);
     function CreateListPicker: TCustomListPicker;
+    procedure DoTimeSelected(Sender: TObject; const ATime: TDateTime);
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -63,6 +71,8 @@ type
     procedure ShowActionSheet(AItems: TStrings; ATitle: string; AOnSelect: TksSelectPickerItemEvent); overload;
     procedure ShowItemPicker(AItems: array of string; ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent); overload;
     procedure ShowItemPicker(AItems: TStrings; ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent); overload;
+    procedure ShowDatePicker(ATitle: string; ASelected: TDateTime; AOnSelect: TksSelectPickerDateEvent); overload;
+    procedure ShowTimePicker(ATitle: string; ASelected: TDateTime; AOnSelect: TksSelectPickerTimeEvent);
     function CreateDatePicker: TCustomDateTimePicker;
     procedure HidePickers;//nst AForce: Boolean = False);
   end;
@@ -83,12 +93,18 @@ begin
   FActionSheet := TDPFUIActionSheet.Create(nil);
   {$ENDIF}
   if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
+  begin
     FPicker := CreateListPicker;
+    FDatePicker := CreateDatePicker;
+    FTimePicker := CreateDatePicker;
+    FTimePicker.ShowMode := TDatePickerShowMode.Time;
+  end;
 end;
 
 function TksPickerService.CreateDatePicker: TCustomDateTimePicker;
 begin
   Result := FPickerService.CreateDateTimePicker;
+
 end;
 
 function TksPickerService.CreateListPicker: TCustomListPicker;
@@ -115,6 +131,20 @@ begin
     DoSelectItem(Sender, ButtonIndex);
 end;
 {$ENDIF}
+
+procedure TksPickerService.DoDateSelected(Sender: TObject;
+  const ADate: TDateTime);
+begin
+  if Assigned(FOnDateSelected) then
+    FOnDateSelected(Self, ADate);
+end;
+
+procedure TksPickerService.DoTimeSelected(Sender: TObject;
+  const ATime: TDateTime);
+begin
+  if Assigned(FOnTimeSelected) then
+    FOnTimeSelected(Self, ATime);
+end;
 
 procedure TksPickerService.DoItemSelected(Sender: TObject;
   const AValueIndex: Integer);
@@ -196,16 +226,27 @@ begin
   {$ENDIF}
 end;
 
+procedure TksPickerService.ShowDatePicker(ATitle: string;
+  ASelected: TDateTime; AOnSelect: TksSelectPickerDateEvent);
+begin
+  FOnDateSelected := AOnSelect;
+  FDatePicker.OnDateChanged := DoDateSelected;
+  FDatePicker.Date := ASelected;
+  FDatePicker.Show;
+end;
+
+procedure TksPickerService.ShowTimePicker(ATitle: string;
+  ASelected: TDateTime; AOnSelect: TksSelectPickerTimeEvent);
+begin
+  FOnTimeSelected := AOnSelect;
+  FTimePicker.OnDateChanged := DoTimeSelected;
+  FTimePicker.Date := ASelected;
+  FTimePicker.Show;
+end;
+
 procedure TksPickerService.ShowItemPicker(AItems: TStrings; ATitle: string;
   AIndex: integer; AOnSelect: TksSelectPickerItemEvent);
 begin
-  //HidePickers;
-  //FOnItemSelected := nil;
-  //FPicker := CreateListPicker;
-
-  //if FListPicker = nil then
-  //  CreateListPicker;
-
   FPickerITems.Assign(AItems);
   FPicker.Values.Assign(AItems);
   FPicker.ItemIndex := AIndex;

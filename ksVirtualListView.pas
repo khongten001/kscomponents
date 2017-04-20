@@ -63,7 +63,7 @@ type
   TksVListSwipeDirection = (ksSwipeFromLeft, ksSwipeFromRight);
   TksVListItemPurpose = (None, Header);
   TksVListItemState = (Normal, Deleting, Deleted, Sliding);
-  TksVListItemSelectorType = (ksSelectorNone, ksSelectorEdit, ksSelectorPicker, ksSelectorDate);
+  TksVListItemSelectorType = (ksSelectorNone, ksSelectorEdit, ksSelectorPicker, ksSelectorDate, ksSelectorTime);
   TksImageShape = (ksImageRect, ksImageCircle);
 
   TksVListItemClickEvent = procedure(Sender: TObject; AItem: TksVListItem) of object;
@@ -75,6 +75,7 @@ type
   TksItemSelectPickerItemEvent = procedure(Sender: TObject; ARow: TksVListItem; AText: string) of object;
 
   TksItemDateSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ADate: TDateTime) of object;
+  TksItemTimeSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ATime: TDateTime) of object;
   TksItemGetPickerItemsEvent = procedure(Sender: TObject; ARow: TksVListItem; var ASelected: string; AItems: TSTrings) of object;
 
 
@@ -379,10 +380,14 @@ type
     //FPicker: TCustomListPicker;
     FOnEditInput: TksItemEditInputEvent;
     FOnSelectPickerItem: TksItemSelectPickerItemEvent;
+    //FOnSelectPickerDate: TksItemSelectPickerDateEvent;
     FSelectedDate: TDateTime;
+    FSelectedTime: TDateTime;
+    FSelectedItem: string;
     FEditFieldKeyboardType: TVirtualKeyboardType;
     FSelectorType: TksVListItemSelectorType;
     FOnDateSelected: TksItemDateSelectedEvent;
+    FOnTimeSelected: TksItemTimeSelectedEvent;
     // procedure CacheRowToBitmap;
     procedure Changed;
     procedure SetAccessory(const Value: TksVListItemAccessoryObject);
@@ -410,10 +415,13 @@ type
     procedure SetIconSize(const Value: integer);
     //procedure DoDatePickerChanged(Sender: TObject; const ADateTime: TDateTime);
     procedure DoItemPickerChanged(Sender: TObject; AItem: string; AValueIndex: Integer);
+    procedure DoDatePickerChanged(Sender: TObject; ADate: TDateTime);
 
     procedure ShowEditInput;
-    procedure ShowDatePicker;
+    procedure ShowDatePicker(ASelected: TDateTime);
+    procedure ShowTimePicker(ASelected: TDateTime);
     procedure ShowPicker;
+    procedure DoTimePickerChanged(Sender: TObject; ATime: TDateTime);
   public
     constructor Create(Owner: TksVListItemList); virtual;
     destructor Destroy; override;
@@ -460,7 +468,9 @@ type
     property EditFieldKeyboardType: TVirtualKeyboardType read FEditFieldKeyboardType write FEditFieldKeyboardType default TVirtualKeyboardType.Alphabet;
     property OnEditInput: TksItemEditInputEvent read FOnEditInput write FOnEditInput;
     property OnSelectPickerItem: TksItemSelectPickerItemEvent read FOnSelectPickerItem write FOnSelectPickerItem;
+    //property OnSelectPickerDate: TksItemSelectPickerDateEvent read FOnSelectPickerDate write FOnSelectPickerDate;
     property OnDateSelected: TksItemDateSelectedEvent read FOnDateSelected write FOnDateSelected;
+    property OnTimeSelected: TksItemTimeSelectedEvent read FOnTimeSelected write FOnTimeSelected;
 
   end;
 
@@ -473,6 +483,7 @@ type
     function GetItem(index: integer): TksVListItem;
     function GetCount: integer;
     function GetCheckedCount: integer;
+
   public
     constructor Create(AOwner: TksVirtualListView); virtual;
     destructor Destroy; override;
@@ -481,7 +492,8 @@ type
     function Add(ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem;
-
+    function AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
+    function AddTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddHeader(AText: string): TksVListItem;
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
     function Insert(AIndex: integer; ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
@@ -606,6 +618,7 @@ type
     FOnActionButtonClick: TksItemActionButtonClickEvent;
     FOnItemEditInputEvent: TksItemEditInputEvent;
     FOnItemDateSelectedEvent: TksItemDateSelectedEvent;
+    FOnItemTimeSelectedEvent: TksItemTimeSelectedEvent;
     FOnItemPickerSelectedEvent: TksItemSelectPickerItemEvent;
     FOnGetPickerItemsEvent: TksItemGetPickerItemsEvent;
     //FFont: TFont;
@@ -651,6 +664,8 @@ type
     procedure UnfocusControl;
     procedure DoItemEditInput(Sender: TObject; ARow: TksVListItem; AText: string);
     procedure DoItemDateSelected(Sender: TObject; ARow: TksVListItem; ADate: TDateTime);
+    procedure DoItemTimeSelected(Sender: TObject; ARow: TksVListItem; ATime: TDateTime);
+
     procedure DoItemPickerSelected(Sender: TObject; ARow: TksVListItem; AText: string);
     procedure DoPullRefresh;
     // procedure Tap(const Point:TPointF); override;
@@ -899,25 +914,35 @@ begin
 
   case FSelectorType of
     ksSelectorEdit: ShowEditInput;
-    ksSelectorDate: ShowDatePicker;
+    ksSelectorDate: ShowDatePicker(FSelectedDate);
+    ksSelectorTime: ShowTimePicker(FSelectedTime);
     ksSelectorPicker: ShowPicker;
 
   end;
 end;
-             {
-procedure TksVListItem.DoDatePickerChanged(Sender: TObject;
-  const ADateTime: TDateTime);
+
+procedure TksVListItem.DoDatePickerChanged(Sender: TObject; ADate: TDateTime);
 begin
-  FSelectedDate := ADateTime;
-  FDetail.Text := FormatDateTime('d-mmm-yyyy', ADateTime);
+  FSelectedDate := ADate;
+  FDetail.Text := FormatDateTime('ddd, dd mmm, yyyy', ADate);
   FDetail.ClearCache;
   if Assigned(FOnDateSelected) then
-    FOnDateSelected(Self, Self, ADateTime);
-end;        }
+    FOnDateSelected(FOwner.FOwner, Self, ADate);
+end;
+
+procedure TksVListItem.DoTimePickerChanged(Sender: TObject; ATime: TDateTime);
+begin
+  FSelectedTime := ATime;
+  FDetail.Text := FormatDateTime('hh:nn', ATime);
+  FDetail.ClearCache;
+  if Assigned(FOnTimeSelected) then
+    FOnTimeSelected(FOwner.FOwner, Self, ATime);
+end;
 
 procedure TksVListItem.DoItemPickerChanged(Sender: TObject;
   AItem: string; AValueIndex: Integer);
 begin
+  FSelectedItem := AItem;
   FDetail.Text := AItem;// (Sender as TCustomListPicker).Values[AValueIndex];// FPicker.Values[AValueIndex];
   FDetail.ClearCache;
   if Assigned(FOnSelectPickerItem) then
@@ -1067,6 +1092,7 @@ end;
 
 procedure TksVListItem.ShowEditInput;
 begin
+  PickerService.HidePickers;
   {$IFDEF XE10_OR_NEWER}
   TDialogService.InputQuery('Input',['Enter text'], [FDetail.Text],
   procedure(const AResult: TModalResult; const AValues: array of string)
@@ -1085,51 +1111,37 @@ procedure TksVListItem.ShowPicker;
 var
   AItems: TStrings;
   ASelected: string;
-  //APicker: TCustomListPicker;
   AIndex: integer;
 begin
-  //AIndex := -1;
-  //if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
-  begin
-    //FPickerService.CloseAllPickers;
-    AItems := TStringList.Create;
-    try
-      //APicker := PickerService.CreateListPicker;
-      //FPicker := FPickerService.CreateListPicker;
-      //_Pickers.Add(FPicker);
-      if Assigned(FOwner.FOwner.OnGetPickerItems) then
-        FOwner.FOwner.OnGetPickerItems(FOwner.FOwner, Self, ASelected, AItems);
-      //APicker.Values.Assign(AItems);
+  PickerService.HidePickers;
+  AItems := TStringList.Create;
+  try
+    ASelected := '';
+    if Assigned(FOwner.FOwner.OnGetPickerItems) then
+      FOwner.FOwner.OnGetPickerItems(FOwner.FOwner, Self, ASelected, AItems);
 
-      if AItems.IndexOf(ASelected) > -1 then
-        AIndex := AItems.IndexOf(ASelected)
-      else
-        AIndex := 0;
-
-      PickerService.ShowItemPicker(AItems, '',  AIndex, DoItemPickerChanged);
-      //APicker.OnValueChanged := DoItemPickerChanged;
-      //APicker.Show;
-
-    finally
-      FreeAndNil(AItems);
-    end;
+    if ASelected = '' then
+      ASelected := FDetail.Text;
+    if AItems.IndexOf(ASelected) > -1 then
+      AIndex := AItems.IndexOf(ASelected)
+    else
+      AIndex := 0;
+    PickerService.ShowItemPicker(AItems, '',  AIndex, DoItemPickerChanged);
+  finally
+    FreeAndNil(AItems);
   end;
 end;
 
-procedure TksVListItem.ShowDatePicker;
-{var
-  APicker: TCustomDateTimePicker;     }
+procedure TksVListItem.ShowDatePicker(ASelected: TDateTime);
 begin
-  { TODO : TO DO }
-  //if TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, FPickerService) then
- { begin
-    APicker := PickerService.CreateDatePicker;// FPickerService.CreateDateTimePicker;
-    //_Pickers.Add(APicker);
-    APicker.Date := FSelectedDate;
-    APicker.OnDateChanged := DoDatePickerChanged;
-    APicker.Show;
-    APicker.OnDateChanged := DoDatePickerChanged;
-  end; }
+  PickerService.HidePickers;
+  PickerService.ShowDatePicker('', ASelected, DoDatePickerChanged);
+end;
+
+procedure TksVListItem.ShowTimePicker(ASelected: TDateTime);
+begin
+  PickerService.HidePickers;
+  PickerService.ShowTimePicker('', ASelected, DoTimePickerChanged);
 end;
 
 procedure TksVListItem.SlideOut(ADirection: TksVListSwipeDirection);
@@ -1639,6 +1651,17 @@ begin
   if AItem.FActionButtons.Count = 0 then
     Exit;
   AItem.SlideOut(ASwipeDirection);
+end;
+
+procedure TksVirtualListView.DoItemTimeSelected(Sender: TObject;
+  ARow: TksVListItem; ATime: TDateTime);
+begin
+  if Assigned(FOnItemTimeSelectedEvent) then
+    FOnItemTimeSelectedEvent(Self, ARow, ATime);
+  {$IFDEF ANDROID}
+  Application.ProcessMessages;
+  Repaint;
+  {$ENDIF}
 end;
 
 procedure TksVirtualListView.DoMouseLeave;
@@ -2323,6 +2346,7 @@ begin
   Result.Background := FOwner.Appearence.ItemBackground;
   Result.OnEditInput := FOwner.DoItemEditInput;
   Result.OnDateSelected := FOwner.DoItemDateSelected;
+  Result.OnTimeSelected := FOwner.DoItemTimeSelected;
   Result.OnSelectPickerItem := FOwner.DoItemPickerSelected;
   Changed(True);
 end;
@@ -2382,6 +2406,24 @@ function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
 begin
   Result := Add(ATitle, ASubTitle, ADetail, AImage, atMore);
   Result.SelectorType := TksVListItemSelectorType.ksSelectorPicker;
+  Result.TagStr := ATagStr;
+end;
+
+function TksVListItemList.AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime;
+  AImage: TBitmap; ATagStr: string): TksVListItem;
+begin
+  Result := Add(ATitle, ASubTitle, FormatDateTime('ddd, dd mmm, yyyy', ASelected), AImage, atMore);
+  Result.FSelectedDate := ASelected;
+  Result.SelectorType := TksVListItemSelectorType.ksSelectorDate;
+  Result.TagStr := ATagStr;
+end;
+
+function TksVListItemList.AddTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime;
+  AImage: TBitmap; ATagStr: string): TksVListItem;
+begin
+  Result := Add(ATitle, ASubTitle, FormatDateTime('hh:nn', ASelected), AImage, atMore);
+  Result.FSelectedTime := ASelected;
+  Result.SelectorType := TksVListItemSelectorType.ksSelectorTime;
   Result.TagStr := ATagStr;
 end;
 
