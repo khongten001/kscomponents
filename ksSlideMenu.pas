@@ -110,13 +110,14 @@ type
   TksSlideMenuItem = class
     FID: string;
     FText: string;
+    FBitmap: TBitmap;
     FForm: TCommonCustomForm;
     FIcon: TksStandardIcon;
   end;
 
   TksSlideMenuItemList = class(TObjectList<TksSlideMenuItem>)
   public
-    procedure AddItem(AID, AText: string; AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom);
+    procedure AddItem(AID, AText: string; AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom; const ABmp: TBitmap = nil);
   end;
 
   //TksSlideMenuState = (ksMsOpening, ksMsOpen, ksMsClosing, ksMsClosed);
@@ -399,19 +400,34 @@ begin
 
     aBmp := TBitmap.Create;
     try
-      AEnumName := GetENumName(TypeInfo(TksStandardIcon), Ord(FItems[ICount].FIcon));
-      if FItems[ICount].FIcon <> Custom then
+      if FItems[ICount].FBitmap <> nil then
       begin
-
-        AStream := TResourceStream.Create(HInstance, AEnumName, RT_RCDATA);
-        aBmp.LoadFromStream(AStream);
+        ABmp := FItems[ICount].FBitmap;
         ReplaceOpaqueColor(ABmp, claWhite);
 
         AItem.Image.Bitmap := ABmp;
         AItem.Image.Width := 20;
         AItem.Image.Height := 20;
+      end
+      else
+      begin
 
-        AStream.Free;
+        AEnumName := GetENumName(TypeInfo(TksStandardIcon), Ord(FItems[ICount].FIcon));
+
+
+        if FItems[ICount].FIcon <> Custom then
+        begin
+
+          AStream := TResourceStream.Create(HInstance, AEnumName, RT_RCDATA);
+          aBmp.LoadFromStream(AStream);
+          ReplaceOpaqueColor(ABmp, claWhite);
+
+          AItem.Image.Bitmap := ABmp;
+          AItem.Image.Width := 20;
+          AItem.Image.Height := 20;
+
+          AStream.Free;
+        end;
       end;
     finally
       ABmp.Free;
@@ -498,7 +514,7 @@ end;
 {TksSlideMenuItemExtList }
 
 procedure TksSlideMenuItemList.AddItem(AID, AText: string;
-  AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom);
+  AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom; const ABmp: TBitmap = nil);
 var
   AItem: TksSlideMenuItem;
 begin
@@ -507,6 +523,7 @@ begin
   AItem.FText := AText;
   AItem.FForm := AForm;
   AItem.FIcon := AIcon;
+  AItem.FBitmap := ABmp;
   Add(AItem);
 end;
 

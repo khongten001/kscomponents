@@ -57,7 +57,9 @@ contains
   ksFormTransitionUI in 'ksFormTransitionUI.pas' {frmFormTransitionUI},
   ksAppEvents in 'ksAppEvents.pas',
   ksToolbar in 'ksToolbar.pas',
-  ksPickers in 'ksPickers.pas';
+  ksPickers in 'ksPickers.pas',
+  ksMapView in 'ksMapView.pas',
+  ksProgressBar in 'ksProgressBar.pas';
 
 end.
 

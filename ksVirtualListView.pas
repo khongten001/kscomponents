@@ -494,6 +494,7 @@ type
     function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
+    function AddInputSelector(ATitle, ASubTitle, ADetail, ATagStr: string): TksVListItem;
     function AddHeader(AText: string): TksVListItem;
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
     function Insert(AIndex: integer; ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
@@ -673,7 +674,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure CreateAniCalc2(AUpdateLimits: Boolean);
+    procedure CreateAniCalc5(AUpdateLimits: Boolean);
     procedure DoCleanupDeletedItems;
     procedure DoItemSwiped(AItem: TksVListItem;
       ASwipeDirection: TksVListSwipeDirection);
@@ -1094,7 +1095,7 @@ procedure TksVListItem.ShowEditInput;
 begin
   PickerService.HidePickers;
   {$IFDEF XE10_OR_NEWER}
-  TDialogService.InputQuery('Input',['Enter text'], [FDetail.Text],
+  TDialogService.InputQuery(FTitle.Text, [''], [FDetail.Text],
   procedure(const AResult: TModalResult; const AValues: array of string)
   begin
     if AResult = mrOk then
@@ -1102,6 +1103,7 @@ begin
       FDetail.Text := AValues[0];
       if Assigned(FOnEditInput) then
         FOnEditInput(Self, Self, AValues[0]);
+      FDetail.ClearCache;
     end;
   end);
   {$ENDIF}
@@ -1496,7 +1498,7 @@ begin
   FScrollBar.Width := 8;
   FPendingRefresh := False;
 
-  CreateAniCalc2(False);
+  CreateAniCalc5(False);
 
   FScrollBar.Orientation := TOrientation.Vertical;
   // FScrollBar.Align := TAlignLayout.Right;
@@ -1513,7 +1515,7 @@ begin
   end;
 end;
 
-procedure TksVirtualListView.CreateAniCalc2(AUpdateLimits: Boolean);
+procedure TksVirtualListView.CreateAniCalc5(AUpdateLimits: Boolean);
 begin
   FreeAndNil(FAniCalc);
   FAniCalc := TksAniCalc.Create(nil);
@@ -2053,7 +2055,6 @@ end;
 procedure TksVirtualListView.SetScrollPos(const Value: integer);
 begin
   if not SameValue(FScrollPos, Value, TEpsilon.Vector) then
-  //if Value <> FScrollPos then
   begin
     UnfocusControl;
     PickerService.HidePickers;//HidePickers(False);
@@ -2120,8 +2121,8 @@ begin
     Targets[1].TargetType := TAniCalculations.TTargetType.Max;
 
     FMaxScrollPos := Round(Max((FTotalItemHeight - Height), 0));
-    if FMaxScrollPos < FScrollPos then
-      FScrollPos := FMaxScrollPos;
+    //if FMaxScrollPos < FScrollPos then
+    //  FScrollPos := FMaxScrollPos;
     Targets[1].Point := TPointD.Create(100, FMaxScrollPos);
     FAniCalc.SetTargets(Targets);
 
@@ -2399,6 +2400,14 @@ begin
   finally
   //  Result.EndUpdate;
   end;
+end;
+
+function TksVListItemList.AddInputSelector(ATitle, ASubTitle, ADetail,
+  ATagStr: string): TksVListItem;
+begin
+  Result := Add(ATitle, ASubTitle, ADetail, nil, atMore);
+  Result.SelectorType := TksVListItemSelectorType.ksSelectorEdit;
+  Result.TagStr := ATagStr;
 end;
 
 function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;

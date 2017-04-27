@@ -80,7 +80,7 @@ type
   TksFormTransition = class(TksComponent)
   private
     FInitalizedForms: TList<TCommonCustomForm>;
-    FInTransition: Boolean;
+
     function GetTransitionList: TksFormTransitionList;
     function TransitionExists(AFrom, ATo: TCommonCustomForm): Boolean;
   public
@@ -111,6 +111,7 @@ uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI, ksToolbar,
 
 var
   _InternalTransitionList: TksFormTransitionList;
+  _InTransition: Boolean;
 
 procedure Register;
 begin
@@ -152,7 +153,7 @@ constructor TksFormTransition.Create(AOwner: TComponent);
 begin
   inherited;
   FInitalizedForms := TList<TCommonCustomForm>.Create;
-  FInTransition := False;
+
 end;
 
 destructor TksFormTransition.Destroy;
@@ -192,9 +193,9 @@ begin
   if _InternalTransitionList.Count < 1 then
     Exit;
 
-  if FInTransition then
+  if _InTransition then
     Exit;
-  FInTransition := True;
+  _InTransition := True;
   try
 
     AAnimateForm := TfrmFormTransitionUI.Create(nil);
@@ -230,7 +231,7 @@ begin
       AAnimateForm.DisposeOf;
     end;
   finally
-    FInTransition := False;
+    _InTransition := False;
   end;
 
 
@@ -248,9 +249,9 @@ begin
   if _InternalTransitionList.Count = 0 then
     Exit;
 
-  if FInTransition then
+  if _InTransition then
     Exit;
-  FInTransition := True;
+  _InTransition := True;
   try
     AAnimateForm := TfrmFormTransitionUI.Create(nil);
     try
@@ -285,7 +286,7 @@ begin
       AAnimateForm.DisposeOf;
     end;
   finally
-    FInTransition := False;
+    _InTransition := False;
   end;
 end;
 
@@ -298,16 +299,11 @@ var
   AAnimateForm: TfrmFormTransitionUI;
   AFormIntf: IksFormTransition;
 begin
-  if FInTransition then
+  if _InTransition then
     Exit;
 
-  FInTransition := True;
+  _InTransition := True;
   try
-    {if PickerService.PickerCount > 0 then
-    begin
-      PickerService.HidePickers;
-      Sleep(1000);
-    end;  }
     PickerService.HidePickers;
 
     AFrom := Screen.ActiveForm;
@@ -365,7 +361,7 @@ begin
   finally
     if not ARecordPush then
       FreeAndNil(AInfo);
-    FInTransition := False;
+    _InTransition := False;
   end;
 end;
 
@@ -390,6 +386,7 @@ end;
 initialization
 
   _InternalTransitionList := TksFormTransitionList.Create(True);
+  _InTransition := False;
 
 finalization
 

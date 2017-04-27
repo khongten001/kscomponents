@@ -109,6 +109,7 @@ type
     FGroupID: string;
     FItemIndex: integer;
     FBtnWidth: single;
+    FFontSize: integer;
     FOnChange: TNotifyEvent;
     FSegments: TksSegmentButtonCollection;
     FTintColor: TAlphaColor;
@@ -123,6 +124,7 @@ type
     function GetSelectedID: string;
     procedure SetSelectedID(const Value: string);
     function ButtonFromPos(x,y: single): TksSegmentButton;
+    procedure SetFontSize(const Value: integer);
   protected
     procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
@@ -137,6 +139,7 @@ type
     property SelectedID: string read GetSelectedID write SetSelectedID;
   published
     property Align;
+    property FontSize: integer read FFontSize write SetFontSize default 14;
     property ItemIndex: integer read FItemIndex write SetItemIndex default -1;
     property Margins;
     property Position;
@@ -274,6 +277,7 @@ begin
   FTintColor := claNull;
   Size.Height := 50;
   Size.Width := 300;
+  FFontSize := 14;
 end;
 
 destructor TksSegmentButtons.Destroy;
@@ -430,6 +434,13 @@ begin
   UpdateButtons;
 end;
 
+
+procedure TksSegmentButtons.SetFontSize(const Value: integer);
+begin
+  FFontSize := Value;
+  UpdateButtons;
+end;
+
 procedure TksSegmentButtons.SetItemIndex(const Value: integer);
 begin
   if FItemIndex <> Value then
@@ -573,7 +584,8 @@ begin
   else
     Canvas.Fill.Color := GetColorOrDefault(FOwner.TintColor, claDodgerblue);
 
-  Canvas.Font.Size := 14;
+  Canvas.Font.Size := FOwner.FontSize;
+  //ShowMessage(fowner.FontSize.ToString);
   RenderText(Canvas, ClipRect, FText, Canvas.Font, Canvas.Fill.Color, False, TTextAlign.Center, TTextAlign.Center, TTextTrimming.Character);
 
   if FBadge > 0 then

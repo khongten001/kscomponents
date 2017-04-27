@@ -56,6 +56,7 @@ type
     FShowMenuButton: Boolean;
     FOnBackButtonClick: TNotifyEvent;
     FBackButtonEnabled: Boolean;
+    FShowBackButton: Boolean;
     procedure Changed(Sender: TObject);
     procedure BackButtonClicked;
     procedure SetShowMenuButton(const Value: Boolean);
@@ -64,6 +65,7 @@ type
     procedure SetText(const Value: string);
     procedure SetFont(const Value: TFont);
     function GetButtonOpacity: single;
+    procedure SetShowBackButton(const Value: Boolean);
   protected
     procedure Paint; override;
     function GetDefaultSize: TSizeF; override;
@@ -84,6 +86,7 @@ type
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claWhitesmoke;
     property TextColor: TAlphaColor read FTextColor write SetTextColor default claBlack;
     property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
+    property ShowBackButton: Boolean read FShowBackButton write SetShowBackButton default True;
 
 
     property OnClick;
@@ -120,9 +123,8 @@ begin
   end
   else
   begin
-    if (Assigned(FOnBackButtonClick)) then
+    if (Assigned(FOnBackButtonClick))and (FShowBackButton)  then
       FOnBackButtonClick(Self);
-
     FFormTransition.Pop;
   end;
 end;
@@ -137,7 +139,7 @@ begin
   inherited;
   FFont := TFont.Create;
   FFont.Size := 14;
-  Align := TAlignLayout.Top;
+  Align := TAlignLayout.MostTop;
   FFormTransition := TksFormTransition.Create(nil);
 
   FTintColor := claWhitesmoke;
@@ -147,6 +149,7 @@ begin
   FFont.OnChanged := Changed;
 
   FShowMenuButton := True;
+  FShowBackButton := True;
   FBackButtonEnabled := True;
 end;
 
@@ -178,11 +181,9 @@ end;
 
 function TksToolbar.GetButtonOpacity: single;
 begin
-  //esult := 1;
-  case FMouseDown of
-    True: Result := 0.5;
-    False: Result := 1;
-  end;
+  Result := 1;
+  if FMouseDown then
+    Result := 0.5;
 end;
 
 function TksToolbar.GetDefaultSize: TSizeF;
@@ -201,7 +202,6 @@ begin
       Exit;
     InvalidateRect(ClipRect);
     Application.ProcessMessages;
-    //BackButtonClicked;
   end;
 end;
 
@@ -232,11 +232,6 @@ begin
   inherited;
   ABmp := nil;
   s := GetScreenScale(False);
-  //if FBackBmp.IsEmpty then
-  //  FBackBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft));
-
-  //if FMenuBmp.IsEmpty then
-  //  FMenuBmp.Assign(AAccessories.GetAccessoryImage(TksAccessoryType.atDetails));
 
   if (csDesigning in ComponentState) then
     ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atDetails)
@@ -248,7 +243,8 @@ begin
         ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atDetails);
     end
     else
-      ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft);
+      if FShowBackButton then
+        ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft);
   end;
 
 
@@ -263,11 +259,14 @@ begin
     Canvas.Fill.Color := FTextColor;
     Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
 
-    ReplaceOpaqueColor(ABmp, FTextColor);
-    Canvas.DrawBitmap(ABmp,
-                      RectF(0, 0, ABmp.Width, ABmp.Height),
-                      RectF(4, (Height/2)-((ABmp.Height/s)/2), 4+(ABmp.Width/s), (Height/2)+((ABmp.Height/s)/2)),
-                      GetButtonOpacity);
+    if ABmp <> nil then
+    begin
+      ReplaceOpaqueColor(ABmp, FTextColor);
+      Canvas.DrawBitmap(ABmp,
+                        RectF(0, 0, ABmp.Width, ABmp.Height),
+                        RectF(4, (Height/2)-((ABmp.Height/s)/2), 4+(ABmp.Width/s), (Height/2)+((ABmp.Height/s)/2)),
+                        GetButtonOpacity);
+    end;
 
   finally
     Canvas.EndScene;
@@ -279,10 +278,16 @@ begin
   FFont.Assign(Value);
 end;
 
+procedure TksToolbar.SetShowBackButton(const Value: Boolean);
+begin
+  FShowBackButton := Value;
+  //InvalidateRect(ClipRect);
+end;
+
 procedure TksToolbar.SetShowMenuButton(const Value: Boolean);
 begin
   FShowMenuButton := Value;
-  InvalidateRect(ClipRect);
+  //InvalidateRect(ClipRect);
 end;
 
 procedure TksToolbar.SetText(const Value: string);
