@@ -31,7 +31,7 @@ type
 
   procedure ShowLoadingIndicator(AForm: TCommonCustomForm);
   procedure HideLoadingIndicator(AForm: TCommonCustomForm);
-
+  function IsLoadingIndicatorVisible(AForm: TCommonCustomForm): Boolean;
 
 
 procedure Register;
@@ -68,6 +68,19 @@ begin
   end;
 end;
 
+function IsLoadingIndicatorVisible(AForm: TCommonCustomForm): Boolean;
+var
+  ALoading: TksLoadingIndicator;
+begin
+  Result := False;
+  ALoading := FindLoadingIndicator(AForm);
+  if ALoading <> nil then
+  begin
+    if ALoading.Parent = AForm then
+      Result := True;
+  end;
+end;
+
 procedure ShowLoadingIndicator(AForm: TCommonCustomForm);
 var
   ALoadingIndicator: TksLoadingIndicator;
@@ -77,15 +90,15 @@ begin
     ALoadingIndicator := TksLoadingIndicator.Create(AForm);
   //ALoadingIndicator.Opacity := 0;
 
-  if APos.X > 0 then
+  {if APos.X > 0 then
   begin
     ALoadingIndicator.Position.X := APos.X;
     ALoadingIndicator.Position.Y := APos.Y;
   end
-  else
+  else }
   begin
-    ALoadingIndicator.Position.X := (AForm.Width-100) / 2;
-    ALoadingIndicator.Position.Y := (AForm.Height-100) / 2;
+    ALoadingIndicator.Position.X := (AForm.FormFactor.Width-ALoadingIndicator.Width) / 2;
+    ALoadingIndicator.Position.Y := (AForm.FormFactor.Height-ALoadingIndicator.Height) / 2;
     APos.X := ALoadingIndicator.Position.X;
     APos.Y := ALoadingIndicator.Position.Y;
   end;
@@ -140,15 +153,18 @@ begin
   FLoadingText := 'LOADING';
   FFadeBackground := False;
   FIsModal := False;
+  Stroke.Kind := TBrushKind.None;
+  Stroke.Color := claNull;
   Fill.Color := claBlack;
-  Width := 100;
-  Height := 100;
-  {$IFNDEF ANDROID}
-  XRadius := 10;
-  YRadius := 10;
-  {$ELSE}
-  Opacity := 0.7;
+  Width := 90;
+  Height := 70;
+  {$IFNDEF MSWINDOWS}
+  XRadius := 5;
+  YRadius := 5;
   {$ENDIF}
+  //{$ELSE}
+  Opacity := 0.7;
+  //{$ENDIF}
 
   //Align := TAlignLayout.Center;
 

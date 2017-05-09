@@ -82,7 +82,7 @@ var
 
 implementation
 
-uses FMX.Platform, SysUtils, FMX.Forms;
+uses FMX.Platform, SysUtils, FMX.Forms, System.Threading;
 
 { TksPickerService }
 
@@ -126,9 +126,21 @@ end;
 {$IFDEF DPF}
 procedure TksPickerService.DoActionSheetButtonClick(Sender: TObject;
   ButtonIndex: Integer);
+var
+  ATask: ITask;
 begin
-  if ButtonIndex < FPickerITems.Count then
-    DoSelectItem(Sender, ButtonIndex);
+
+  ATask := TTask.Create (procedure ()
+   begin
+     TThread.Synchronize(nil,procedure
+                  begin
+                     //Interact with UI
+                      if ButtonIndex < FPickerITems.Count then
+                        DoSelectItem(Sender, ButtonIndex);
+
+                  end);
+   end);
+ ATask.Start;
 end;
 {$ENDIF}
 
@@ -231,7 +243,10 @@ procedure TksPickerService.ShowDatePicker(ATitle: string;
 begin
   FOnDateSelected := AOnSelect;
   FDatePicker.OnDateChanged := DoDateSelected;
-  FDatePicker.Date := ASelected;
+  if ASelected = 0 then
+    FDatePicker.Date := Date
+  else
+    FDatePicker.Date := ASelected;
   FDatePicker.Show;
 end;
 

@@ -82,7 +82,7 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types,
 implementation
 
 uses FMX.Platform, SysUtils, FMX.TextLayout, Math, FMX.Utils, FMX.VirtualKeyboard,
-  System.Generics.Collections,
+  System.Generics.Collections, ksLoadingIndicator,
   {$IFDEF VER290}
   FMX.Dialogs
   {$ELSE}
@@ -178,14 +178,12 @@ end;
 
 function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
 var
+  ALoadingVisible: Boolean;
   AScale: single;
 begin
-  {$IFDEF ANDDROID}
-  //AForm.Visible := True;
-  //AForm.Visible := False;
-  //Application.ProcessMessages;
-  {$ENDIF}
-
+  ALoadingVisible := IsLoadingIndicatorVisible(AForm);
+  if ALoadingVisible then
+    HideLoadingIndicator(AForm);
   Result := TBitmap.Create;
   AScale := GetScreenScale(True);
   Result.BitmapScale := AScale;
@@ -201,6 +199,8 @@ begin
     FreeAndNil(Result);
     Result := GenerateFormImageExt(AForm);
   end;
+  if ALoadingVisible then
+    ShowLoadingIndicator(AForm);
 end;
 
 
@@ -581,6 +581,7 @@ finalization
 
 
 end.
+
 
 
 

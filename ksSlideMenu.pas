@@ -159,7 +159,7 @@ type
 
 implementation
 
-uses SysUtils, ksCommon, System.TypInfo;
+uses SysUtils, ksCommon, System.TypInfo, ksLoadingIndicator;
 
 procedure Register;
 begin
@@ -365,6 +365,7 @@ begin
   end;
 
   FCallingForm := ACallingForm;
+  HideLoadingIndicator(FCallingForm);
   if FMenuForm = nil then
   begin
     FMenuForm :=  TfrmSlideMenuUI.Create(nil);

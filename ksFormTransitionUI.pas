@@ -25,7 +25,8 @@ type
 
 implementation
 
-uses ksCommon, System.UIConsts, FMX.Ani, DateUtils, FMX.Platform;
+uses ksCommon, System.UIConsts, FMX.Ani, DateUtils, FMX.Platform,
+  ksLoadingIndicator;
 
 {$R *.fmx}
 
@@ -44,14 +45,6 @@ end;
 
 procedure TfrmFormTransitionUI.Initialise(AFrom, ATo: TCommonCustomForm);
 begin
-  {$IFDEF ANDROID}
-  // fix for Android initial form size
-  //if (AFrom.Width <> ATo.Width) or (AFrom.Height <> ATo.Height) then
-  //begin
-   // ATo.Visible := True;
-  //  ATo.Visible := False;
-  //end;
-  {$ENDIF}
 
   ATo.SetBounds(0, 0, AFrom.Width, AFrom.Height);
   Image1.WrapMode := TImageWrapMode.Original;
