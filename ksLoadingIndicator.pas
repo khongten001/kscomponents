@@ -98,7 +98,7 @@ begin
   else }
   begin
     ALoadingIndicator.Position.X := (AForm.FormFactor.Width-ALoadingIndicator.Width) / 2;
-    ALoadingIndicator.Position.Y := (AForm.FormFactor.Height-ALoadingIndicator.Height) / 2;
+    ALoadingIndicator.Position.Y := ((AForm.FormFactor.Height-ALoadingIndicator.Height) / 2)+30;
     APos.X := ALoadingIndicator.Position.X;
     APos.Y := ALoadingIndicator.Position.Y;
   end;
