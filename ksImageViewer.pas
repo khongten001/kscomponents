@@ -67,10 +67,12 @@ type
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Single); override;
+    procedure DoDoubleTap;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure DownloadFile(AUrl: string);
+    function GetFitHeightWidthZoom: integer;
     procedure FitHeight;
     procedure FitWidth;
     procedure FitHeightAndWidth;
@@ -83,7 +85,9 @@ type
     property Width;
     property Height;
     property Visible;
+    property Touch;
     property OnGesture;
+    property OnDblClick;
     property OnZoom: TNotifyEvent read FOnZoom write FOnZoom;
   end;
 
@@ -145,7 +149,7 @@ end;
 procedure TksImageViewer.DblClick;
 begin
   inherited;
-  FitHeightAndWidth;
+
 end;
 
 destructor TksImageViewer.Destroy;
@@ -153,6 +157,12 @@ begin
   FreeAndNil(FBitmap);
   FreeAndNil(FAniCalc);
   inherited;
+end;
+
+procedure TksImageViewer.DoDoubleTap;
+begin
+  if Assigned(OnDblClick) then
+    OnDblClick(Self);
 end;
 
 procedure TksImageViewer.DoMouseLeave;
@@ -193,17 +203,22 @@ begin
 end;
 
 procedure TksImageViewer.FitHeightAndWidth;
-var
-  z1, z2: single;
 begin
-  z1 := (Height / FBitmap.Height) * 100;
-  z2 := (Width / FBitmap.Width) * 100;
-  Zoom := Min(z1, z2);
+  Zoom := GetFitHeightWidthZoom;
 end;
 
 procedure TksImageViewer.FitWidth;
 begin
   Zoom := (Width / FBitmap.Width) * 100;
+end;
+
+function TksImageViewer.GetFitHeightWidthZoom: integer;
+var
+  z1, z2: single;
+begin
+  z1 := (Height / FBitmap.Height) * 100;
+  z2 := (Width / FBitmap.Width) * 100;
+  Result := Trunc(Min(z1, z2));
 end;
 
 procedure TksImageViewer.CMGesture(var EventInfo: TGestureEventInfo);
@@ -215,6 +230,9 @@ var
 begin
   inherited;
   {$IFDEF IOS}
+  if EventInfo.GestureID = igiDoubleTap then
+    DoDoubleTap;
+
   if EventInfo.GestureID = igiZoom then
   begin
     if TInteractiveGestureFlag.gfEnd in EventInfo.Flags then
@@ -231,7 +249,7 @@ begin
       FZooming := True;
       Exit;
     end;
-    ADistance := Round(EventInfo.Distance-FStartDistance);
+    ADistance := Round(EventInfo.Distance-FStartDistance) * Round(GetScreenScale(True));
     //if FStartZoom + Round(EventInfo.Distance-FStartDistance) > 10 then
 
     ANewZoom := FStartZoom + (ADistance / 10);
@@ -318,8 +336,11 @@ var
   xpercent, ypercent: single;
   ANewX, ANewY: single;
 begin
+
   if FZoom <> Value then
   begin
+    if Value < GetFitHeightWidthZoom then
+      Exit;
     xPercent := 0;
     yPercent := 0;
     if (FAniCalc.ViewportPosition.X > 0) and (FMaxXPos > 0) then xPercent := (FAniCalc.ViewportPosition.X / FMaxXPos) * 100;

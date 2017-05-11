@@ -411,7 +411,7 @@ type
     procedure SwipeCalcChange(Sender: TObject);
     procedure DeleteCalcChange(Sender: TObject);
     function CreateAniCalc(AOnChange: TNotifyEvent): TAniCalculations;
-    procedure DoClicked;
+    procedure DoClicked(var AHandled: Boolean);
     procedure SetPurpose(const Value: TksVListItemPurpose);
     procedure SetOffset(const Value: integer);
     procedure SetCanSelect(const Value: Boolean);
@@ -915,18 +915,20 @@ begin
   inherited;
 end;
 
-procedure TksVListItem.DoClicked;
+procedure TksVListItem.DoClicked(var AHandled: Boolean);
 begin
   if Assigned(FOnClick) then
     FOnClick(Self);
-
+  AHandled := False;
   case FSelectorType of
     ksSelectorEdit: ShowEditInput;
     ksSelectorDate: ShowDatePicker(FSelectedDate);
     ksSelectorTime: ShowTimePicker(FSelectedTime);
     ksSelectorPicker: ShowPicker;
-
+  else
+    Exit;
   end;
+  AHandled := True;
 end;
 
 procedure TksVListItem.DoDatePickerChanged(Sender: TObject; ADate: TDateTime);
@@ -1113,6 +1115,11 @@ begin
 end;
 
 procedure TksVListItem.ShowEditInput;
+{$IFDEF XE10_OR_NEWER}
+var
+  ATask: ITask;
+  AStr: string;
+{$ENDIF}
 begin
   PickerService.HidePickers;
   {$IFDEF XE10_OR_NEWER}
@@ -1122,9 +1129,29 @@ begin
     if AResult = mrOk then
     begin
       FDetail.Text := AValues[0];
-      if Assigned(FOnEditInput) then
-        FOnEditInput(Self, Self, AValues[0]);
+      AStr := AValues[0];
       FDetail.ClearCache;
+      Changed;
+
+      ATask := TTask.Create (procedure ()
+     // var
+     //   AStr: string;
+      begin
+       // AStr := AValues[0];
+        TThread.Synchronize(nil,procedure
+                     begin
+                        //Interact with UI
+
+                       if Assigned(FOnEditInput) then
+                        FOnEditInput(Self, Self, AStr);
+
+                     end);
+      end);
+     ATask.Start;
+
+    {  if Assigned(FOnEditInput) then
+        FOnEditInput(Self, Self, AValues[0]);
+      FDetail.ClearCache;         }
     end;
   end);
   {$ENDIF}
@@ -1590,6 +1617,8 @@ end;
 
 procedure TksVirtualListView.DoItemClicked(AItem: TksVListItem;
   ACallClickEvent: Boolean);
+var
+  AHandled: Boolean;
 begin
   if AItem = nil then
     Exit;
@@ -1609,10 +1638,14 @@ begin
 
   //Application.ProcessMessages;
 
-  AItem.DoClicked;
+  //FMouseDownItem := nil;
+  AItem.DoClicked(AHandled);
 
-  if Assigned(FOnItemClick) then
-    FOnItemClick(Self, AItem);
+  if AHandled = False then
+  begin
+    if Assigned(FOnItemClick) then
+      FOnItemClick(Self, AItem);
+  end;
 end;
 
 procedure TksVirtualListView.DoItemDateSelected(Sender: TObject;
@@ -3170,6 +3203,7 @@ begin
   end
   //else
   //  FBitmap := Value;*)
+  FBitmap.Clear(claNull);
   FBitmap.Assign(Value);
 end;
 

@@ -3,12 +3,19 @@ unit ksLoadingIndicator;
 interface
 
 uses FMX.Forms, Classes, FMX.Controls, FMX.Objects, ksTypes, FMX.Graphics,
-  FMX.StdCtrls;
+  FMX.StdCtrls
+  {$IFDEF IOS}
+  , iOSapi.UIKit, iOSapi.Foundation
+  {$ENDIF}
+  ;
 
 type
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
     {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+
+
+
   TksLoadingIndicator = class(TRectangle)
   private
     FLoadingText: string;
@@ -34,20 +41,30 @@ type
   function IsLoadingIndicatorVisible(AForm: TCommonCustomForm): Boolean;
 
 
-procedure Register;
+
+//procedure Register;
+
 
 implementation
 
-uses System.UIConsts, FMX.Types, SysUtils, Types, FMX.Ani;
+uses
+  System.UIConsts, FMX.Types, SysUtils, Types, FMX.Ani
+  {$IFDEF IOS}
+  ,iOSapi.CoreGraphics, FMX.Helpers.iOS
+  {$ENDIF}
+  ;
 
 var
   APos: TPointF;
+  {$IFDEF IOS}
+  FIndicator: UIActivityIndicatorView;
+  {$ENDIF}
 
-
+ (*
 procedure Register;
 begin
-  RegisterComponents('Kernow Software FMX', [TksLoadingIndicator]);
-end;
+  //RegisterComponents('Kernow Software FMX', [TksLoadingIndicator]);
+end;  *)
 
 
 
@@ -83,19 +100,31 @@ end;
 
 procedure ShowLoadingIndicator(AForm: TCommonCustomForm);
 var
+  {$IFDEF IOS}
+  ACenter: NSPoint;
+  {$ENDIF}
   ALoadingIndicator: TksLoadingIndicator;
 begin
+  {$IFDEF IOS}
+  if FIndicator = nil then
+  begin
+      {$IFDEF IOS}
+  ACenter.x := MainScreen.bounds.size.width/2;
+  ACenter.y := MainScreen.bounds.size.height/2;
+  FIndicator := TUIActivityIndicatorView.Alloc;
+  FIndicator.initWithActivityIndicatorStyle(UIActivityIndicatorViewStyleGray);
+  FIndicator.setCenter(CGPointMake(ACenter.x, ACenter.y));
+  {$ENDIF}
+
+  end;
+  FIndicator.startAnimating;
+  SharedApplication.keyWindow.rootViewController.view.AddSubview(FIndicator);
+  Exit;
+  {$ENDIF}
+
   ALoadingIndicator := FindLoadingIndicator(AForm);
   if ALoadingIndicator = nil then
     ALoadingIndicator := TksLoadingIndicator.Create(AForm);
-  //ALoadingIndicator.Opacity := 0;
-
-  {if APos.X > 0 then
-  begin
-    ALoadingIndicator.Position.X := APos.X;
-    ALoadingIndicator.Position.Y := APos.Y;
-  end
-  else }
   begin
     ALoadingIndicator.Position.X := (AForm.FormFactor.Width-ALoadingIndicator.Width) / 2;
     ALoadingIndicator.Position.Y := ((AForm.FormFactor.Height-ALoadingIndicator.Height) / 2)+30;
@@ -107,48 +136,31 @@ begin
 
   ALoadingIndicator.BringToFront;
   Application.ProcessMessages;
-  //Sleep(100);
-  //TAnimator.AnimateFloatWait(ALoadingIndicator, 'Opacity', 1);
 end;
 
 procedure HideLoadingIndicator(AForm: TCommonCustomForm);
 var
   ALoadingIndicator: TksLoadingIndicator;
 begin
+  {$IFDEF IOS}
+  FIndicator.stopAnimating;
+  FIndicator.removeFromSuperview;
+  Exit;
+  {$ENDIF}
   ALoadingIndicator := FindLoadingIndicator(AForm);
   //TAnimator.AnimateFloat(ALoadingIndicator, 'Opacity', 0);
   if ALoadingIndicator <> nil then
     AForm.RemoveObject(ALoadingIndicator);
+
 end;
 
-{ TksLoadingIndicatorExt }
-               {
-constructor TksLoadingIndicatorExt.Create(AOwner: TComponent);
-begin
-  inherited;
-  Fill.Color := claBlack;
-  Width := 100;
-  Height := 100;
-  XRadius := 10;
-  YRadius := 10;
-  Opacity := 0.75;
-  Stroke.Kind := TBrushKind.None;
-  Visible := False;
-end;
-
-procedure TksLoadingIndicatorExt.Paint;
-begin
-  inherited;
-  Canvas.Fill.Color := claWhite;
-  Canvas.Font.Size := 16;
-  Canvas.FillText(ClipRect, 'LOADING', False, 1, [], TTextAlign.Center, TTextAlign.Center);
-end;
-                 }
 { TksLoadingIndicator }
 
 constructor TksLoadingIndicator.Create(AOwner: TComponent);
 begin
   inherited;
+
+
   HitTest := False;
   FLoadingText := 'LOADING';
   FFadeBackground := False;
@@ -162,16 +174,12 @@ begin
   XRadius := 5;
   YRadius := 5;
   {$ENDIF}
-  //{$ELSE}
   Opacity := 0.7;
-  //{$ENDIF}
-
-  //Align := TAlignLayout.Center;
 
   FLabel := TLabel.Create(Self);
   FLabel.Align := TAlignLayout.Client;
   FLabel.TextSettings.FontColor := claWhite;
-  FLabel.Text := 'LOADING';
+  FLabel.Text := FLoadingText;
   FLabel.TextSettings.HorzAlign := TTextAlign.Center;
   FLabel.TextSettings.VertAlign := TTextAlign.Center;
   FLabel.StyledSettings := [];
@@ -198,15 +206,13 @@ end;
 procedure TksLoadingIndicator.ShowLoading;
 begin
   ShowLoadingIndicator(Owner as TForm);
+
 end;
 
 initialization
 
   APos := PointF(0, 0);
-  //ALoadingIndicator := TksLoadingIndicator.Create(nil);
 
-finalization
- //
- // ALoadingIndicator.DisposeOf;
 
 end.
+

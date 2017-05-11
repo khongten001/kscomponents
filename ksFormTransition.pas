@@ -103,11 +103,13 @@ type
 
   procedure Register;
 
+var
+  ShowLoadingIndicatorOnTransition: Boolean;
 
 implementation
 
 uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI, ksToolbar,
-  ksPickers;
+  ksPickers, ksLoadingIndicator;
 
 var
   _InternalTransitionList: TksFormTransitionList;
@@ -188,6 +190,7 @@ var
   AAnimateForm: TfrmFormTransitionUI;
   AFormIntf: IksFormTransition;
 begin
+
   Screen.ActiveForm.Focused := nil;
 
   if _InternalTransitionList.Count < 1 then
@@ -196,15 +199,23 @@ begin
   if _InTransition then
     Exit;
   _InTransition := True;
+
+  AInfo := _InternalTransitionList.Last;
+  AFrom := AInfo.FToForm;
+  ATo := AInfo.FFromForm;
+
+  if ShowLoadingIndicatorOnTransition then
+    ShowLoadingIndicator(AFrom);
   try
+
+
+
 
     AAnimateForm := TfrmFormTransitionUI.Create(nil);
     try
 
-      AInfo := _InternalTransitionList.Last;
 
-      AFrom := AInfo.FToForm;
-      ATo := AInfo.FFromForm;
+
 
       if Supports(ATo, IksFormTransition, AFormIntf) then
         AFormIntf.BeforeTransition(ksTmPop);
@@ -231,6 +242,9 @@ begin
       AAnimateForm.DisposeOf;
     end;
   finally
+    if ShowLoadingIndicatorOnTransition then
+      HideLoadingIndicator(AFrom);
+
     _InTransition := False;
   end;
 
@@ -267,8 +281,6 @@ begin
       AAnimateForm.Initialise(AFrom, ATo);
       AAnimateForm.Visible := True;
 
-
-
       AAnimateForm.Animate(AInfo.FTransition, True);
       ATo.Visible := True;
       AAnimateForm.Visible := False;
@@ -302,12 +314,14 @@ begin
   if _InTransition then
     Exit;
 
+  AFrom := Screen.ActiveForm;
+  ATo := AForm;
   _InTransition := True;
+  if ShowLoadingIndicatorOnTransition then
+    ShowLoadingIndicator(AFrom);
   try
     PickerService.HidePickers;
 
-    AFrom := Screen.ActiveForm;
-    ATo := AForm;
 
 
     {$IFDEF ANDROID}
@@ -331,6 +345,9 @@ begin
       Exit;
 
 
+    if Supports(ATo, IksFormTransition, AFormIntf) then
+      AFormIntf.BeforeTransition(ksTmPush);
+
     AInfo := TksFormTransitionItem.Create;
     AInfo.FFromForm := AFrom;
     AInfo.FToForm := ATo;
@@ -341,8 +358,6 @@ begin
     AAnimateForm := TfrmFormTransitionUI.Create(nil);
     try
 
-      if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition(ksTmPush);
 
       AAnimateForm.Initialise(AFrom, ATo);
       AAnimateForm.Visible := True;
@@ -362,6 +377,8 @@ begin
     if not ARecordPush then
       FreeAndNil(AInfo);
     _InTransition := False;
+    if ShowLoadingIndicatorOnTransition then
+      HideLoadingIndicator(AFrom);
   end;
 end;
 
@@ -384,6 +401,12 @@ begin
 end;
 
 initialization
+
+  {$IFDEF IOS}
+  ShowLoadingIndicatorOnTransition := True;
+  {$ELSE}
+  ShowLoadingIndicatorOnTransition := False;
+  {$ENDIF}
 
   _InternalTransitionList := TksFormTransitionList.Create(True);
   _InTransition := False;
