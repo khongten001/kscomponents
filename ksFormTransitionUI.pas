@@ -44,18 +44,28 @@ end;
 
 
 procedure TfrmFormTransitionUI.Initialise(AFrom, ATo: TCommonCustomForm);
+var
+  ABmp: TBitmap;
 begin
 
   ATo.SetBounds(0, 0, AFrom.Width, AFrom.Height);
-  Image1.WrapMode := TImageWrapMode.Original;
-  Image2.WrapMode := TImageWrapMode.Original;
+  //Image1.WrapMode := TImageWrapMode.Original;
+  //Image2.WrapMode := TImageWrapMode.Original;
   Fade.Fill.Kind := TBrushKind.Solid;
   Fade.Fill.Color := claBlack;
   Fade.Align := TAlignLayout.Client;
   Fade.Opacity := 0;
   ATo.SetBounds(0, 0, AFrom.Width, AFrom.Height);
-  Image1.Bitmap := GenerateFormImageExt(AFrom);
-  Image2.Bitmap := GenerateFormImageExt(ATo);
+  ABmp := TBitmap.Create;
+  try
+    GenerateFormImageExt(AFrom, ABmp);
+    Image1.Bitmap := ABmp;
+
+    GenerateFormImageExt(ATo, ABmp);
+    Image2.Bitmap := ABmp;
+  finally
+    FreeAndNil(ABmp);
+  end;
   Fade.Opacity := 0;
   {$IFDEF MSWINDOWS}
   SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);

@@ -39,6 +39,7 @@ type
   procedure ShowLoadingIndicator(AForm: TCommonCustomForm);
   procedure HideLoadingIndicator(AForm: TCommonCustomForm);
   function IsLoadingIndicatorVisible(AForm: TCommonCustomForm): Boolean;
+  function FindLoadingIndicator(AForm: TCommonCustomForm): TksLoadingIndicator;
 
 
 
@@ -57,15 +58,9 @@ uses
 var
   APos: TPointF;
   {$IFDEF IOS}
+  FIndicatorBackground: UIView;
   FIndicator: UIActivityIndicatorView;
   {$ENDIF}
-
- (*
-procedure Register;
-begin
-  //RegisterComponents('Kernow Software FMX', [TksLoadingIndicator]);
-end;  *)
-
 
 
 function FindLoadingIndicator(AForm: TCommonCustomForm): TksLoadingIndicator;
@@ -108,17 +103,28 @@ begin
   {$IFDEF IOS}
   if FIndicator = nil then
   begin
-      {$IFDEF IOS}
-  ACenter.x := MainScreen.bounds.size.width/2;
-  ACenter.y := MainScreen.bounds.size.height/2;
-  FIndicator := TUIActivityIndicatorView.Alloc;
-  FIndicator.initWithActivityIndicatorStyle(UIActivityIndicatorViewStyleGray);
-  FIndicator.setCenter(CGPointMake(ACenter.x, ACenter.y));
-  {$ENDIF}
+    ACenter.x := MainScreen.bounds.size.width/2;
+    ACenter.y := MainScreen.bounds.size.height/2;
 
+    FIndicatorBackground := TUIView.Alloc;
+    FIndicatorBackground.setUserInteractionEnabled(True);
+    FIndicatorBackground := TUIView.Wrap(FIndicatorBackground.initWithFrame(CGRectMake(0, 0, 70, 70)));
+    FIndicatorBackground.setCenter(CGPointMake(ACenter.x, ACenter.y));
+    FIndicatorBackground.setHidden(False);
+    FIndicatorBackground.setAutoresizingMask(UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight);
+    FIndicatorBackground.setBackgroundColor(AlphaColorToUIColor(claDimgray));
+    FIndicatorBackground.layer.setCornerRadius(10);
+
+    FIndicator := TUIActivityIndicatorView.Alloc;
+    FIndicator.initWithActivityIndicatorStyle(UIActivityIndicatorViewStyleWhiteLarge);
+    FIndicator.setCenter(CGPointMake(35, 35));
+
+    FIndicatorBackground.addSubview(FIndicator);
   end;
   FIndicator.startAnimating;
-  SharedApplication.keyWindow.rootViewController.view.AddSubview(FIndicator);
+  SharedApplication.keyWindow.rootViewController.view.AddSubview(FIndicatorBackground);
+  //SharedApplication.keyWindow.rootViewController.view.AddSubview(FIndicator);
+  Application.ProcessMessages;
   Exit;
   {$ENDIF}
 
@@ -143,9 +149,12 @@ var
   ALoadingIndicator: TksLoadingIndicator;
 begin
   {$IFDEF IOS}
-  FIndicator.stopAnimating;
-  FIndicator.removeFromSuperview;
-  Exit;
+  if FIndicator <> nil then
+  begin
+    FIndicator.stopAnimating;
+    FIndicatorBackground.removeFromSuperview;
+    Exit;
+  end;
   {$ENDIF}
   ALoadingIndicator := FindLoadingIndicator(AForm);
   //TAnimator.AnimateFloat(ALoadingIndicator, 'Opacity', 0);
@@ -210,6 +219,7 @@ begin
 end;
 
 initialization
+
 
   APos := PointF(0, 0);
 

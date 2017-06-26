@@ -71,6 +71,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+
     procedure DownloadFile(AUrl: string);
     function GetFitHeightWidthZoom: integer;
     procedure FitHeight;
@@ -329,6 +330,7 @@ procedure TksImageViewer.SetBitmap(const Value: TBitmap);
 begin
   FBitmap.Assign(Value);
   UpdateScrollLimits;
+  Repaint;
 end;
 
 procedure TksImageViewer.SetZoom(const Value: single);

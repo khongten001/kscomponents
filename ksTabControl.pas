@@ -149,6 +149,7 @@ type
     FTabIndex: integer;
     FTabs: TksTabItemList;
     FAppearence: TksTabBarAppearence;
+    FBeforeChange: TNotifyEvent;
     FOnChange: TNotifyEvent;
     FOnClickTab: TksTabBarClickTabEvent;
     FTabPosition: TksTabBarPosition;
@@ -199,6 +200,7 @@ type
     property TabPosition: TksTabBarPosition read FTabPosition write SetTabBarPosition default ksTbpBottom;
     property Visible;
     // events
+    property BeforeChange: TNotifyEvent read FBeforeChange write FBeforeChange;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnClickTab: TksTabBarClickTabEvent read FOnClickTab write FOnClickTab;
   end;
@@ -731,6 +733,10 @@ begin
     Exit;
   if FTabIndex <> Value then
   begin
+    if Assigned(FBeforeChange) then
+      FBeforeChange(Self);
+
+
     FTabIndex := Value;
     UpdateTabs;
     if Assigned(FOnChange) then

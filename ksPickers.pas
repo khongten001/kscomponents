@@ -30,7 +30,7 @@ interface
 {$DEFINE DPF}
 {$ENDIF}
 
-uses FMX.Pickers, Classes
+uses FMX.Pickers, Classes, FMX.Controls
   {$IFDEF DPF}
   ,DPF.iOS.UIActIonSheet
   {$ENDIF}
@@ -69,8 +69,8 @@ type
     destructor Destroy; override;
     procedure ShowActionSheet(AItems: array of string; ATitle: string; AOnSelect: TksSelectPickerItemEvent); overload;
     procedure ShowActionSheet(AItems: TStrings; ATitle: string; AOnSelect: TksSelectPickerItemEvent); overload;
-    procedure ShowItemPicker(AItems: array of string; ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent); overload;
-    procedure ShowItemPicker(AItems: TStrings; ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent); overload;
+    procedure ShowItemPicker(AParent: TControl; AItems: array of string; ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent); overload;
+    procedure ShowItemPicker(AParent: TControl; AItems: TStrings; ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent); overload;
     procedure ShowDatePicker(ATitle: string; ASelected: TDateTime; AOnSelect: TksSelectPickerDateEvent); overload;
     procedure ShowTimePicker(ATitle: string; ASelected: TDateTime; AOnSelect: TksSelectPickerTimeEvent);
     function CreateDatePicker: TCustomDateTimePicker;
@@ -82,7 +82,7 @@ var
 
 implementation
 
-uses FMX.Platform, SysUtils, FMX.Forms, System.Threading;
+uses FMX.Platform, SysUtils, FMX.Forms, System.Threading, System.Types, ksVirtualListView;
 
 { TksPickerService }
 
@@ -234,7 +234,7 @@ begin
   FActionSheet.ShowMessage;
   FActionSheet.OnClick := DoActionSheetButtonClick;
   {$ELSE}
-  ShowItemPicker(AItems, '', -1, AOnSelect);
+  ShowItemPicker(nil, AItems, '', -1, AOnSelect);
   {$ENDIF}
 end;
 
@@ -259,18 +259,26 @@ begin
   FTimePicker.Show;
 end;
 
-procedure TksPickerService.ShowItemPicker(AItems: TStrings; ATitle: string;
+procedure TksPickerService.ShowItemPicker(AParent: TControl; AItems: TStrings; ATitle: string;
   AIndex: integer; AOnSelect: TksSelectPickerItemEvent);
 begin
   FPickerITems.Assign(AItems);
+
+  if FPicker <> nil then
+    FPicker.DisposeOf;
+
+  FPicker := PickerService.CreateListPicker;
+
   FPicker.Values.Assign(AItems);
   FPicker.ItemIndex := AIndex;
+  FPicker.Parent := AParent;
+
   FOnItemSelected := AOnSelect;
   FPicker.OnValueChanged := DoItemSelected;
   FPicker.Show;
 end;
 
-procedure TksPickerService.ShowItemPicker(AItems: array of string;
+procedure TksPickerService.ShowItemPicker(AParent: TControl; AItems: array of string;
   ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent);
 var
   ICount: integer;
@@ -281,7 +289,7 @@ begin
     for Icount := Low(AItems) to High(AItems) do
     begin
       AStrings.Add(AItems[ICount]);
-      ShowItemPicker(AStrings, ATitle, AIndex, AOnSelect);
+      ShowItemPicker(AParent, AStrings, ATitle, AIndex, AOnSelect);
     end;
   finally
     FreeAndNil(AStrings);

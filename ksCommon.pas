@@ -71,7 +71,7 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types,
 
   procedure ShowMessage(AText: string);
 
-  function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
+  procedure GenerateFormImageExt(AForm: TCommonCustomForm; ABmp: TBitmap);
 
 
   procedure HideKeyboard;
@@ -82,7 +82,7 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types,
 implementation
 
 uses FMX.Platform, SysUtils, FMX.TextLayout, Math, FMX.Utils, FMX.VirtualKeyboard,
-  System.Generics.Collections, ksLoadingIndicator,
+  System.Generics.Collections, ksLoadingIndicator, System.Classes,
   {$IFDEF VER290}
   FMX.Dialogs
   {$ELSE}
@@ -176,31 +176,39 @@ begin
     AKeyboard.HideVirtualKeyboard;
 end;
 
-function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
+procedure GenerateFormImageExt(AForm: TCommonCustomForm; ABmp: TBitmap);
 var
-  ALoadingVisible: Boolean;
   AScale: single;
+  ALoadingIndicator: TksLoadingIndicator;
 begin
-  ALoadingVisible := IsLoadingIndicatorVisible(AForm);
-  if ALoadingVisible then
-    HideLoadingIndicator(AForm);
-  Result := TBitmap.Create;
-  AScale := GetScreenScale(True);
-  Result.BitmapScale := AScale;
-  Result.Width := Round(AForm.Width * AScale);
-  Result.Height := Round(AForm.Height * AScale);
-  Result.Canvas.BeginScene;
-  TForm(AForm).PaintTo(Result.Canvas);
-  Result.Canvas.EndScene;
-  if Result.IsEmpty then
-  begin
-    //AForm.Visible := True;
-    //AForm.Visible := False;
-    FreeAndNil(Result);
-    Result := GenerateFormImageExt(AForm);
-  end;
-  if ALoadingVisible then
-    ShowLoadingIndicator(AForm);
+  TThread.Synchronize (TThread.CurrentThread,
+      procedure ()
+      begin
+        ALoadingIndicator := nil;
+        if IsLoadingIndicatorVisible(AForm) then
+          ALoadingIndicator := FindLoadingIndicator(AForm);
+
+        if ALoadingIndicator <> nil then
+          ALoadingIndicator.Visible := False;
+
+        //Result := TBitmap.Create;
+        AScale := GetScreenScale(False);
+        ABmp.Clear(claNull);
+        ABmp.BitmapScale := AScale;
+        ABmp.Width := Round(AForm.Width * AScale);
+        ABmp.Height := Round(AForm.Height * AScale);
+        ABmp.Canvas.BeginScene;
+        TForm(AForm).PaintTo(ABmp.Canvas);
+        ABmp.Canvas.EndScene;
+        {if ABmp.IsEmpty then
+        begin
+          FreeAndNil(ABmp);
+          GenerateFormImageExt(AForm, ABmp);
+        end;  }
+        if ALoadingIndicator <> nil then
+          ALoadingIndicator.Visible := True;
+      end);
+
 end;
 
 

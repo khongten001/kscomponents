@@ -61,7 +61,8 @@ type
   TksMapMarkers = class(TList<TksMapMarker>)
   private
     function GetMarkerByID(AID: string): TksMapMarker;  public
-    procedure DeleteMarker(AMarker: TksMapMarker);
+    procedure DeleteMarker(AMarker: TksMapMarker); overload;
+    procedure DeleteMarker(AMarkerID: string); overload;
     property MarkerByID[AID: string]: TksMapMarker read GetMarkerByID;
   public
 
@@ -78,7 +79,6 @@ type
     function AddMarker(AID: string; ALocation: TMapCoordinate; ATitle, ASnippet: string; AImage: TBitmap): TksMapMarker; overload;
     function AddMarker(AID: string; ALat, ALon: Extended; ATitle, ASnippet: string; AImage: TBitmap): TksMapMarker; overload;
     property Markers: TksMapMarkers read FMarkers;
-
   end;
 
   procedure Register;
@@ -106,19 +106,12 @@ var
 begin
   ALastMarker := FMarkers.MarkerByID[AID];
 
-  //if AMarker <> nil then
-  //  FMarkers.DeleteMarker(AMarker);
+  Result := TksMapMarker.Create;
 
   ADesc := TMapMarkerDescriptor.Create(TMapCoordinate.Create(ALat, ALon), ATitle);
   ADesc.Snippet := ASnippet;
   ADesc.Icon := AImage;
 
-  if ALastMarker <> nil then
-  begin
-
-  end;
-
-  Result := TksMapMarker.Create;
   Result.FMarker := AddMarker(ADesc);
   Result.FID := AID;
 
@@ -157,6 +150,15 @@ procedure TksMapMarkers.DeleteMarker(AMarker: TksMapMarker);
 begin
   AMarker.FMarker.Remove;
   Delete(IndexOf(AMarker));
+end;
+
+procedure TksMapMarkers.DeleteMarker(AMarkerID: string);
+var
+  Marker: TksMapMarker;
+begin
+  Marker := MarkerByID[AMarkerID];
+  if Marker <> nil then
+    DeleteMarker(Marker);
 end;
 
 function TksMapMarkers.GetKsMarker(AMarker: TMapMarker): TksMapMarker;

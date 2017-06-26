@@ -222,6 +222,7 @@ type
   public
     constructor Create(AItem: TksVListItem); virtual;
     procedure ClearCache; virtual;
+    procedure SetSize(AWidth, AHeight: single);
     property Left: single read FLeft write SetLeft;
     property Top: single read FTop write SetTop;
     property Width: single read FWidth write SetWidth;
@@ -237,6 +238,7 @@ type
 
   TksVListItemTextObject = class(TksVListItemBaseObject)
   private
+    FAutoSize: Boolean;
     {$IFDEF IOS}
     FCached: TBitmap;
     {$ENDIF}
@@ -248,10 +250,12 @@ type
     FText: string;
     FMaxWidth: integer;
     FActualTextWidth: single;
+    FPasswordField: Boolean;
     procedure SetText(const Value: string);
     function GetFont: TFont;
     procedure SetFont(const Value: TFont);
     procedure SetMaxWidth(const Value: integer);
+    procedure SetPasswordField(const Value: Boolean);
   protected
     procedure Changed; override;
     function ActualTextWidth: single;
@@ -267,6 +271,7 @@ type
     property TextSettings: TTextSettings read FTextSettings;
     property Font: TFont read GetFont write SetFont;
     property MaxWidth: integer read FMaxWidth write SetMaxWidth default 0;
+    property PasswordField: Boolean read FPasswordField write SetPasswordField;
   end;
 
   TksVListItemShapeObject = class(TksVListItemBaseObject)
@@ -387,6 +392,7 @@ type
     FSelectedDate: TDateTime;
     FSelectedTime: TDateTime;
     FSelectedItem: string;
+    FPickerItems: TStrings;
     FEditFieldKeyboardType: TVirtualKeyboardType;
     FSelectorType: TksVListItemSelectorType;
     FOnDateSelected: TksItemDateSelectedEvent;
@@ -464,6 +470,7 @@ type
     property Offset: integer read FOffset write SetOffset default 0;
     property IconSize: integer read FIconSize write SetIconSize default 28;
     property SelectedDate: TDateTime read FSelectedDate write FSelectedDate;
+    property PickerItems: TStrings read FPickerItems;
     // events...
     property OnClick: TNotifyEvent read FOnClick write FOnClick;
     property CheckBoxVisible: Boolean read FCheckBoxVisible write FCheckBoxVisible default True;
@@ -495,7 +502,8 @@ type
     function Add: TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
-    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem;
+    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem; overload;
+    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem; overload;
     function AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddInputSelector(ATitle, ASubTitle, ADetail, ATagStr: string): TksVListItem;
@@ -771,7 +779,8 @@ begin
   Result := TksVListItemTextObject.Create(Self);
   Result.FLeft := x;
   Result.FTop := y;
-  Result.Width := AWidth;
+  Result.FWidth := AWidth;
+  Result.FAutoSize := AWidth = 0;
   Result.Text := AText;
   FObjects.Add(Result);
 end;
@@ -822,6 +831,7 @@ begin
   inherited Create; // (nil);
   FActionButtons := TksVListActionButtons.Create(Self);
   FObjects := TksVListObjectList.Create(True);
+  FPickerItems := TStringList.Create;
   FCheckBoxVisible := True;
   FSelectorType := ksSelectorNone;
   FOffset := 0;
@@ -912,8 +922,9 @@ begin
   FreeAndNil(FImage);
   FreeAndNil(FAccessory);
   FreeAndNil(FActionButtons);
+  FreeAndNil(FPickerItems);
   inherited;
-end;
+  end;
 
 procedure TksVListItem.DoClicked(var AHandled: Boolean);
 begin
@@ -1167,6 +1178,7 @@ begin
   AItems := TStringList.Create;
   try
     ASelected := '';
+    AItems.Assign(FPickerItems);
     if Assigned(FOwner.FOwner.OnGetPickerItems) then
       FOwner.FOwner.OnGetPickerItems(FOwner.FOwner, Self, ASelected, AItems);
 
@@ -1176,7 +1188,7 @@ begin
       AIndex := AItems.IndexOf(ASelected)
     else
       AIndex := 0;
-    PickerService.ShowItemPicker(AItems, '',  AIndex, DoItemPickerChanged);
+    PickerService.ShowItemPicker(FOwner.FOwner, AItems, '',  AIndex, DoItemPickerChanged);
   finally
     FreeAndNil(AItems);
   end;
@@ -1821,6 +1833,16 @@ end;
 procedure TksVirtualListView.EndUpdate;
 begin
   if FUpdateCount > 0 then
+    Dec(FUpdateCount);
+  if FUpdateCount = 0 then
+  begin
+    FItems.UpdateItemRects;
+    UpdateScrollLimmits;
+    //Repaint;
+    Invalidate;
+    inherited EndUpdate;
+  end;
+  {if FUpdateCount > 0 then
   begin
     if FUpdateCount = 1 then
     begin
@@ -1831,9 +1853,7 @@ begin
 
       Invalidate;
     end;
-  end;
-  Dec(FUpdateCount);
-  inherited EndUpdate;
+  end; }
 end;
 
 procedure TksVirtualListView.FocusControl(AItem: TksVListItem; AControl: TControl);
@@ -1893,7 +1913,8 @@ end;
 
 procedure TksVirtualListView.BeginUpdate;
 begin
-  inherited;
+  if FUpdateCount = 0 then
+    inherited BeginUpdate;
   Inc(FUpdateCount);
 end;
 
@@ -2021,7 +2042,7 @@ end;
 
 procedure TksVirtualListView.ScrollToBottom(AAnimated: Boolean);
 begin
- Application.ProcessMessages;
+  Application.ProcessMessages;
   if AAnimated then
     TAnimator.AnimateIntWait(Self, 'ScrollPos', FMaxScrollPos)
   else
@@ -2475,11 +2496,22 @@ begin
 end;
 
 function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
-  AImage: TBitmap; ATagStr: string): TksVListItem;
+  AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem;
+var
+  ICount: integer;
 begin
   Result := Add(ATitle, ASubTitle, ADetail, AImage, atMore);
+  for ICount := Low(AItems) to High(AItems) do
+    Result.PickerItems.Add(AItems[ICount]);
+
   Result.SelectorType := TksVListItemSelectorType.ksSelectorPicker;
   Result.TagStr := ATagStr;
+end;
+
+function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
+  AImage: TBitmap; ATagStr: string): TksVListItem;
+begin
+  Result := AddPickerSelector(ATitle, ASubTitle, ADetail, AImage, ATagStr, []);
 end;
 
 function TksVListItemList.AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime;
@@ -2690,11 +2722,24 @@ end;
 
 function TksVListItemTextObject.CalculateSize: TSizeF;
 begin
-  Result.Width := CalculateTextWidth(FText, FTextSettings.Font, FTextSettings.WordWrap, FMaxWidth, 0);
-  Result.Height := CalculateTextHeight(FText, FTextSettings.Font, FTextSettings.WordWrap, FTextSettings.Trimming, Result.Width, 0);
-  FWidth := Result.Width;
-  FHeight := Result.Height;
+  if (FAutoSize) or (FWidth = 0) then
+    FWidth := CalculateTextWidth(FText, FTextSettings.Font, FTextSettings.WordWrap, FMaxWidth, 0);
+  if (FAutoSize) or (FHeight = 0) then
+    FHeight := CalculateTextHeight(FText, FTextSettings.Font, FTextSettings.WordWrap, FTextSettings.Trimming, FWidth, 0);
+
+  Result.Width := FWidth;
+  Result.Height := FHeight;
 end;
+
+
+{  if FWidth = 0 then
+  begin
+    FWidth := CalculateTextWidth(FText, FTextSettings.Font, FTextSettings.WordWrap, FMaxWidth, 0);
+  end;
+  FHeight := CalculateTextHeight(FText, FTextSettings.Font, FTextSettings.WordWrap, FTextSettings.Trimming, FWidth, 0);
+  Result.Width := FWidth;
+  Result.Height := FHeight;}
+
 
 function TksVListItemTextObject.CalculateWidth: single;
 begin
@@ -2705,9 +2750,13 @@ procedure TksVListItemTextObject.Changed;
 begin
   {$IFDEF IOS}
   FCached.Clear(claNull);
+  FCached.Width := 0;
+  FCached.Height := 0;
+
   {$ENDIF}
   FTextSize := Point(0, 0);
   CalculateSize;
+
   //FCachedSize := FCachedSize.Empty;
   //if FCached = nil then
   //  Exit;
@@ -2751,6 +2800,8 @@ begin
   FMaxWidth := 0;
   FActualTextWidth := 0;
   FText := '';
+  FAutoSize := True;
+  FPasswordField := False;
   //FCached := nil;
 end;
 
@@ -2770,6 +2821,7 @@ procedure TksVListItemTextObject.DrawToCanvas(ACanvas: TCanvas;
 var
   ARect: TRectF;
   ATextColor: TAlphaColor;
+  AText: string;
 begin
   if (FText = '') or (FVisible = False) then
     Exit;
@@ -2783,7 +2835,10 @@ begin
       ARect.Width := FMaxWidth;
 
     FTextLayout.BeginUpdate;
-    FTextLayout.Text := FText;
+    AText := FText;
+    if FPasswordField then
+      AText := StringOfChar('*', Length(AText));
+    FTextLayout.Text := AText;
     FTextLayout.WordWrap := FTextSettings.WordWrap;
     FTextLayout.Font.Assign(FTextSettings.Font);
     FTextLayout.HorizontalAlign := FTextSettings.HorzAlign;
@@ -2827,7 +2882,9 @@ begin
   FTextLayout.RenderLayout(ACanvas);
   {$ENDIF}
 
- // ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);
+  {ACanvas.Stroke.Kind := TBrushKind.Solid;
+  ACanvas.Stroke.Color := claBlack;
+  ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);}
 {  RenderText(ACanvas,
            ARect.Left,
            ARect.Top,
@@ -2860,6 +2917,15 @@ begin
   if FMaxWidth <> Value then
   begin
     FMaxWidth := Value;
+    Changed;
+  end;
+end;
+
+procedure TksVListItemTextObject.SetPasswordField(const Value: Boolean);
+begin
+  if FPasswordField <> Value then
+  begin
+    FPasswordField := Value;
     Changed;
   end;
 end;
@@ -2948,6 +3014,13 @@ end;
 procedure TksVListItemBaseObject.SetLeft(const Value: single);
 begin
   FLeft := Value;
+  Changed;
+end;
+
+procedure TksVListItemBaseObject.SetSize(AWidth, AHeight: single);
+begin
+  FWidth := AWidth;
+  FHeight := AHeight;
   Changed;
 end;
 
@@ -3203,7 +3276,8 @@ begin
   end
   //else
   //  FBitmap := Value;*)
-  FBitmap.Clear(claNull);
+  //FBitmap.Clear(claNull);
+
   FBitmap.Assign(Value);
 end;
 
@@ -3706,4 +3780,5 @@ end;
 
 
 end.
+
 

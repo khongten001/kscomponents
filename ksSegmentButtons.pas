@@ -329,7 +329,7 @@ begin
         FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]);
     end;
   end;
-  Application.ProcessMessages;
+  //Application.ProcessMessages;
   HitTest := True;
 end;
 
@@ -449,7 +449,7 @@ begin
     FItemIndex := Value;
     UpdateButtons;
     Repaint;
-    Application.ProcessMessages;
+    //Application.ProcessMessages;
 
     if Assigned(FOnChange) then
       FOnChange(Self);

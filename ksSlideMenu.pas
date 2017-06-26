@@ -33,7 +33,8 @@ interface
 
 uses System.UITypes, FMX.Controls, FMX.Layouts, FMX.Objects, System.Classes,
   FMX.Types, Generics.Collections, FMX.Graphics, System.UIConsts, FMX.Effects,
-  FMX.StdCtrls, System.Types, FMX.Forms, {ksTableView,} ksVirtualListView, ksTypes, ksSlideMenuUI
+  FMX.StdCtrls, System.Types, FMX.Forms, {ksTableView,} ksVirtualListView, ksTypes,
+  ksSlideMenuUI
   {$IFDEF XE8_OR_NEWER}
   ,FMX.ImgList
   {$ENDIF}
@@ -113,11 +114,14 @@ type
     FBitmap: TBitmap;
     FForm: TCommonCustomForm;
     FIcon: TksStandardIcon;
+    FIsHeader: Boolean;
+
   end;
 
   TksSlideMenuItemList = class(TObjectList<TksSlideMenuItem>)
   public
     procedure AddItem(AID, AText: string; AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom; const ABmp: TBitmap = nil);
+    procedure AddHeader(AText: string);
   end;
 
   //TksSlideMenuState = (ksMsOpening, ksMsOpen, ksMsClosing, ksMsClosed);
@@ -366,6 +370,7 @@ begin
 
   FCallingForm := ACallingForm;
   HideLoadingIndicator(FCallingForm);
+
   if FMenuForm = nil then
   begin
     FMenuForm :=  TfrmSlideMenuUI.Create(nil);
@@ -373,6 +378,7 @@ begin
     FMenuForm.OnSelectItem := SelectItem;
     RebuildMenu;
   end;
+
   ACallingForm.Visible := False;
   FMenuForm.OpenMenu(ACallingForm);
 end;
@@ -394,52 +400,65 @@ begin
   lv.ClearItems;
   for ICount := 0 to FItems.Count-1 do
   begin
-    AItem := lv.Items.Add(FItems[ICount].FText, '', '', atMore);
-    AItem.TagInt := ICount;
-    AItem.Title.TextSettings.FontColor := FAppearence.FontColor;
-    AItem.Accessory.SetOpaqueColor(FAppearence.AccessoryColor);
+    if FItems[ICount].FIsHeader then
+    begin
+      AItem := lv.Items.AddHeader(FItems[ICount].FText);
+      AItem.Background := $FF484848;//claDimgray;// lv.Appearence.HeaderColor;
+      AItem.Title.TextSettings.FontColor := claWhite;// lv.Appearence.HeaderFontColor;
+    end
+    else
+    begin
+      AItem := lv.Items.Add(FItems[ICount].FText, '', '', atMore);
+      AItem.TagInt := ICount;
+      AItem.Title.TextSettings.FontColor := FAppearence.FontColor;
+      AItem.Accessory.SetOpaqueColor(FAppearence.AccessoryColor);
+      if lv.ItemIndex = -1 then
+        AItem.Selected := True;
 
-    aBmp := TBitmap.Create;
-    try
-      if FItems[ICount].FBitmap <> nil then
-      begin
-        ABmp := FItems[ICount].FBitmap;
-        ReplaceOpaqueColor(ABmp, claWhite);
-
-        AItem.Image.Bitmap := ABmp;
-        AItem.Image.Width := 20;
-        AItem.Image.Height := 20;
-      end
-      else
-      begin
-
-        AEnumName := GetENumName(TypeInfo(TksStandardIcon), Ord(FItems[ICount].FIcon));
-
-
-        if FItems[ICount].FIcon <> Custom then
+      aBmp := TBitmap.Create;
+      try
+        if FItems[ICount].FBitmap <> nil then
         begin
-
-          AStream := TResourceStream.Create(HInstance, AEnumName, RT_RCDATA);
-          aBmp.LoadFromStream(AStream);
+          ABmp := FItems[ICount].FBitmap;
           ReplaceOpaqueColor(ABmp, claWhite);
 
           AItem.Image.Bitmap := ABmp;
           AItem.Image.Width := 20;
           AItem.Image.Height := 20;
+        end
+        else
+        begin
 
-          AStream.Free;
+          AEnumName := GetENumName(TypeInfo(TksStandardIcon), Ord(FItems[ICount].FIcon));
+
+
+          if FItems[ICount].FIcon <> Custom then
+          begin
+
+            AStream := TResourceStream.Create(HInstance, AEnumName, RT_RCDATA);
+            aBmp.LoadFromStream(AStream);
+            ReplaceOpaqueColor(ABmp, claWhite);
+
+            AItem.Image.Bitmap := ABmp;
+            AItem.Image.Width := 20;
+            AItem.Image.Height := 20;
+
+            AStream.Free;
+          end;
         end;
+      finally
+        ABmp.Free;
       end;
-    finally
-      ABmp.Free;
     end;
   end;
+
 end;
 
 procedure TksSlideMenu.SelectItem(Sender: TObject; AItem: TksVListItem);
 var
   mi: TksSlideMenuItem;
   AForm: TCommonCustomForm;
+  ABmp: TBitmap;
 begin
   AForm := nil;
   mi := nil;
@@ -471,8 +490,8 @@ begin
   // fix for Android initial form size
   if FInitalizedForms.IndexOf(AForm) = -1 then
   begin
-    AForm.Visible := True;
-    AForm.Visible := False;
+    //AForm.Visible := True;
+    //AForm.Visible := False;
     FInitalizedForms.Add(AForm);
   end;
   {$ENDIF}
@@ -483,7 +502,15 @@ begin
   {$ELSE}
   AForm.SetBounds(FMenuForm.Left, FMenuForm.Top, FMenuForm.Width, FMenuForm.Height);
   {$ENDIF}
-  FMenuForm.Image1.Bitmap := GenerateFormImageExt(AForm);
+
+  ABmp := TBitmap.Create;
+  try
+    GenerateFormImageExt(AForm, ABmp);
+    FMenuForm.Bitmap.Assign(ABmp);
+  finally
+    FreeAndNil(ABmp);
+  end;
+    //FMenuForm.Image1.Bitmap := GenerateFormImageExt(AForm);
   FMenuForm.CloseMenu;
 
   AForm.Visible := True;
@@ -514,6 +541,17 @@ end;
 
 {TksSlideMenuItemExtList }
 
+procedure TksSlideMenuItemList.AddHeader(AText: string);
+var
+  AItem: TksSlideMenuItem;
+begin
+  AItem := TksSlideMenuItem.Create;
+  AItem.FText := AText;
+  AItem.FIsHeader := True;
+  Add(AItem);
+
+end;
+
 procedure TksSlideMenuItemList.AddItem(AID, AText: string;
   AForm: TCommonCustomForm; const AIcon: TksStandardIcon = Custom; const ABmp: TBitmap = nil);
 var
@@ -525,6 +563,7 @@ begin
   AItem.FForm := AForm;
   AItem.FIcon := AIcon;
   AItem.FBitmap := ABmp;
+  AItem.FIsHeader := False;
   Add(AItem);
 end;
 

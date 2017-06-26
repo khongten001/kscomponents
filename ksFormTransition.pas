@@ -217,8 +217,8 @@ begin
 
 
 
-      if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition(ksTmPop);
+      {if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);  }
 
       AAnimateForm.Initialise(AFrom, ATo);
       AAnimateForm.Visible := True;
@@ -229,6 +229,9 @@ begin
       ATo.Visible := True;
       AAnimateForm.Visible := False;
 
+      // moved to here...
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);
 
       AFrom.Visible := False;
       ATo.Activate;
@@ -275,8 +278,8 @@ begin
       AFrom := AInfo.FToForm;
       ATo := _InternalTransitionList.First.FFromForm;
 
-      if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition(ksTmPop);
+      {if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);  }
 
       AAnimateForm.Initialise(AFrom, ATo);
       AAnimateForm.Visible := True;
@@ -285,6 +288,9 @@ begin
       ATo.Visible := True;
       AAnimateForm.Visible := False;
 
+      // moved to here...
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);
 
       AFrom.Visible := False;
       ATo.Activate;
@@ -331,8 +337,8 @@ begin
 
     if FInitalizedForms.IndexOf(ATo) = -1 then
     begin
-      ATo.Visible := True;
-      ATo.Visible := False;
+      //ATo.Visible := True;
+      //ATo.Visible := False;
       FInitalizedForms.Add(ATo);
     end;
     {$ENDIF}
@@ -345,8 +351,8 @@ begin
       Exit;
 
 
-    if Supports(ATo, IksFormTransition, AFormIntf) then
-      AFormIntf.BeforeTransition(ksTmPush);
+    {if Supports(ATo, IksFormTransition, AFormIntf) then
+      AFormIntf.BeforeTransition(ksTmPush); }
 
     AInfo := TksFormTransitionItem.Create;
     AInfo.FFromForm := AFrom;
@@ -355,22 +361,38 @@ begin
     if ARecordPush then
       _InternalTransitionList.Add(AInfo);
 
-    AAnimateForm := TfrmFormTransitionUI.Create(nil);
-    try
+    if ATransition <> TksTransitionType.ksFtNoTransition then
+    begin
+      AAnimateForm := TfrmFormTransitionUI.Create(nil);
+      try
 
 
-      AAnimateForm.Initialise(AFrom, ATo);
-      AAnimateForm.Visible := True;
-      AAnimateForm.Animate(AInfo.FTransition, False);
+        AAnimateForm.Initialise(AFrom, ATo);
+        AAnimateForm.Visible := True;
+        AAnimateForm.Animate(AInfo.FTransition, False);
+
+        // moved to here...
+        if Supports(ATo, IksFormTransition, AFormIntf) then
+          AFormIntf.BeforeTransition(ksTmPush);
+
+        AForm.Visible := True;
+        AAnimateForm.Visible := False;
+        AFrom.Visible := False;
+        AForm.Activate;
+        {$IFDEF MSWINDOWS}
+        AForm.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
+        {$ENDIF}
+      finally
+        AAnimateForm.DisposeOf;
+      end;
+    end
+    else
+    begin
+      // no animation...
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPush);
       AForm.Visible := True;
-      AAnimateForm.Visible := False;
       AFrom.Visible := False;
-      AForm.Activate;
-      {$IFDEF MSWINDOWS}
-      AForm.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
-      {$ENDIF}
-    finally
-      AAnimateForm.DisposeOf;
     end;
 
   finally
@@ -405,7 +427,7 @@ initialization
   {$IFDEF IOS}
   ShowLoadingIndicatorOnTransition := True;
   {$ELSE}
-  ShowLoadingIndicatorOnTransition := False;
+  ShowLoadingIndicatorOnTransition := True;
   {$ENDIF}
 
   _InternalTransitionList := TksFormTransitionList.Create(True);
