@@ -49,7 +49,7 @@ begin
 
   Image1.Visible := False;
 
-    for ICount := 1 to 3 do
+    for ICount := 1 to 6 do
     begin
       AItem := ksVirtualListView1.Items.Add('Item: '+IntToStr(ICount), 'some subtitle text', 'some detail', atMore );
       AItem.Image.Bitmap := Image1.Bitmap;

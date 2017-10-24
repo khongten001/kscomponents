@@ -283,8 +283,8 @@ begin
 
   ACanvas.FillText(r, FText, False, 1, [], TTextAlign.Center, TTextAlign.Trailing);
 
-  ADestRect := RectF(0, 0, 22, 22);
-  OffsetRect(ADestRect, ARect.Left + ((ARect.Width - ADestRect.Width) / 2), 4);
+  ADestRect := RectF(0, 0, 25, 25);
+  OffsetRect(ADestRect, ARect.Left + ((ARect.Width - ADestRect.Width) / 2), 6);
 
  { if (AIndex = TksTabControl(Parent).TabIndex) then
     ReplaceOpaqueColor(FIcon, AAppearence.SelectedColor)
@@ -973,5 +973,6 @@ initialization
 RegisterFmxClasses([TksTabControl, TksTabItem]);
 
 end.
+
 
 

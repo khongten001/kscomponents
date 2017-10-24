@@ -41,6 +41,7 @@ object Form24: TForm24
   object ksVirtualListView1: TksVirtualListView
     Align = Client
     DeleteButton.Text = 'Delete'
+    ItemHeight = 50
     NoItemsText.Font.Size = 18.000000000000000000
     PullToRefresh.PullText = 'PULL TO REFRESH'
     PullToRefresh.ReleaseText = 'RELEASE TO REFRESH'

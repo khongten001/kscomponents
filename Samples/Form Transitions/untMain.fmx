@@ -1697,25 +1697,10 @@ object Form3: TForm3
       Size.PlatformDefault = False
     end
   end
-  object ToolBar1: TToolBar
-    Size.Width = 259.000000000000000000
-    Size.Height = 44.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 4
-    object Label1: TLabel
-      Align = Contents
-      StyledSettings = [Family, FontColor]
-      Size.Width = 259.000000000000000000
-      Size.Height = 44.000000000000000000
-      Size.PlatformDefault = False
-      TextSettings.Font.Size = 14.000000000000000000
-      TextSettings.HorzAlign = Center
-      Text = 'FIRST FORM'
-    end
-  end
   object ksVirtualListView1: TksVirtualListView
     Align = Client
     DeleteButton.Text = 'Delete'
+    ItemHeight = 60
     NoItemsText.Font.Size = 18.000000000000000000
     PullToRefresh.PullText = 'PULL TO REFRESH'
     PullToRefresh.ReleaseText = 'RELEASE TO REFRESH'
@@ -1725,7 +1710,18 @@ object Form3: TForm3
     OnItemClick = ksVirtualListView1ItemClick
   end
   object ksFormTransition1: TksFormTransition
-    Left = 112
-    Top = 252
+    Left = 40
+    Top = 204
+  end
+  object ksToolbar1: TksToolbar
+    Font.Size = 14.000000000000000000
+    Text = 'MAIN FORM'
+    Size.Width = 259.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    TintColor = claSteelblue
+    TextColor = claWhite
+    ShowMenuButton = False
   end
 end

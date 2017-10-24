@@ -104,7 +104,7 @@ var
 procedure ShowMessage(AText: string);
 begin
   {$IFDEF VER290}
-  ShowMessage(AText);
+  FMX.Dialogs.ShowMessage(AText);
   {$ELSE}
   TDialogService.ShowMessage(AText);
   {$ENDIF}
@@ -511,7 +511,7 @@ var
 begin
   s := GetScreenScale;
 
-  AWidth := 64;
+  AWidth := 64*s;
 
   ABmp := TBitmap.Create(Round(AWidth*s), Round(AWidth*s));
   try
@@ -524,42 +524,18 @@ begin
     ABmp.Clear(claNull);
     ABmp.Canvas.BeginScene;
     r := RectF(2, 2, ABmp.Width-2, ABmp.Height-2);
-    //r := RectF(0, 0, ABmp.Width, ABmp.Width);
 
-    {if AValue = -1 then
-    begin
-      InflateRect(r, -12, -12);
-      InflateRect(r2,-12, -12);
-      OffsetRect(r, 0, -6);
-      OffsetRect(r2, 0, -6);
-    end;    }
-
-    //DrawEllipse(ABmp.Canvas, r2, claBlack);//BackgroundColor);
-
-
-    //DrawEllipse(ABmp.Canvas, r, AColor);
-
-    //InflateRect(r, );
     ABmp.Canvas.Fill.Color := AColor;
     ABmp.Canvas.Fill.Kind := TBrushKind.Solid;
     ABmp.Canvas.FillEllipse(r, 1);
 
     //InflateRect();
-   { ABmp.Canvas.Stroke.Color := claBlack;
-    ABmp.Canvas.Stroke.Thickness := s;
+    ABmp.Canvas.Stroke.Color := claBlack;
+    ABmp.Canvas.stroke.Thickness := 4*s;
     ABmp.Canvas.Stroke.Kind := TBrushKind.Solid;
-    ABmp.Canvas.DrawEllipse(r, 1);  }
+    ABmp.Canvas.DrawEllipse(r, 1);
 
     ABmp.Canvas.EndScene;
-
-   {if AValue = -1 then
-   begin
-      ARect.Left := ARect.Left + 2;
-      //ARect.Top := ARect.Top + 2;
-      ARect.Right := ARect.Right - 6;
-      ARect.Bottom := ARect.Bottom - 8;
-   end; }
-
 
 
     ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, 1, False);

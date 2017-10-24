@@ -29,15 +29,11 @@ interface
 {$I ksComponents.inc}
 
 uses
-  Classes, FMX.Types, FMX.Controls, FMX.Graphics, Types, System.UITypes,
+  Classes, FMX.Types, FMX.Controls, FMX.Graphics, System.UITypes,
   FMX.StdCtrls, System.Generics.Collections, FMX.Objects, FMX.Effects,
-  System.UIConsts, ksSpeedButton, ksTypes, FMX.Maps;
+  System.UIConsts, ksSpeedButton, ksTypes, FMX.Maps, System.Types;
 
 type
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
-    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
-    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
-
   TksMapMarker = class;
 
   TksMarkerEvent = procedure(Marker: TksMapMarker) of object;
@@ -70,15 +66,30 @@ type
     procedure Clear; virtual;
   end;
 
-  TksMapView = class(TMapView)
+  IksMapView = interface
+  ['{AABA39E3-52EB-4344-BF48-5F3DAE1CB6AA}']
+    procedure SetTilt(const Degrees: Single);
+  end;
+
+  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
+    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
+    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+
+  TksMapView = class(TMapView, IksMapView)
   private
     FMarkers: TksMapMarkers;
+  protected
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function AddMarker(AID: string; ALocation: TMapCoordinate; ATitle, ASnippet: string; AImage: TBitmap): TksMapMarker; overload;
     function AddMarker(AID: string; ALat, ALon: Extended; ATitle, ASnippet: string; AImage: TBitmap): TksMapMarker; overload;
     property Markers: TksMapMarkers read FMarkers;
+  published
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
   end;
 
   procedure Register;
@@ -126,12 +137,19 @@ constructor TksMapView.Create(AOwner: TComponent);
 begin
   inherited;
   FMarkers := TksMapMarkers.Create;
+
 end;
 
 destructor TksMapView.Destroy;
 begin
   FMarkers.Clear;
   FreeAndNil(FMarkers);
+  inherited;
+end;
+
+procedure TksMapView.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Single);
+begin
   inherited;
 end;
 

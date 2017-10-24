@@ -100,7 +100,7 @@ var
   {$ENDIF}
   ALoadingIndicator: TksLoadingIndicator;
 begin
-  {$IFDEF IOS}
+(*  {$IFDEF IOS}
   if FIndicator = nil then
   begin
     ACenter.x := MainScreen.bounds.size.width/2;
@@ -126,17 +126,24 @@ begin
   //SharedApplication.keyWindow.rootViewController.view.AddSubview(FIndicator);
   Application.ProcessMessages;
   Exit;
-  {$ENDIF}
+  {$ENDIF} *)
 
+  Application.ProcessMessages;
   ALoadingIndicator := FindLoadingIndicator(AForm);
   if ALoadingIndicator = nil then
     ALoadingIndicator := TksLoadingIndicator.Create(AForm);
-  begin
-    ALoadingIndicator.Position.X := (AForm.FormFactor.Width-ALoadingIndicator.Width) / 2;
-    ALoadingIndicator.Position.Y := ((AForm.FormFactor.Height-ALoadingIndicator.Height) / 2)+30;
-    APos.X := ALoadingIndicator.Position.X;
-    APos.Y := ALoadingIndicator.Position.Y;
-  end;
+
+  {$IFDEF ANDROID}
+  ALoadingIndicator.Position.X := (AForm.Width-ALoadingIndicator.Width) / 2;
+  ALoadingIndicator.Position.Y := ((AForm.Height-ALoadingIndicator.Height) / 2)+30;
+  APos.X := ALoadingIndicator.Position.X;
+  APos.Y := ALoadingIndicator.Position.Y;
+  {$ELSE}
+  ALoadingIndicator.Position.X := (AForm.Width-ALoadingIndicator.Width) / 2;
+  ALoadingIndicator.Position.Y := ((AForm.Height-ALoadingIndicator.Height) / 2)+30;
+  APos.X := ALoadingIndicator.Position.X;
+  APos.Y := ALoadingIndicator.Position.Y;
+  {$ENDIF}
 
   AForm.AddObject(ALoadingIndicator);
 
@@ -148,14 +155,18 @@ procedure HideLoadingIndicator(AForm: TCommonCustomForm);
 var
   ALoadingIndicator: TksLoadingIndicator;
 begin
-  {$IFDEF IOS}
-  if FIndicator <> nil then
+(*  {$IFDEF IOS}
+
+  {if FIndicator <> nil then
   begin
     FIndicator.stopAnimating;
     FIndicatorBackground.removeFromSuperview;
     Exit;
-  end;
-  {$ENDIF}
+  end; }
+  {$ENDIF}  *)
+  if AForm = nil then
+    Exit;
+
   ALoadingIndicator := FindLoadingIndicator(AForm);
   //TAnimator.AnimateFloat(ALoadingIndicator, 'Opacity', 0);
   if ALoadingIndicator <> nil then
@@ -225,4 +236,5 @@ initialization
 
 
 end.
+
 

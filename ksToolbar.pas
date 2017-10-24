@@ -259,6 +259,15 @@ begin
     Canvas.Fill.Color := FTextColor;
     Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
 
+    (*{$IFDEF ANDROID}
+    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) and (FShowMenuButton) then
+
+      Canvas.FillText(Rect(0, 0, 50, Round(Height)), 'MENU', False, 1, [], TTextAlign.Center);
+
+    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) > 0) and (FShowBackButton) then
+      Canvas.FillText(Rect(0, 0, 50, Round(Height)), 'BACK', False, 1, [], TTextAlign.Center);
+
+    {$ELSE}   *)
     if ABmp <> nil then
     begin
       ReplaceOpaqueColor(ABmp, FTextColor);
@@ -267,7 +276,7 @@ begin
                         RectF(4, (Height/2)-((ABmp.Height/s)/2), 4+(ABmp.Width/s), (Height/2)+((ABmp.Height/s)/2)),
                         GetButtonOpacity);
     end;
-
+   //{$ENDIF}
   finally
     Canvas.EndScene;
   end;

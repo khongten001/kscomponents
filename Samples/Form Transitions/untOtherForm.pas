@@ -5,18 +5,14 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, ksTableView,
-  ksFormTransition, FMX.StdCtrls, FMX.Controls.Presentation, ksTypes,
-  ksVirtualListView;
+  FMX.StdCtrls, FMX.Controls.Presentation, ksTypes,
+  ksVirtualListView, ksToolBar;
 
 type
   TForm5 = class(TForm)
-    ToolBar1: TToolBar;
-    Label1: TLabel;
-    Button1: TButton;
-    ksFormTransition1: TksFormTransition;
     ksVirtualListView1: TksVirtualListView;
+    ksToolbar1: TksToolbar;
     procedure FormCreate(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -30,11 +26,6 @@ implementation
 
 {$R *.fmx}
 
-
-procedure TForm5.Button1Click(Sender: TObject);
-begin
-  ksFormTransition1.Pop;
-end;
 
 procedure TForm5.FormCreate(Sender: TObject);
 var

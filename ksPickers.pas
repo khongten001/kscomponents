@@ -44,6 +44,7 @@ type
   TksPickerService = class
   private
     [weak]FPicker: TCustomListPicker;
+    [weak]FPrevPicker: TCustomListPicker;
     [weak]FDatePicker: TCustomDateTimePicker;
     [weak]FTimePicker: TCustomDateTimePicker;
     FPickerItems: TStrings;
@@ -82,7 +83,8 @@ var
 
 implementation
 
-uses FMX.Platform, SysUtils, FMX.Forms, System.Threading, System.Types, ksVirtualListView;
+uses FMX.Platform, SysUtils, FMX.Forms, System.Threading, System.Types, ksVirtualListView,
+  FMX.Types;
 
 { TksPickerService }
 
@@ -116,6 +118,8 @@ end;
 destructor TksPickerService.Destroy;
 begin
   FPicker.DisposeOf;
+  FDatePicker.DisposeOf;
+  FTimePicker.DisposeOf;
   FreeAndNil(FPickerITems);
   {$IFDEF DPF}
   FActionSheet.DisposeOf;
@@ -146,9 +150,19 @@ end;
 
 procedure TksPickerService.DoDateSelected(Sender: TObject;
   const ADate: TDateTime);
+var
+ aTask: ITask;
 begin
-  if Assigned(FOnDateSelected) then
-    FOnDateSelected(Self, ADate);
+ aTask := TTask.Create (procedure ()
+   begin
+      // Copy files here
+      TThread.Synchronize(nil,procedure
+                  begin
+                    if Assigned(FOnDateSelected) then
+                      FOnDateSelected(Self, ADate);
+                  end);
+   end);
+ aTask.Start;
 end;
 
 procedure TksPickerService.DoTimeSelected(Sender: TObject;
@@ -156,6 +170,8 @@ procedure TksPickerService.DoTimeSelected(Sender: TObject;
 begin
   if Assigned(FOnTimeSelected) then
     FOnTimeSelected(Self, ATime);
+
+  //FPicker.Parent.RemoveObject(TFmxObject(Sender));
 end;
 
 procedure TksPickerService.DoItemSelected(Sender: TObject;
@@ -210,7 +226,6 @@ var
   {$ENDIF}
 begin
   {$IFDEF DPF}
-  //FActionSheet.OnClick := nil;
   FOnItemSelected := AOnSelect;
 
   FActionSheet := TDPFUIActionSheet.Create(nil);
@@ -230,6 +245,7 @@ begin
     ButtonKind := TDPFActionSheetButtonKind.bkCancel;
     Title := 'CANCEL';
   end;
+
 
   FActionSheet.ShowMessage;
   FActionSheet.OnClick := DoActionSheetButtonClick;
@@ -262,20 +278,28 @@ end;
 procedure TksPickerService.ShowItemPicker(AParent: TControl; AItems: TStrings; ATitle: string;
   AIndex: integer; AOnSelect: TksSelectPickerItemEvent);
 begin
+  HidePickers;
+
   FPickerITems.Assign(AItems);
 
+  {$IFDEF MSWINDOWS}
   if FPicker <> nil then
-    FPicker.DisposeOf;
+  begin
+    FPicker.Free;
+  end;
+  {$ENDIF}
 
   FPicker := PickerService.CreateListPicker;
 
   FPicker.Values.Assign(AItems);
   FPicker.ItemIndex := AIndex;
-  FPicker.Parent := AParent;
+
 
   FOnItemSelected := AOnSelect;
   FPicker.OnValueChanged := DoItemSelected;
   FPicker.Show;
+
+  FPrevPicker := FPicker;
 end;
 
 procedure TksPickerService.ShowItemPicker(AParent: TControl; AItems: array of string;

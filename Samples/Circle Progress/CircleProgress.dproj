@@ -421,6 +421,12 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="iOSDevice32\Release\CircleProgress" Configuration="Release" Class="ProjectOutput_iOS32">
+                    <Platform Name="iOSDevice64">
+                        <RemoteName>CircleProgress.armv7</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="$(BDS)\bin\Artwork\iOS\iPad\FM_SpotlightSearchIcon_100x100.png" Configuration="Release" Class="iPad_SpotLight100">
                     <Platform Name="iOSDevice64">
                         <Overwrite>true</Overwrite>

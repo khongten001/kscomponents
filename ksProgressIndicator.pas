@@ -65,25 +65,32 @@ type
     FActiveColor: TAlphaColor;
     FInActiveColor: TAlphaColor;
     FBitmap: TBitmap;
+    FOutlineColor: TAlphaColor;
+    FKeepHighlighted: Boolean;
     procedure SetActiveColor(const Value: TAlphaColor);
     procedure SetInActiveColor(const Value: TAlphaColor);
     procedure Redraw;
-  protected
+
     procedure Changed;
+  protected
     procedure Paint; override;
     procedure Resize; override;
+
+    procedure SetOutlineColor(const Value: TAlphaColor);
+    procedure SetKeepHighlighted(const Value: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
   published
     property ActiveColor: TAlphaColor read FActiveColor write SetActiveColor default claDodgerblue;
     property InactiveColor: TAlphaColor read FInActiveColor write SetInActiveColor default claSilver;
-
+    property KeepHighlighted: Boolean read FKeepHighlighted write SetKeepHighlighted default False;
     property Align;
     property Position;
     property Width;
     property Height;
     property Steps: TksProgressIndicatorSteps read FSteps write FSteps;
+    property OutlineColor: TAlphaColor read FOutlineColor write SetOutlineColor default claNull;
   end;
 
   procedure Register;
@@ -158,12 +165,13 @@ constructor TksProgressIndicator.Create(AOwner: TComponent);
 begin
   inherited;
   FSteps := TksProgressIndicatorSteps.Create(Self);
+  FBitmap := TBitmap.Create;
   Size.Width := 200;
   Size.Height := 40;
   FActiveColor := claDodgerblue;
   FInActiveColor := claSilver;
-  FBitmap := TBitmap.Create;
-
+  FKeepHighlighted := False;
+  Redraw;
 end;
 
 destructor TksProgressIndicator.Destroy;
@@ -213,10 +221,13 @@ begin
     for ICount := 0 to FSteps.MaxSteps-1 do
     begin
       AColor := FInactiveColor;
-      if (ICount+1) = FSteps.CurrentStep then
+      if ((ICount+1) = FSteps.CurrentStep) then
+        AColor := FActiveColor;
+      if ((ICount+1) < FSteps.CurrentStep) and (FKeepHighlighted) then
         AColor := FActiveColor;
 
-      FBitmap.Canvas.Stroke.Color := AColor;
+      FBitmap.Canvas.Stroke.Color := FOutlineColor;
+      FBitmap.Canvas.Stroke.Thickness := GetScreenScale * 2;
       FBitmap.Canvas.Stroke.Kind := TBrushKind.Solid;
       FBitmap.Canvas.Fill.Color := AColor;
       FBitmap.Canvas.Fill.Kind := TBrushKind.Solid;
@@ -251,8 +262,24 @@ begin
   if FInActiveColor <> Value then
   begin
     FInActiveColor := Value;
-    Repaint;
+    Redraw;
   end;
 end;
+
+procedure TksProgressIndicator.SetKeepHighlighted(const Value: Boolean);
+begin
+  FKeepHighlighted := Value;
+  Redraw;
+end;
+
+procedure TksProgressIndicator.SetOutlineColor(const Value: TAlphaColor);
+begin
+  FOutlineColor := Value;
+  Redraw;
+end;
+
+initialization
+
+  Classes.RegisterClass(TksProgressIndicator);
 
 end.

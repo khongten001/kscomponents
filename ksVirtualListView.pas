@@ -32,7 +32,7 @@ interface
 uses System.Classes, System.Types, ksTypes, FMX.Graphics, System.UITypes,
   System.Generics.Collections, FMX.Types, FMX.InertialMovement, System.UIConsts,
   FMX.StdCtrls, FMX.Controls, FMX.Platform, FMX.Objects, FMX.Edit,
-  FMX.TextLayout;
+  FMX.TextLayout, ksListViewFilter;
 
 const
   C_VLIST_ITEM_DEFAULT_HEIGHT = 44;
@@ -266,6 +266,7 @@ type
     destructor Destroy; override;
     procedure ClearCache; override;
     function CalculateWidth: single;
+    function MatchesFilter(AFilter: string): Boolean;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
     property Text: string read FText write SetText;
     property TextSettings: TTextSettings read FTextSettings;
@@ -431,12 +432,15 @@ type
     procedure ShowTimePicker(ASelected: TDateTime);
     procedure ShowPicker;
     procedure DoTimePickerChanged(Sender: TObject; ATime: TDateTime);
+  protected
+    function MatchesFilter(AFilter: string): Boolean;
   public
     constructor Create(Owner: TksVListItemList); virtual;
     destructor Destroy; override;
     function IsItemVisible(AViewPort: TRectF): Boolean;
     function AddText(x, y: single; AText: string): TksVListItemTextObject; overload;
     function AddText(x, y, AWidth: single; AText: string): TksVListItemTextObject; overload;
+    function AddDetailText(y: single; AText: string): TksVListItemTextObject; overload;
     function AddImage(x, y, AWidth, AHeight: single; ABitmap: TBitmap): TksVListItemImageObject;
     function DrawRect(x, y, AWidth, AHeight, ACornerRadius: single; AStroke, AFill: TAlphaColor): TksVListItemShapeObject;
     function AddChatBubble(AText, ASender: string; ALeftAlign: Boolean): TksVListItemBubbleObject;
@@ -447,6 +451,7 @@ type
 
     // procedure ShowActionButtons(AAlign: TksVListActionButtonAlign);
     // procedure HideActionButtons;
+    procedure SetItemFont(AName: string; ASize: integer; AColor: TAlphaColor; AStyle: TFontStyles);
     procedure DrawToCanvas(ACanvas: TCanvas; AScrollPos: single; ADrawToCache: Boolean);
     property AbsoluteIndex: integer read FAbsoluteIndex;
     property Index: integer read FIndex;
@@ -494,6 +499,7 @@ type
    // function GetItem(index: integer): TksVListItem;
     //function GetCount: integer;
     function GetCheckedCount: integer;
+    function GetFirstChecked: TksVListItem;
 
   public
     constructor Create(AOwner: TksVirtualListView); virtual;
@@ -511,7 +517,7 @@ type
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
     function Insert(AIndex: integer; ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
     function ItemAtPos(x, y: single): TksVListItem;
-
+    function ItemByTagStr(ATagStr: string): TksVListItem;
     procedure Clear;
     procedure Delete(AIndex: integer; AAnimate: Boolean); overload;
     procedure Delete(AItem: TksVListItem; const AAnimate: Boolean = False); overload;
@@ -588,6 +594,7 @@ type
 
   TksVirtualListView = class(TksControl)
   private
+    [weak]FFilterEdit: TksListViewFilter;
     FAniCalc: TksAniCalc;
     FAppearence: TksVirtualListViewAppearence;
     FCheckBoxOptions: TksVListCheckBoxOptions;
@@ -635,6 +642,7 @@ type
     FBeforeItemPickerSelectedEvent: TksItemBeforeSelectPickerItemEvent;
     FOnItemPickerSelectedEvent: TksItemSelectPickerItemEvent;
     FOnGetPickerItemsEvent: TksItemGetPickerItemsEvent;
+    FScrollingDisabled: Boolean;
     //FFont: TFont;
     procedure SetScrollPos(const Value: integer);
     procedure AniCalcChange(Sender: TObject);
@@ -661,7 +669,9 @@ type
     procedure SetNoItemsText(const Value: TksNoItemsText);
     function GetIsEmpty: Boolean;
     function GetTopItem: TksVListItem;
-    //procedure SetFont(const Value: TFont);
+
+    procedure FilterChanged(Sender: TObject);
+    procedure SetFilterEdit(const Value: TksListViewFilter);    //procedure SetFont(const Value: TFont);
   protected
     procedure Paint; override;
     procedure DrawPullToRefresh;
@@ -699,6 +709,7 @@ type
     procedure DeselectAll;
     procedure ScrollTo(const Value: integer);
     procedure ScrollToBottom(AAnimated: Boolean);
+    procedure ScrollToFirstChecked;
 
     procedure UpdateScrollLimmits;
     procedure UncheckAll;
@@ -711,11 +722,13 @@ type
     property IsEmpty: Boolean read GetIsEmpty;
     property TopItem: TksVListItem read GetTopItem;
     property TotalItemHeight: single read FTotalItemHeight;
+    property ScrollingDisabled: Boolean read FScrollingDisabled write FScrollingDisabled default False;
   published
     property Align;
     property Appearence: TksVirtualListViewAppearence read FAppearence write SetAppearence;
     property CheckBoxes: TksVListCheckBoxOptions read FCheckBoxOptions write SetCheckBoxOptions;
     property DeleteButton: TksVListDeleteButton read FDeleteButton write FDeleteButton;
+    property FilterEdit: TksListViewFilter read FFilterEdit write SetFilterEdit;
     //property Font: TFont read FFont write SetFont;
     property Height;
 
@@ -783,6 +796,20 @@ begin
   Result.FAutoSize := AWidth = 0;
   Result.Text := AText;
   FObjects.Add(Result);
+end;
+
+function TksVListItem.AddDetailText(y: single;
+  AText: string): TksVListItemTextObject;
+begin
+  Result := AddText(0, y, AText);
+  Result.HorzAlign := TAlignment.taRightJustify;
+  Result.TextSettings.HorzAlign := TTextAlign.Trailing;
+  {$IFDEF IOS}
+  Result.TextSettings.FontColor := claDodgerblue;
+  {$ELSE}
+  Result.TextSettings.FontColor := claGray;
+  {$ENDIF}
+  Result.Font.Size := 14;
 end;
 
 function TksVListItem.AddImage(x, y, AWidth, AHeight: single; ABitmap: TBitmap): TksVListItemImageObject;
@@ -928,6 +955,8 @@ begin
 
 procedure TksVListItem.DoClicked(var AHandled: Boolean);
 begin
+  PickerService.HidePickers;
+
   if Assigned(FOnClick) then
     FOnClick(Self);
   AHandled := False;
@@ -1070,6 +1099,35 @@ begin
   Changed;
 end;
 
+procedure TksVListItem.SetItemFont(AName: string; ASize: integer;
+  AColor: TAlphaColor; AStyle: TFontStyles);
+
+  procedure SetFont(AText: TksVListItemTextObject);
+  begin
+    //
+    if AName <> '' then AText.Font.Family := AName;
+    if ASize > -1 then AText.Font.Size := ASize;
+    if AColor <> claNull then AText.TextSettings.FontColor := AColor;
+    AText.Font.Style := AStyle;
+
+  end;
+var
+  AObj: TksVListItemBaseObject;
+  AText: TksVListItemTextObject;
+begin
+  for AObj in FObjects do
+  begin
+    if AObj is TksVListItemTextObject then
+    begin
+      AText := AObj as TksVListItemTextObject;
+      SetFont(AText);
+    end;
+  end;
+  SetFont(FTitle);
+  SetFont(FDetail);
+  SetFont(FSubTitle);
+end;
+
 procedure TksVListItem.SetOffset(const Value: integer);
 begin
   if FOffset <> Value then
@@ -1144,25 +1202,33 @@ begin
       FDetail.ClearCache;
       Changed;
 
+      {$IFDEF ANDROID}
+      if Assigned(FOnEditInput) then
+        FOnEditInput(Self, Self, AStr);
+
+      {$ELSE}
+
       ATask := TTask.Create (procedure ()
      // var
      //   AStr: string;
       begin
        // AStr := AValues[0];
+
+
+        Application.processMessages;
+        Sleep(100);
         TThread.Synchronize(nil,procedure
                      begin
                         //Interact with UI
 
                        if Assigned(FOnEditInput) then
-                        FOnEditInput(Self, Self, AStr);
+                         FOnEditInput(Self, Self, AStr);
 
                      end);
       end);
-     ATask.Start;
 
-    {  if Assigned(FOnEditInput) then
-        FOnEditInput(Self, Self, AValues[0]);
-      FDetail.ClearCache;         }
+      ATask.Start;
+      {$ENDIF}
     end;
   end);
   {$ENDIF}
@@ -1496,6 +1562,34 @@ begin
   Result := IntersectRectF(r, FItemRect, AViewPort);
 end;
 
+function TksVListItem.MatchesFilter(AFilter: string): Boolean;
+var
+  AObj: TksVListItemBaseObject;
+begin
+  Result := Trim(AFilter) = '';
+  if Result then
+    Exit;
+
+  Result := (FTitle.MatchesFilter(AFilter)) or
+            (FSubTitle.MatchesFilter(AFilter)) or
+            (FDetail.MatchesFilter(AFilter));
+
+  if not Result then
+  begin
+    for AObj in FObjects do
+    begin
+      if (AObj is TksVListItemTextObject) then
+      begin
+        if (AObj as TksVListItemTextObject).MatchesFilter(AFilter) then
+        begin
+          Result := True;
+          Exit;
+        end;
+      end;
+    end;
+  end;
+end;
+
 {procedure TksVListItem.OnEditChange(Sender: TObject);
 begin
   FDetail.Text := (Sender as TEdit).Text;
@@ -1544,6 +1638,7 @@ begin
   FItemIndex := -1;
   FScrollPos := 0;
   FUpdateCount := 0;
+  FScrollingDisabled := False;
   FItemHeight := C_VLIST_ITEM_DEFAULT_HEIGHT;
   FHeaderHeight := C_VLIST_HEADER_DEFAULT_HEIGHT;
   FCheckBoxOptions := TksVListCheckBoxOptions.Create(Self);
@@ -1838,7 +1933,6 @@ begin
   begin
     FItems.UpdateItemRects;
     UpdateScrollLimmits;
-    //Repaint;
     Invalidate;
     inherited EndUpdate;
   end;
@@ -1854,6 +1948,13 @@ begin
       Invalidate;
     end;
   end; }
+end;
+
+procedure TksVirtualListView.FilterChanged(Sender: TObject);
+begin
+  FItems.UpdateItemRects;
+  UpdateScrollLimmits;
+  Invalidate;
 end;
 
 procedure TksVirtualListView.FocusControl(AItem: TksVListItem; AControl: TControl);
@@ -1901,6 +2002,8 @@ end;
 
 procedure TksVirtualListView.AniCalcChange(Sender: TObject);
 begin
+  if FScrollingDisabled then
+    Exit;
   ScrollPos := Round(FAniCalc.ViewportPosition.y);
 end;
 
@@ -2036,6 +2139,7 @@ begin
     // FScrollPos := ANewValue;
     ScrollPos := ANewValue;
     UpdateScrollLimmits;
+    FAniCalc.UpdatePosImmediately;
     Invalidate;
   end;
 end;
@@ -2051,6 +2155,17 @@ begin
   FAniCalc.ViewportPositionF := PointF(0, FMaxScrollPos);
  FAniCalc.UpdatePosImmediately;
  Application.ProcessMessages;
+end;
+
+procedure TksVirtualListView.ScrollToFirstChecked;
+var
+  APos: integer;
+begin
+  APos := 0;
+  if FItems.GetCheckedCount > 0 then
+    APos := Round(FItems.GetFirstChecked.ItemRect.Top)-(FItemHeight*3);
+
+  ScrollTo(APos);
 end;
 
 procedure TksVirtualListView.SelectItem(AItem: TksVListItem);
@@ -2084,7 +2199,20 @@ procedure TksVirtualListView.SetCheckBoxOptions(const Value
 begin
   FCheckBoxOptions := Value;
 end;
-    {
+
+procedure TksVirtualListView.SetFilterEdit(const Value: TksListViewFilter);
+begin
+  FFilterEdit := Value;
+  FFilterEdit.OnChangeTracking := FilterChanged;
+
+end;
+
+{procedure TksVirtualListView.SetFilterEdit(const Value: TksListViewFilter);
+begin
+  FFilterEdit := Value;
+end;
+
+
 procedure TksVirtualListView.SetFont(const Value: TFont);
 begin
    FFont.Assign(Value);
@@ -2187,6 +2315,9 @@ begin
     //FFocusedControl.Visible := False;
     RemoveObject(FFocusedControl);
     FFocusedControl := nil;
+    HideKeyboard;
+    if FFilterEdit <> nil then
+      FFilterEdit.Unfocus;
   end;
 end;
 
@@ -2247,16 +2378,18 @@ procedure TksVirtualListView.MouseDown(Button: TMouseButton; Shift: TShiftState;
 var
   ABtn: TksVListActionButton;
   ACanDelete: Boolean;
-//  ATask: ITask;
 begin
   inherited;
   if FScrollPos < 0 then
     Exit;
   KillTimer(FLongTapTimer);
-
+  HideKeyboard;
+  if FFilterEdit <> nil then
+    FFilterEdit.Unfocus;
   FMouseDownTime := Now;
   FMouseDownPos := PointF(x, y);
-  FAniCalc.MouseDown(x, y);
+  if not FScrollingDisabled then
+    FAniCalc.MouseDown(x, y);
   FMouseDownItem := FItems.ItemAtPos(x, y);
 
   if (FMouseDownItem <> nil) and (FMouseDownItem.FOffset <> 0) then
@@ -2620,7 +2753,23 @@ begin
     if Items[ICount].Checked then
       Result := Result +1;
 end;
-       {
+
+function TksVListItemList.GetFirstChecked: TksVListItem;
+var
+  AItem: TksVListItem;
+begin
+  Result := nil;
+  for AItem in Self do
+  begin
+    if AItem.Checked then
+    begin
+      Result := AItem;
+      Exit;
+    end;
+  end;
+end;
+
+{
 function TksVListItemList.GetCount: integer;
 begin
   Result := FItems.Count;
@@ -2655,6 +2804,21 @@ begin
 end;
 
 
+function TksVListItemList.ItemByTagStr(ATagStr: string): TksVListItem;
+var
+  AItem: TksVListItem;
+begin
+  Result := nil;
+  for AItem in Self do
+  begin
+    if AItem.TagStr = ATagStr then
+    begin
+      Result := AItem;
+      Exit;
+    end;
+  end;
+end;
+
 procedure TksVListItemList.Changed(AUpdateScrollLimits: Boolean);
 begin
   if FOwner.FUpdateCount > 0 then
@@ -2673,22 +2837,37 @@ var
   ARect: TRectF;
   AYPos: integer;
   AItem: TksVListItem;
+  AMatchesFilter: Boolean;
 begin
   AYPos := 0;
   FOwner.FTotalItemHeight := 0;
   for ICount := 0 to Count - 1 do
   begin
     AItem := Items[ICount];
-    AItem.FAbsoluteIndex := ICount;
-    AItem.FIndex := ICount;
-    ARect := RectF(0, AYPos, FOwner.Width, AYPos + AItem.Height);
 
-    AItem.Title.FMaxWidth := Round(FOwner.Width-50);
-    AItem.SubTitle.FMaxWidth := Round(FOwner.Width-50);
+    if (FOwner.FilterEdit = nil) then
+      AMatchesFilter := True
+    else
+    begin
+      AMatchesFilter := AItem.MatchesFilter(FOwner.FilterEdit.Text);
+    end;
 
-    AItem.FItemRect := ARect;
-    AYPos := AYPos + AItem.Height;
-    FOwner.FTotalItemHeight := FOwner.FTotalItemHeight + AItem.Height;
+
+    if AMatchesFilter then
+    begin
+      AItem.FAbsoluteIndex := ICount;
+      AItem.FIndex := ICount;
+      ARect := RectF(0, AYPos, FOwner.Width, AYPos + AItem.Height);
+
+      AItem.Title.FMaxWidth := Round(FOwner.Width-50);
+      AItem.SubTitle.FMaxWidth := Round(FOwner.Width-50);
+
+      AItem.FItemRect := ARect;
+      AYPos := AYPos + AItem.Height;
+      FOwner.FTotalItemHeight := FOwner.FTotalItemHeight + AItem.Height;
+    end
+    else
+      AItem.FItemRect := RectF(0, AYPos, FOwner.Width, AYPos);
   end;
 end;
 
@@ -2831,9 +3010,12 @@ begin
     FTextSize := CalculateSize;
     ARect := CalcObjectRect(AItemRect);
 
+    FTextLayout.Trimming := TTextTrimming.None;
     if (FMaxWidth > 0) and (FMaxWidth < ARect.Width) then
+    begin
       ARect.Width := FMaxWidth;
-
+      FTextLayout.Trimming := TTextTrimming.Character;
+    end;
     FTextLayout.BeginUpdate;
     AText := FText;
     if FPasswordField then
@@ -2844,7 +3026,7 @@ begin
     FTextLayout.HorizontalAlign := FTextSettings.HorzAlign;
     FTextLayout.VerticalAlign := FTextSettings.VertAlign;
     FTextLayout.Padding.Rect := RectF(0,0,0,0);
-    FTextLayout.Trimming := FTextSettings.Trimming;
+    //FTextLayout.Trimming := FTextSettings.Trimming;
     if FTextSettings.WordWrap  then
       FTextLayout.Trimming := TTextTrimming.None;
     FTextLayout.TopLeft := PointF(ARect.Left, ARect.Top);
@@ -2882,8 +3064,8 @@ begin
   FTextLayout.RenderLayout(ACanvas);
   {$ENDIF}
 
-  {ACanvas.Stroke.Kind := TBrushKind.Solid;
-  ACanvas.Stroke.Color := claBlack;
+{  ACanvas.Stroke.Kind := TBrushKind.Solid;
+  ACanvas.Stroke.Color := claYellow;
   ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);}
 {  RenderText(ACanvas,
            ARect.Left,
@@ -2904,6 +3086,11 @@ end;
 function TksVListItemTextObject.GetFont: TFont;
 begin
   Result := FTextSettings.Font;
+end;
+
+function TksVListItemTextObject.MatchesFilter(AFilter: string): Boolean;
+begin
+  Result := Pos(LowerCase(AFilter), LowerCase(FText)) > 0;
 end;
 
 procedure TksVListItemTextObject.SetFont(const Value: TFont);
@@ -3459,7 +3646,7 @@ begin
   ACanvas.Fill.Color := FColor;
   ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
   ACanvas.Fill.Color := FTextColor;
-  ACanvas.Font.Size := 14;
+  ACanvas.Font.Size := 12;
   ATextRect := ARect;
   ATextRect.Height := CalculateTextHeight(FText, ACanvas.Font, False,
     TTextTrimming.Character);
@@ -3780,5 +3967,6 @@ end;
 
 
 end.
+
 
 

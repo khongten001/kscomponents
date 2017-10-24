@@ -215,3 +215,7 @@ Samples/HTML Text/HtmlText.RES
 Samples/Circle Progress/CircleProgress.res
 /*.tmp
 /Ignore
+/Samples/@Removed
+/Samples/Mega Demo
+/Samples/PinCode/PinCode.dpr
+/Samples/PinCode/PinCode.res

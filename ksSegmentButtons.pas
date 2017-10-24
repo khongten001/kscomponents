@@ -68,12 +68,14 @@ type
     FButton: TksSegmentSpeedButton;
     FID: string;
     FText: string;
+    FVisible: Boolean;
     procedure SetText(const Value: string);
     function GetBadgeValue: integer;
     procedure SetBadgeValue(const Value: integer);
     function GetBoundsRect: TRectF;
 
-    function GetIndex: integer;  public
+    function GetIndex: integer;
+    procedure SetVisible(const Value: Boolean);  public
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
@@ -83,6 +85,7 @@ type
     property BoundsRect: TRectF read GetBoundsRect;
     property Index: integer read GetIndex;
     property BadgeValue: integer read GetBadgeValue write SetBadgeValue;
+    property Visible: Boolean read FVisible write SetVisible default True;
   end;
 
   TksSegmentButtonCollection = class(TCollection)
@@ -97,6 +100,7 @@ type
     constructor Create(AButtons: TKsSegmentButtons);
     function Add: TKsSegmentButton;
     function Insert( Index: Integer ): TKsSegmentButton;
+    function VisibleCount: integer;
     property Items[index: Integer]: TKsSegmentButton read GetItem write SetItem; default; // default - Added by Fenistil
   end;
 
@@ -135,6 +139,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
+    procedure SelectSegmentByText(AText: string);
     property Selected: TKsSegmentButton read GetSelected;
     property SelectedID: string read GetSelectedID write SetSelectedID;
   published
@@ -187,6 +192,7 @@ constructor TKsSegmentButton.Create(Collection: TCollection);
 begin
   inherited Create(Collection);
   FButton := TksSegmentSpeedButton.Create((Collection as TksSegmentButtonCollection).FSegmentButtons);
+  FVisible := True;
 end;
 
 destructor TKsSegmentButton.Destroy;
@@ -227,7 +233,21 @@ begin
 
 end;
 
-{ TksSegmentButtons }
+procedure TKsSegmentButton.SetVisible(const Value: Boolean);
+begin
+  if FVisible <> Value then
+  begin
+    FVisible := Value;
+    (Collection as TksSegmentButtonCollection).FSegmentButtons.UpdateButtons;
+  end;
+end;
+
+{procedure TKsSegmentButton.SetVisible(const Value: Boolean);
+begin
+  FVisible := Value;
+end;
+
+ TksSegmentButtons }
 
 
 procedure TksSegmentButtons.Assign(Source: TPersistent);
@@ -374,56 +394,87 @@ end;
 procedure TksSegmentButtons.UpdateButtons;
 var
   ICount: integer;
+  i: integer;
 begin
-  if FSegments.Count = 0 then
+  if FSegments.VisibleCount = 0 then
     Exit;
 
-  FBtnWidth := (Width-16) / FSegments.Count;
+  FBtnWidth := (Width-16) / FSegments.VisibleCount;
+  i := 0;
   for ICount := 0 to FSegments.Count-1 do
   begin
-    if Assigned(FSegments[ICount].FButton) then
+    FSegments[ICount].FButton.Visible := FSegments[ICount].Visible;
+    if FSegments[Icount].Visible then
     begin
-      if ContainsObject(FSegments[ICount].FButton) = False then
-        AddObject(FSegments[ICount].FButton);
-
-      with FSegments[ICount].FButton do
+      if Assigned(FSegments[ICount].FButton) then
       begin
-       (* IsPressed := False;
+        if ContainsObject(FSegments[ICount].FButton) = False then
+          AddObject(FSegments[ICount].FButton);
 
-        if ICount = 0 then s := 'toolbuttonleft';
-        if ICount > 0 then s := 'toolbuttonmiddle';
-        if ICount = FSegments.Count-1 then s := 'toolbuttonright';
+        with FSegments[ICount].FButton do
+        begin
+         (* IsPressed := False;
+
+          if ICount = 0 then s := 'toolbuttonleft';
+          if ICount > 0 then s := 'toolbuttonmiddle';
+          if ICount = FSegments.Count-1 then s := 'toolbuttonright';
 
 
-        {$IFDEF ANDROID}
-        //StyleLookup := 'listitembutton';
-        //Height := 30;
-        {$ELSE}
-        //FSegments[ICount].FButton.StyleLookup := s;
+          {$IFDEF ANDROID}
+          //StyleLookup := 'listitembutton';
+          //Height := 30;
+          {$ELSE}
+          //FSegments[ICount].FButton.StyleLookup := s;
 
-        //StaysPressed := ICount = FItemIndex;
+          //StaysPressed := ICount = FItemIndex;
 
-        //GroupName := FGroupID;
+          //GroupName := FGroupID;
 
-        //TintColor := FTintColor;
+          //TintColor := FTintColor;
 
-                              *)
-        Index := ICount;
-        IsPressed := ICount = FItemIndex;
-        Width := FBtnWidth+1;
-        Height := 30;
-        {TextSettings.FontColorForState.Focused := FTintColor;
-        TextSettings.FontColorForState.Active := FTintColor;
-        TextSettings.FontColorForState.Normal := FTintColor;
-        TextSettings.FontColorForState.Pressed := FBackgroundColor;}
-        Text := FSegments[ICount].Text;
+                                *)
+          Index := ICount;
 
-        //TextSettings.FontColor := FTintColor;
+          if Selected <> nil then
+          begin
+            if (Selected.Visible = False) and (FSegments.VisibleCount > 0) then
+              ItemIndex := ICount;
+          end;
 
-       // {$ENDIF}
-        Position.Y := (Self.Height - Height) / 2;
-        Position.X := (ICount * FBtnWidth)+8;
+          IsPressed := ICount = FItemIndex;
+          Width := FBtnWidth;
+          Height := 30;
+          {TextSettings.FontColorForState.Focused := FTintColor;
+          TextSettings.FontColorForState.Active := FTintColor;
+          TextSettings.FontColorForState.Normal := FTintColor;
+          TextSettings.FontColorForState.Pressed := FBackgroundColor;}
+          Text := FSegments[ICount].Text;
+
+          //TextSettings.FontColor := FTintColor;
+
+         // {$ENDIF}
+          Position.Y := (Self.Height - Height) / 2;
+          Position.X := (i * FBtnWidth)+8;
+
+          i := i + 1;
+        end;
       end;
+    end;
+  end;
+end;
+
+procedure TksSegmentButtons.SelectSegmentByText(AText: string);
+var
+  ICount: integer;
+  ASeg: TKsSegmentButton;
+begin
+  for ICount := 0 to FSegments.Count-1 do
+  begin
+    ASeg := FSegments.Items[ICount];
+    if ASeg.Text = AText then
+    begin
+      ItemIndex := ICount;
+      Exit;
     end;
   end;
 end;
@@ -532,6 +583,18 @@ begin
   (Owner as TksSegmentButtons).UpdateButtons;
 end;
 
+function TksSegmentButtonCollection.VisibleCount: integer;
+var
+  ICount: integer;
+begin
+  Result := 0;
+  for ICount := 0 to Count-1 do
+  begin
+    if Items[ICount].Visible then
+      Result := Result + 1;
+  end;
+end;
+
 { TksSegmentSpeedButton }
 
 procedure TksSegmentSpeedButton.Changed;
@@ -572,7 +635,7 @@ begin
   if FIsPressed then
     Canvas.Fill.Color := GetColorOrDefault(FOwner.TintColor, claDodgerblue)
   else
-    Canvas.Fill.Color := claWhite;
+    Canvas.Fill.Color := FOwner.BackgroundColor;
   Canvas.Stroke.Color := GetColorOrDefault(FOwner.TintColor, claDodgerblue);
   Canvas.Stroke.Kind := TBrushKind.Solid;
 
@@ -589,7 +652,7 @@ begin
   RenderText(Canvas, ClipRect, FText, Canvas.Font, Canvas.Fill.Color, False, TTextAlign.Center, TTextAlign.Center, TTextTrimming.Character);
 
   if FBadge > 0 then
-    GenerateBadge(Canvas, PointF(ClipRect.Right-20, ClipRect.Top-4), FBadge, claRed, claNull, claWhite);
+    GenerateBadge(Canvas, PointF(ClipRect.Right-20, ClipRect.Top-6), FBadge, claRed, claNull, claWhite);
 end;
 
 procedure TksSegmentSpeedButton.SetBadge(const Value: integer);

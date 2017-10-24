@@ -34,9 +34,9 @@ uses System.UITypes, FMX.Controls, FMX.Layouts, FMX.Objects, System.Classes,
 
 const
   {$IFDEF ANDROID}
-  C_TRANSITION_DURATION = 0.3;
+  C_TRANSITION_DURATION = 0.2;
   {$ELSE}
-  C_TRANSITION_DURATION = 0.3;
+  C_TRANSITION_DURATION = 0.2;
   {$ENDIF}
   C_FADE_OPACITY = 0.5;
 
@@ -91,14 +91,18 @@ type
                    const ATransition: TksTransitionType = ksFtSlideInFromRight;
                    const ARecordPush: Boolean = True);
     procedure Pop;
+    procedure PopTo(AFormClass: string);
     procedure PopAllForms;
     property TransitionList: TksFormTransitionList read GetTransitionList;
   end;
 
   //{$R *.dcr}
 
+
   procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight; const ARecordPush: Boolean = True);
   procedure Pop;
+  procedure PopTo(AFormClass: string);
+  procedure PopAllForms;
   procedure ClearFormTransitionStack;
 
   procedure Register;
@@ -109,7 +113,12 @@ var
 implementation
 
 uses FMX.Ani, SysUtils, ksCommon, DateUtils, ksFormTransitionUI, ksToolbar,
-  ksPickers, ksLoadingIndicator;
+  ksPickers, ksLoadingIndicator
+  {$IFDEF IOS}
+  , IOSApi.UIKit
+
+  {$ENDIF}
+  ;
 
 var
   _InternalTransitionList: TksFormTransitionList;
@@ -120,13 +129,27 @@ begin
   RegisterComponents('Kernow Software FMX', [TksFormTransition]);
 end;
 
+function IsIPad: Boolean;
+begin
+  Result := False;
+  {$IFDEF IOS}
+  Result := TUIDevice.Wrap( TUIDevice.OCClass.currentDevice ).userInterfaceIdiom = UIUserInterfaceIdiomPad;
+  {$ENDIF}
+end;
+
+
+
 procedure Push(AForm: TCommonCustomForm; const ATransition: TksTransitionType = ksFtSlideInFromRight; const ARecordPush: Boolean = True);
 var
   ATran: TksFormTransition;
 begin
   ATran := TksFormTransition.Create(nil);
   try
-    ATran.Push(AForm, ATransition, ARecordPush);
+    // prevent animation on ipad...
+    if IsIPad then
+      ATran.Push(AForm, ksFtNoTransition, ARecordPush)
+    else
+      ATran.Push(AForm, ATransition, ARecordPush);
   finally
     FreeAndNil(ATran);
   end;
@@ -139,6 +162,30 @@ begin
   ATran := TksFormTransition.Create(nil);
   try
     ATran.Pop;
+  finally
+    FreeAndNil(ATran);
+  end;
+end;
+
+procedure PopTo(AFormClass: string);
+var
+  ATran: TksFormTransition;
+begin
+  ATran := TksFormTransition.Create(nil);
+  try
+    ATran.PopTo(AFormClass);
+  finally
+    FreeAndNil(ATran);
+  end;
+end;
+
+procedure PopAllForms;
+var
+  ATran: TksFormTransition;
+begin
+  ATran := TksFormTransition.Create(nil);
+  try
+    ATran.PopAllForms;
   finally
     FreeAndNil(ATran);
   end;
@@ -184,76 +231,8 @@ begin
 end;
 
 procedure TksFormTransition.Pop;
-var
-  AInfo: TksFormTransitionItem;
-  AFrom, ATo: TCommonCustomForm;
-  AAnimateForm: TfrmFormTransitionUI;
-  AFormIntf: IksFormTransition;
 begin
-
-  Screen.ActiveForm.Focused := nil;
-
-  if _InternalTransitionList.Count < 1 then
-    Exit;
-
-  if _InTransition then
-    Exit;
-  _InTransition := True;
-
-  AInfo := _InternalTransitionList.Last;
-  AFrom := AInfo.FToForm;
-  ATo := AInfo.FFromForm;
-
-  if ShowLoadingIndicatorOnTransition then
-    ShowLoadingIndicator(AFrom);
-  try
-
-
-
-
-    AAnimateForm := TfrmFormTransitionUI.Create(nil);
-    try
-
-
-
-
-      {if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition(ksTmPop);  }
-
-      AAnimateForm.Initialise(AFrom, ATo);
-      AAnimateForm.Visible := True;
-
-
-
-      AAnimateForm.Animate(AInfo.FTransition, True);
-      ATo.Visible := True;
-      AAnimateForm.Visible := False;
-
-      // moved to here...
-      if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition(ksTmPop);
-
-      AFrom.Visible := False;
-      ATo.Activate;
-
-      {$IFDEF MSWINDOWS}
-      ATo.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
-      {$ENDIF}
-
-      _InternalTransitionList.Delete(_InternalTransitionList.Count-1);
-    finally
-      AAnimateForm.DisposeOf;
-    end;
-  finally
-    if ShowLoadingIndicatorOnTransition then
-      HideLoadingIndicator(AFrom);
-
-    _InTransition := False;
-  end;
-
-
-
-
+  PopTo('');
 end;
 
 procedure TksFormTransition.PopAllForms;
@@ -281,6 +260,10 @@ begin
       {if Supports(ATo, IksFormTransition, AFormIntf) then
         AFormIntf.BeforeTransition(ksTmPop);  }
 
+      // moved to here...
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);
+
       AAnimateForm.Initialise(AFrom, ATo);
       AAnimateForm.Visible := True;
 
@@ -289,8 +272,8 @@ begin
       AAnimateForm.Visible := False;
 
       // moved to here...
-      if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition(ksTmPop);
+      //if Supports(ATo, IksFormTransition, AFormIntf) then
+      //  AFormIntf.BeforeTransition(ksTmPop);
 
       AFrom.Visible := False;
       ATo.Activate;
@@ -308,6 +291,87 @@ begin
   end;
 end;
 
+procedure TksFormTransition.PopTo(AFormClass: string);
+var
+  AInfo: TksFormTransitionItem;
+  AFrom, ATo: TCommonCustomForm;
+  AAnimateForm: TfrmFormTransitionUI;
+  AFormIntf: IksFormTransition;
+  ALevels: Integer;
+  ICount: integer;
+begin
+
+  Screen.ActiveForm.Focused := nil;
+  ALevels := 1;
+
+  if _InternalTransitionList.Count < 1 then
+    Exit;
+
+  if _InTransition then
+    Exit;
+  _InTransition := True;
+
+  AInfo := _InternalTransitionList.Last;
+  AFrom := AInfo.FToForm;
+  ATo := AInfo.FFromForm;
+
+  if AFormClass <> '' then
+  begin
+    while ATo.ClassName <> AFormClass do
+    begin
+      AInfo := _InternalTransitionList.Items[_InternalTransitionList.IndexOf(AInfo)-1];
+      ATo := AInfo.FFromForm;
+      Inc(ALevels);
+    end;
+  end;
+
+  if ShowLoadingIndicatorOnTransition then
+    ShowLoadingIndicator(AFrom);
+  try
+
+
+
+
+    AAnimateForm := TfrmFormTransitionUI.Create(nil);
+    try
+
+       // moved to here...
+      if Supports(ATo, IksFormTransition, AFormIntf) then
+        AFormIntf.BeforeTransition(ksTmPop);
+
+
+      AAnimateForm.Initialise(AFrom, ATo);
+      AAnimateForm.Visible := True;
+
+
+      AAnimateForm.Animate(AInfo.FTransition, True);
+      ATo.Visible := True;
+      AAnimateForm.Visible := False;
+
+      AFrom.Visible := False;
+      ATo.Activate;
+
+      {$IFDEF MSWINDOWS}
+      ATo.SetBounds(AFrom.Left, AFrom.Top, AFrom.Width, AFrom.Height);
+      {$ENDIF}
+
+      for ICount := ALevels downto 1 do
+        _InternalTransitionList.Delete(_InternalTransitionList.Count-1);
+    finally
+      AAnimateForm.DisposeOf;
+    end;
+  finally
+    if ShowLoadingIndicatorOnTransition then
+      HideLoadingIndicator(AFrom);
+
+    _InTransition := False;
+  end;
+
+
+
+
+end;
+
 procedure TksFormTransition.Push(AForm: TCommonCustomForm;
   const ATransition: TksTransitionType = ksFtSlideInFromRight;
   const ARecordPush: Boolean = True);
@@ -323,7 +387,7 @@ begin
   AFrom := Screen.ActiveForm;
   ATo := AForm;
   _InTransition := True;
-  if ShowLoadingIndicatorOnTransition then
+  if (ShowLoadingIndicatorOnTransition) and (AFrom <> nil) then
     ShowLoadingIndicator(AFrom);
   try
     PickerService.HidePickers;

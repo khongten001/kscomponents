@@ -4266,9 +4266,10 @@ object Form24: TForm24
   end
   object ksSlideMenu1: TksSlideMenu
     Appearence.HeaderFontColor = claNull
+    Appearence.Theme = mtCustom
     OnSelectMenuItemEvent = ksSlideMenu1SelectMenuItemEvent
     OnBuildMenu = ksSlideMenu1BuildMenu
-    Left = 40
-    Top = 240
+    Left = 280
+    Top = 96
   end
 end
