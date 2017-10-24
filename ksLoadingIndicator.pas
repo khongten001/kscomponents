@@ -58,8 +58,8 @@ uses
 var
   APos: TPointF;
   {$IFDEF IOS}
-  FIndicatorBackground: UIView;
-  FIndicator: UIActivityIndicatorView;
+  //FIndicatorBackground: UIView;
+  //FIndicator: UIActivityIndicatorView;
   {$ENDIF}
 
 
@@ -96,7 +96,7 @@ end;
 procedure ShowLoadingIndicator(AForm: TCommonCustomForm);
 var
   {$IFDEF IOS}
-  ACenter: NSPoint;
+  //ACenter: NSPoint;
   {$ENDIF}
   ALoadingIndicator: TksLoadingIndicator;
 begin
