@@ -8,7 +8,7 @@ Have a play and let me know your thoughts.
 
 Enhanced ListView componnent
 
-![Alt text](https://bytebucket.org/gmurt/kscomponents/raw/d102258c466a604e30547480b7ba06d8254d91e1/Samples/VirtualListView/screenshot.png)
+![Alt text](https://bytebucket.org/gmurt/kscomponents/raw/d102258c466a604e30547480b7ba06d8254d91e1/Samples/VirtualListView/screenshot.png =100)
 
 
 
