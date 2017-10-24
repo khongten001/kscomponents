@@ -8,7 +8,9 @@ Have a play and let me know your thoughts.
 
 Enhanced ListView componnent
 
-https://bitbucket.org/gmurt/kscomponents/src/8f12408804e09208b992f7a0751f9bf0aa7752c6/Samples/VirtualListView/screenshot.png?at=master
+![alt text](https://bitbucket.org/gmurt/kscomponents/src/8f12408804e09208b992f7a0751f9bf0aa7752c6/Samples/VirtualListView/screenshot.png "Logo Title Text 1")
+
+
 
 
 ** TksPinCode **
