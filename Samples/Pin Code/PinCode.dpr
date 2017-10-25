@@ -3,7 +3,7 @@ program PinCode;
 uses
   System.StartUpCopy,
   FMX.Forms,
-  untMain in '..\Pin Code - Copy\untMain.pas' {Form4};
+  untMain in 'untMain.pas' {Form4};
 
 {$R *.res}
 
