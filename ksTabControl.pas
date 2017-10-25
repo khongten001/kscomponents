@@ -62,19 +62,22 @@ type
     FBackground: TAlphaColor;
     FBadgeColor: TAlphaColor;
     FTheme: TksTabBarTheme;
-    procedure SetColours(ASelected, ANormal, ABackground, ABadge: TAlphaColor);
+    FSelectedBackground: TAlphaColor;
+    procedure SetColours(ASelected, ANormal, ABackground, ASelectedBackground, ABadge: TAlphaColor);
     procedure SetBackground(const Value: TAlphaColor);
     procedure SetNormal(const Value: TAlphaColor);
     procedure SetSelected(const Value: TAlphaColor);
     procedure SetTheme(const Value: TksTabBarTheme);
     procedure Changed;
     procedure SetBadgeColor(const Value: TAlphaColor);
+    procedure SetSelectedBackground(const Value: TAlphaColor);
   public
     constructor Create(ATabControl: TksTabControl);
   published
     property SelectedColor: TAlphaColor read FSelected write SetSelected default claDodgerblue;
-    property NormalColor: TAlphaColor read FNormal write SetNormal default claDimgray;
-    property BackgroundColor: TAlphaColor read FBackground write SetBackground default claWhite;
+    property NormalColor: TAlphaColor read FNormal write SetNormal default claGray;
+    property BackgroundColor: TAlphaColor read FBackground write SetBackground default $FFEEEEEE;
+    property SelectedBackgroundColor: TAlphaColor read FSelectedBackground write SetSelectedBackground default claWhite;
     property BadgeColor: TAlphaColor read FBadgeColor write SetBadgeColor default claDodgerblue;
     property Theme: TksTabBarTheme read FTheme write SetTheme default ksTbLightTabs;
   end;
@@ -272,25 +275,25 @@ begin
   r := ARect;
 
   AAppearence := TksTabControl(Parent).Appearence;
-  InflateRect(r, 0, -3);
+
 
   ACanvas.Font.Size := 11;
   ACanvas.Fill.Color := AAppearence.NormalColor;
 
   if AIndex = TksTabControl(Parent).TabIndex then
+  begin
+    ACanvas.Fill.Color := AAppearence.SelectedBackgroundColor;
+    ACanvas.FillRect(r, 0, 0, AllCorners, 1);
     ACanvas.Fill.Color := AAppearence.SelectedColor;
+  end;
 
+  InflateRect(r, 0, -3);
 
   ACanvas.FillText(r, FText, False, 1, [], TTextAlign.Center, TTextAlign.Trailing);
+  InflateRect(r, 0, -3);
 
   ADestRect := RectF(0, 0, 25, 25);
   OffsetRect(ADestRect, ARect.Left + ((ARect.Width - ADestRect.Width) / 2), 6);
-
- { if (AIndex = TksTabControl(Parent).TabIndex) then
-    ReplaceOpaqueColor(FIcon, AAppearence.SelectedColor)
-  else
-    ReplaceOpaqueColor(FIcon, AAppearence.NormalColor);
-  //   }
 
   ABmp := TBitmap.Create;
   try
@@ -837,7 +840,7 @@ begin
       if FTabControl.TabPosition = ksTbpNone then
       Exit;
 
-      Clear(claNull);
+      Clear(claBlue);
 
       Fill.Kind := TBrushKind.Solid;
 
@@ -849,15 +852,16 @@ begin
         DrawDesignBorder(claDimgray, claDimgray);
 
 
-      case ATabControl.TabPosition of
-        ksTbpBottom: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Top]);
-        ksTbpTop: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Bottom]);
-      end;
 
       for ICount := 0 to TksTabControl(FTabControl).GetTabCount-1 do
       begin
         //if ATabControl.Tabs[ICount].Visible then
         ATabControl.Tabs[ICount].DrawTab(Canvas, ICount, ATabControl.GetTabRect(ICount));
+      end;
+
+      case ATabControl.TabPosition of
+        ksTbpBottom: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Top]);
+        ksTbpTop: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Bottom]);
       end;
 
     finally
@@ -881,8 +885,9 @@ begin
   inherited Create;
   FTabControl := ATabControl;
   FSelected := claDodgerblue;
-  FNormal := claDimgray;
-  FBackground := claWhite;
+  FNormal := claGray;
+  FBackground := $FFEEEEEE;
+  FSelectedBackground := claWhite;
   FBadgeColor := claDodgerblue;
   FTheme := ksTbLightTabs;
 
@@ -908,11 +913,12 @@ begin
   end;
 end;
 
-procedure TksTabBarAppearence.SetColours(ASelected, ANormal, ABackground, ABadge: TAlphaColor);
+procedure TksTabBarAppearence.SetColours(ASelected, ANormal, ABackground, ASelectedBackground, ABadge: TAlphaColor);
 begin
   FSelected := ASelected;
   FNormal := ANormal;
   FBackground := ABackground;
+  FSelectedBackground := ASelectedBackground;
   FBadgeColor := ABadge;
 end;
 
@@ -936,12 +942,18 @@ begin
   end;
 end;
 
+procedure TksTabBarAppearence.SetSelectedBackground(const Value: TAlphaColor);
+begin
+  FSelectedBackground := Value;
+  Changed;
+end;
+
 procedure TksTabBarAppearence.SetTheme(const Value: TksTabBarTheme);
 begin
   if FTheme <> Value then
   begin
-    if Value = ksTbLightTabs then SetColours(claDodgerblue, claGray, claWhite, claDodgerblue);
-    if Value = ksTbDarkTabs then SetColours(claWhite, claGray, $FF202020, claRed);
+    if Value = ksTbLightTabs then SetColours(claDodgerblue, claGray, $FFEEEEEE, claWhite, claDodgerblue);
+    if Value = ksTbDarkTabs then SetColours(claWhite, claGray, $FF202020, $FF3C3C3C, claRed);
     FTheme := Value;
     Changed;
   end;

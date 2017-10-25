@@ -1709,7 +1709,9 @@ object Form24: TForm24
   end
   object ksTabControl1: TksTabControl
     Align = Client
-    TabIndex = 0
+    Appearence.NormalColor = claGray
+    Appearence.Theme = ksTbCustom
+    TabIndex = 1
     Size.Width = 356.000000000000000000
     Size.Height = 400.000000000000000000
     Size.PlatformDefault = False
