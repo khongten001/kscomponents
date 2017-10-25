@@ -13,7 +13,8 @@ Enhanced ListView componnent
 - Pull to refresh
 - Swipe (action) buttons
 - Lots more.
-https://bytebucket.org/gmurt/kscomponents/raw/d102258c466a604e30547480b7ba06d8254d91e1/Samples/VirtualListView/screenshot.png =100
+
+https://bitbucket.org/gmurt/kscomponents/raw/d102258c466a604e30547480b7ba06d8254d91e1/Samples/VirtualListView/screenshot.png =100
 
 
 
@@ -22,7 +23,7 @@ https://bytebucket.org/gmurt/kscomponents/raw/d102258c466a604e30547480b7ba06d825
 
 PinCode entry component
 
-https://bitbucket.org/gmurt/kscomponents/src/8f12408804e09208b992f7a0751f9bf0aa7752c6/Samples/Pin%20Code/screenshot.png?at=master
+https://bitbucket.org/gmurt/kscomponents/src/8f12408804e09208b992f7a0751f9bf0aa7752c6/Samples/Pin%20Code/screenshot.png
 
 
 
