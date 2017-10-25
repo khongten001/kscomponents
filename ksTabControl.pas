@@ -944,8 +944,11 @@ end;
 
 procedure TksTabBarAppearence.SetSelectedBackground(const Value: TAlphaColor);
 begin
-  FSelectedBackground := Value;
-  Changed;
+  if FSelectedBackground <> Value then
+  begin
+    FSelectedBackground := Value;
+    Changed;
+  end;
 end;
 
 procedure TksTabBarAppearence.SetTheme(const Value: TksTabBarTheme);
