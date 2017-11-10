@@ -14,16 +14,25 @@ Enhanced ListView componnent
 - Swipe (action) buttons
 - Lots more.
 
-https://bitbucket.org/gmurt/kscomponents/raw/d102258c466a604e30547480b7ba06d8254d91e1/Samples/VirtualListView/screenshot.png =100
+https://bytebucket.org/gmurt/kscomponents/raw/d102258c466a604e30547480b7ba06d8254d91e1/Samples/VirtualListView/screenshot.png
 
+** TksTabControl
 
+Enhanced TabControl component
+
+- tab alignment (top/bottom)
+- themes (light/dark/custom)
+- badge support
+
+https://bytebucket.org/gmurt/kscomponents/raw/6a4a1541e6b769f6d3993cf38e1ad60b7d745881/Samples/Tab%20Control/screenshot_dark.png
+https://bytebucket.org/gmurt/kscomponents/raw/6a4a1541e6b769f6d3993cf38e1ad60b7d745881/Samples/Tab%20Control/screenshot_light.png
 
 
 ** TksPinCode **
 
 PinCode entry component
 
-https://bitbucket.org/gmurt/kscomponents/src/8f12408804e09208b992f7a0751f9bf0aa7752c6/Samples/Pin%20Code/screenshot.png
+https://bytebucket.org/gmurt/kscomponents/raw/8f12408804e09208b992f7a0751f9bf0aa7752c6/Samples/Pin%20Code/screenshot.png
 
 
 

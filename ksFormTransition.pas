@@ -131,9 +131,10 @@ end;
 
 function IsIPad: Boolean;
 begin
-  Result := False;
   {$IFDEF IOS}
   Result := TUIDevice.Wrap( TUIDevice.OCClass.currentDevice ).userInterfaceIdiom = UIUserInterfaceIdiomPad;
+  {$ELSE}
+  Result := False;
   {$ENDIF}
 end;
 

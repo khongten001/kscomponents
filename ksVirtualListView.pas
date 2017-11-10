@@ -712,6 +712,7 @@ type
     procedure ScrollToFirstChecked;
 
     procedure UpdateScrollLimmits;
+    procedure CheckAll;
     procedure UncheckAll;
     procedure SwipeItem(AItem: TksVListItem; ASwipeDirection: TksVListSwipeDirection);
     procedure SelectItem(AItem: TksVListItem);
@@ -1606,6 +1607,14 @@ begin
     Items[ICount].CacheItem;
 end;  }
 
+procedure TksVirtualListView.CheckAll;
+var
+  AItem: TksVListItem;
+begin
+  for AItem in FItems do
+    AItem.FChecked := True;
+end;
+
 procedure TksVirtualListView.ClearItems;
 begin
   FItems.Clear;
@@ -2203,8 +2212,8 @@ end;
 procedure TksVirtualListView.SetFilterEdit(const Value: TksListViewFilter);
 begin
   FFilterEdit := Value;
-  FFilterEdit.OnChangeTracking := FilterChanged;
-
+  if FFilterEdit <> nil then
+    FFilterEdit.OnChangeTracking := FilterChanged;
 end;
 
 {procedure TksVirtualListView.SetFilterEdit(const Value: TksListViewFilter);
@@ -2301,10 +2310,10 @@ end;
 
 procedure TksVirtualListView.UncheckAll;
 var
-  ICount: integer;
+  AItem: TksVListItem;
 begin
-  for ICount := 0 to Items.Count - 1 do
-    Items[ICount].FChecked := False;
+  for AItem in FItems do
+    AItem.FChecked := False;
 end;
 
 procedure TksVirtualListView.UnfocusControl;
@@ -2434,7 +2443,7 @@ begin
   if FAniCalc.Down then
     FAniCalc.MouseMove(x, y);
   if (ssLeft in Shift) then
-    FPendingRefresh := ((ScrollPos <= -50) and (FAniCalc.Down));
+    FPendingRefresh := ((ScrollPos <= -50) and (FAniCalc.Down)) and (FPullToRefresh.Enabled);
   if (FAniCalc.Down) and (FMouseDownPos.y <> y) then
   begin
     if FSelectionOptions.KeepSelection = False then

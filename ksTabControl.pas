@@ -277,7 +277,6 @@ begin
   AAppearence := TksTabControl(Parent).Appearence;
 
 
-  ACanvas.Font.Size := 11;
   ACanvas.Fill.Color := AAppearence.NormalColor;
 
   if AIndex = TksTabControl(Parent).TabIndex then
@@ -289,6 +288,7 @@ begin
 
   InflateRect(r, 0, -3);
 
+  ACanvas.Font.Size := 10;
   ACanvas.FillText(r, FText, False, 1, [], TTextAlign.Center, TTextAlign.Trailing);
   InflateRect(r, 0, -3);
 

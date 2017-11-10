@@ -33,12 +33,11 @@ uses {$IFDEF MSWINDOWS} Windows, {$ENDIF} Classes, FMX.StdCtrls, FMX.Graphics, k
 
 
 type
+  TksPinCodeSubmitEvent = procedure(Sender: TObject; ACode: string) of object;
+
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
     {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
-
-  TksPinCodeSubmitEvent = procedure(Sender: TObject; ACode: string) of object;
-    
   TksPinCode = class(TControl)
   private
     FIndicator: TksProgressIndicator;
