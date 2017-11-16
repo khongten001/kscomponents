@@ -80,6 +80,7 @@ type
   TksItemTimeSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ATime: TDateTime) of object;
   TksItemGetPickerItemsEvent = procedure(Sender: TObject; ARow: TksVListItem; var ASelected: string; AItems: TSTrings) of object;
 
+  TksItemSwitchClicked = procedure(Sender: TObject; AItem: TksVListItem; ASwitchID: string; AChecked: Boolean) of object;
 
   TksVirtualListViewAppearence = class(TPersistent)
   private
@@ -205,6 +206,7 @@ type
     FHeight: single;
     FVisible: Boolean;
     FUsePercentForXPos: Boolean;
+    FObjectRect: TRectF;
     FOnChange: TNotifyEvent;
     procedure SetVertAlign(const Value: TVerticalAlignment);
     procedure SetHeight(const Value: single);
@@ -214,10 +216,12 @@ type
     procedure SetHorzAlign(const Value: TAlignment);
     procedure SetVisible(const Value: Boolean);
     procedure SetUsePercentForXPos(const Value: Boolean);
+    function GetListview: TksVirtualListView;
   protected
     function CalcObjectRect(AItemRect: TRectF): TRectF; virtual;
     procedure Changed; virtual;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); virtual;
+    procedure Clicked; virtual;
   public
     constructor Create(AItem: TksVListItem); virtual;
     procedure ClearCache; virtual;
@@ -233,6 +237,7 @@ type
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
     property Visible: Boolean read FVisible write SetVisible default True;
+    property ListView: TksVirtualListView read GetListview;
   end;
 
   TksVListItemTextObject = class(TksVListItemBaseObject)
@@ -306,8 +311,6 @@ type
   private
     FBitmap: TBitmap;
     FRenderImage: TBitmap;
-    //FCached: TBitmap;
-    //FOwnsImage: Boolean;
     FBackground: TAlphaColor;
     FOpacity: single;
     FImageShape: TksImageShape;
@@ -330,6 +333,24 @@ type
     property ImageShape: TksImageShape read FImageShape write SetImageShape;
   end;
 
+  TksVListItemSwitchObject = class(TksVListItemBaseObject)
+  private
+    FSwitch: TBitmap;
+    FChecked: Boolean;
+
+    procedure SetChecked(const Value: Boolean);
+    procedure RedrawSwitch;
+  protected
+    procedure Clicked; override;
+  public
+    constructor Create(AItem: TksVListItem); override;
+    destructor Destroy; override;
+    procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
+    procedure Toggle;
+    property Checked: Boolean read FChecked write SetChecked default False;
+  end;
+
+
   TksVListItemAccessoryObject = class(TksVListItemImageObject)
   private
     FAccessoryType: TksAccessoryType;
@@ -349,6 +370,7 @@ type
   TksVListObjectList = class(TObjectList<TksVListItemBaseObject>)
   public
     function ObjectByID(AID: string): TksVListItemBaseObject;
+    function ObjectAtPos(AItem: TksVListItem; x, y: single): TksVListItemBaseObject;
     procedure ClearCache;
   end;
 
@@ -442,6 +464,7 @@ type
     function AddText(x, y, AWidth: single; AText: string): TksVListItemTextObject; overload;
     function AddDetailText(y: single; AText: string): TksVListItemTextObject; overload;
     function AddImage(x, y, AWidth, AHeight: single; ABitmap: TBitmap): TksVListItemImageObject;
+    function AddSwitch(x, y: single; AChecked: Boolean; const AID: string = ''): TksVListItemSwitchObject;
     function DrawRect(x, y, AWidth, AHeight, ACornerRadius: single; AStroke, AFill: TAlphaColor): TksVListItemShapeObject;
     function AddChatBubble(AText, ASender: string; ALeftAlign: Boolean): TksVListItemBubbleObject;
     //procedure BeginUpdate;
@@ -625,7 +648,8 @@ type
     //FEventThread: TThread;
     FRefreshing: Boolean;
 
-    // events...
+    // events..FOnItemSwitchClick.
+    FOnItemSwitchClick: TksItemSwitchClicked;
     FOnItemClick: TksVListItemClickEvent;
     FOnItemLongTap: TksVListItemLongTapEvent;
     FOnItemSwipe: TksVListItemSwipeEvent;
@@ -642,6 +666,7 @@ type
     FOnItemPickerSelectedEvent: TksItemSelectPickerItemEvent;
     FOnGetPickerItemsEvent: TksItemGetPickerItemsEvent;
     FScrollingDisabled: Boolean;
+
     //FFont: TFont;
     procedure SetScrollPos(const Value: integer);
     procedure AniCalcChange(Sender: TObject);
@@ -747,6 +772,7 @@ type
     property CanDeleteItem: TksVListDeletingItemEvent read FCanDeleteItem write FCanDeleteItem;
     property OnItemLongTap: TksVListItemLongTapEvent read FOnItemLongTap write FOnItemLongTap;
     property OnItemClick: TksVListItemClickEvent read FOnItemClick write FOnItemClick;
+    property OnItemSwitchClick: TksItemSwitchClicked read FOnItemSwitchClick write FOnItemSwitchClick;
     property OnItemSwipe: TksVListItemSwipeEvent read FOnItemSwipe write FOnItemSwipe;
     property OnMouseDown;
     property OnMouseMove;
@@ -822,21 +848,19 @@ begin
   Result.Bitmap := ABitmap;
   FObjects.Add(Result);
 end;
-  {
-procedure TksVListItem.BeginUpdate;
-begin
-  Inc(FUpdateCount);
-end;    }
 
-{
-procedure TksVListItem.CacheItem;
+function TksVListItem.AddSwitch(x, y: single; AChecked: Boolean;
+  const AID: string = ''): TksVListItemSwitchObject;
 begin
-  //UpdateStandardObjectPositions;
-  //FTitle.CacheTextToBmp(FSelected);
-  //FSubTitle.CacheTextToBmp(FSelected);
- // FDetail.CacheTextToBmp(FSelected);
-
-end; }
+  Result := TksVListItemSwitchObject.Create(Self);
+  Result.HorzAlign := TAlignment.taRightJustify;
+  Result.FLeft := x;
+  Result.FTop := y;
+  Result.ID := AID;
+  Result.FChecked := AChecked;
+  FCanSelect := False;
+  FObjects.Add(Result);
+end;
 
 procedure TksVListItem.ClearCache;
 begin
@@ -1643,7 +1667,6 @@ begin
   FNoItemsText := TksNoItemsText.Create(Self);
   //FFont := TFont.Create;
   FDeletedItemCleanup := CreateTimer(500, DoCleanupDeletedItems);
-
   FItemIndex := -1;
   FScrollPos := 0;
   FUpdateCount := 0;
@@ -2383,8 +2406,10 @@ procedure TksVirtualListView.MouseDown(Button: TMouseButton; Shift: TShiftState;
 var
   ABtn: TksVListActionButton;
   ACanDelete: Boolean;
+  AObj: TksVListItemBaseObject;
 begin
   inherited;
+
   if FScrollPos < 0 then
     Exit;
   KillTimer(FLongTapTimer);
@@ -2428,6 +2453,15 @@ begin
   end;
 
   ResetItemOffsets(nil);
+
+  if FMouseDownItem <> nil then
+  begin
+    AObj := FMouseDownItem.Objects.ObjectAtPos(FMouseDownItem, x, y);
+    if AObj <> nil then
+    begin
+      AObj.Clicked;
+    end;
+  end;
 
   if FMouseDownItem <> nil then
     FLongTapTimer := CreateTimer(C_LONG_TAP_DURATION, LongTapTimerProc)
@@ -3148,6 +3182,7 @@ begin
       //Result.Right := Result.Right - C_ACCESSORY_WIDTH;
     end;
   end;
+  FObjectRect := Result;
 end;
 
 procedure TksVListItemBaseObject.Changed;
@@ -3159,6 +3194,11 @@ begin
 end;
 
 procedure TksVListItemBaseObject.ClearCache;
+begin
+  //
+end;
+
+procedure TksVListItemBaseObject.Clicked;
 begin
   //
 end;
@@ -3178,11 +3218,17 @@ begin
   //
 end;
 
+function TksVListItemBaseObject.GetListview: TksVirtualListView;
+begin
+  Result := (FOwner.Fowner.FOwner as TksVirtualListView);
+end;
+
 procedure TksVListItemBaseObject.SetHeight(const Value: single);
 begin
   FHeight := Value;
   Changed;
 end;
+
 
 procedure TksVListItemBaseObject.SetHorzAlign(const Value: TAlignment);
 begin
@@ -3937,6 +3983,21 @@ begin
 end;
 
 
+function TksVListObjectList.ObjectAtPos(AItem: TksVListItem; x, y: single): TksVListItemBaseObject;
+var
+  AObj: TksVListItemBaseObject;
+begin
+  Result := nil;
+  for AObj in Self do
+  begin
+    if PtInRect(AObj.FObjectRect, PointF(x, y)) then
+    begin
+      Result := AObj;
+      Exit;
+    end;
+  end;
+end;
+
 function TksVListObjectList.ObjectByID(AID: string): TksVListItemBaseObject;
 var
   AObj: TksVListItemBaseObject;
@@ -3950,6 +4011,76 @@ begin
       Exit;
     end;
   end;
+end;
+
+{ TksVListItemSwitchObject }
+
+
+procedure TksVListItemSwitchObject.Clicked;
+var
+  lv: TksVirtualListView;
+begin
+  inherited;
+  lv := ListView;
+  Toggle;
+  if Assigned(lv.FOnItemSwitchClick) then
+    lv.FOnItemSwitchClick(lv, FOwner, FID, FChecked);
+end;
+
+constructor TksVListItemSwitchObject.Create(AItem: TksVListItem);
+begin
+  inherited;
+  //FSwitch := TSwitch.Create(FOwner.FOwner.FOwner);
+  FSwitch := TBitmap.Create;
+  //FSwitch.BitmapScale := GetScreenScale;
+
+  FWidth := SwitchWidth;
+  FHeight := SwidthHeight;
+  FChecked := False;
+end;
+
+destructor TksVListItemSwitchObject.Destroy;
+begin
+  FSwitch.DisposeOf;
+  //FSwitch.DisposeOf;
+  inherited;
+end;
+
+procedure TksVListItemSwitchObject.DrawToCanvas(ACanvas: TCanvas;
+  AItemRect: TRectF);
+var
+  ARect: TRectF;
+
+begin
+  inherited;
+  ARect := CalcObjectRect(AItemRect);
+  ACanvas.Stroke.Color := claBlack;
+  ACanvas.Stroke.Thickness := 1;
+
+  if FSwitch.IsEmpty then
+    RedrawSwitch;
+  ACanvas.DrawBitmap(FSwitch, RectF(0, 0, FWidth*GetScreenScale(False), Height*GetScreenScale(False)), ARect, 1);
+end;
+
+procedure TksVListItemSwitchObject.RedrawSwitch;
+begin
+  FSwitch.Clear(claNull);
+  FSwitch.SetSize(Round(SwitchWidth*GetscreenScale(False)), Round(SwidthHeight*GetscreenScale(False)));
+  FSwitch.Canvas.BeginScene(nil) ;
+  SwitchImage(FSwitch.Canvas, RectF(0, 0, FSwitch.Width, FSwitch.Height), FChecked);
+  FSwitch.Canvas.EndScene;
+end;
+
+procedure TksVListItemSwitchObject.SetChecked(const Value: Boolean);
+begin
+  FChecked := Value;
+  RedrawSwitch;
+  Changed;
+end;
+
+procedure TksVListItemSwitchObject.Toggle;
+begin
+  Checked := not Checked;
 end;
 
 end.

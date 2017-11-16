@@ -43,11 +43,13 @@ contains
   ksMapView in 'ksMapView.pas',
   ksProgressBar in 'ksProgressBar.pas',
   ksListViewFilter in 'ksListViewFilter.pas',
-  ksPinCode in 'ksPinCode.pas';
+  ksPinCode in 'ksPinCode.pas',
+  ksSystemSound in 'ksSystemSound.pas';
 
 
 
 end.
+
 
 
 

@@ -78,8 +78,6 @@ type
 
   //---------------------------------------------------------------------------------------
 
-  // TksTableViewAccessoryImage
-
   TksTableViewAccessoryImage = class(TBitmap)
   private
     FColor: TAlphaColor;
@@ -92,8 +90,6 @@ type
 
   //---------------------------------------------------------------------------------------
 
-  // TksTableViewAccessoryImageList
-
   TksTableViewAccessoryImageList = class(TObjectList<TksTableViewAccessoryImage>)
   private
     FImageScale: single;
@@ -101,10 +97,8 @@ type
     FActiveStyle: TFmxObject;
     procedure AddEllipsesAccessory;
     procedure AddFlagAccessory;
-    //procedure CalculateImageScale;
     function GetAccessoryFromResource(AStyleName: array of string; const AState: string = ''): TksTableViewAccessoryImage;
     procedure Initialize;
-    //procedure CalculateImageScale;
   public
     constructor Create;
     destructor Destroy; override;
@@ -124,30 +118,58 @@ var
   AUnitTesting: Boolean;
   AAccessories: TksTableViewAccessoryImageList;
 
+  function SwitchWidth: single;
+  function SwidthHeight: single;
 
-
-  procedure PlaySystemSound(ASound: TksSound);
-  //procedure PlaySystemSound(ASoundID: integer); overload;
+  procedure SwitchImage(ACanvas: TCanvas; ARect: TRectF; AChecked: Boolean);
 
 implementation
 
-uses ksCommon, SysUtils,FMX.Styles, FMX.Styles.Objects, Math, ksSystemSound
+uses FMX.Forms, ksCommon, SysUtils,FMX.Styles, FMX.Styles.Objects, Math, ksSystemSound;
 
-{$IFDEF DEBUG}
-
-//,untMain
-{$ENDIF}
-;
+var
+  ASwitchChecked: TSwitch;
+  ASwitchUnchecked: TSwitch;
 
 // ------------------------------------------------------------------------------
-       {
-procedure PlaySystemSound(ASoundID: integer); overload;
-var
-  AObj: TksSystemSound;
+
+function SwitchWidth: single;
 begin
-  AObj := TksSystemSound.Create;
-  AObj.Play(ASoundID);
-end;   }
+  Result := ASwitchChecked.Width;
+end;
+
+function SwidthHeight: single;
+begin
+  Result := ASwitchChecked.Height;
+end;
+
+procedure SwitchImage(ACanvas: TCanvas; ARect: TRectF; AChecked: Boolean);
+var
+  ASwitch: TSwitch;
+  //AState: TCanvasSaveState;
+begin
+  case AChecked of
+    True: ASwitch := ASwitchChecked;
+    False: ASwitch := ASwitchUnchecked;
+  end;
+
+  if ASwitch.Tag = 0 then
+  begin
+    ASwitch.Visible := False;
+    Application.MainForm.AddObject(ASwitch);
+    ASwitch.ApplyStyleLookup;
+    Application.ProcessMessages;
+    ASwitch.Tag := 1;
+    //EXit;
+  end;
+  //AState := ACanvas.SaveState;
+  try
+   // ACanvas.IntersectClipRect(ARect);
+    ASwitch.PaintTo(ACanvas, ARect, nil);
+  finally
+ //   ACanvas.RestoreState(AState);
+  end;
+end;
 
 procedure PlaySystemSound(ASound: TksSound);
 var
@@ -235,24 +257,12 @@ begin
   end;
   Add(AAcc);
 end;
-        (*
-procedure TksTableViewAccessoryImageList.CalculateImageScale;
-begin
-  (*if FImageScale = 0 then
-  begin
-    FImageScale := Min(Trunc(GetScreenScale), 3);
-    {$IFDEF MSWINDOWS}
-    FImageScale := 1;
-    {$ENDIF}
-  end;  *)
-//end;
 
 constructor TksTableViewAccessoryImageList.Create;
 begin
   inherited Create(True);
   FImageScale := 0;
   FImageMap := TBitmap.Create;
-  //Initialize;
 end;
 
 destructor TksTableViewAccessoryImageList.Destroy;
@@ -267,140 +277,22 @@ procedure TksTableViewAccessoryImageList.DrawAccessory(ACanvas: TCanvas; ARect: 
 var
   AAcc: TksTableViewAccessoryImage;
 begin
-  //AState := ACanvas.SaveState;
-  try
-    //ACanvas.IntersectClipRect(ARect);
-    if AFill <> claNull then
-    begin
-      ACanvas.Fill.Color := AFill;
-      ACanvas.Fill.Kind := TBrushKind.Solid;
-      ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
-    end;
-    AAcc := GetAccessoryImage(AAccessory);
-    if AAcc <> nil then
-      AAcc.DrawToCanvas(ACanvas, ARect, False);
-    //ACanvas.Stroke.Color := AStroke;
-    //ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);
-  finally
-  //  ACanvas.RestoreState(AState);
-  end;
-end;
-        (*
-function TksTableViewAccessoryImageList.GetAccessoryFromResource
-  (AStyleName: string; const AState: string = ''): TksTableViewAccessoryImage;
-var
-  AStyleObj: TStyleObject;
-  AImgRect: TBounds;
-  AIds: TStrings;
-  r: TRectF;
-  ABitmapLink: TBitmapLinks;
-  AImageMap: TBitmap;
-  AImageScale: single;
-begin
- // CalculateImageScale;
-
-  Result := TksTableViewAccessoryImage.Create;
-  AIds := TStringList.Create;
-  try
-    AIds.Text := StringReplace(AStyleName, '.', #13, [rfReplaceAll]);
-
-    if AUnitTesting then
-    begin
-      if FActiveStyle = nil then
-        FActiveStyle := TStyleManager.ActiveStyle(Nil);
-      AStyleObj := TStyleObject(FActiveStyle)
-    end
-    else
-      AStyleObj := TStyleObject(TStyleManager.ActiveStyle(nil));
-
-    while AIds.Count > 0 do
-    begin
-      AStyleObj := TStyleObject(AStyleObj.FindStyleResource(AIds[0]));
-      AIds.Delete(0);
-    end;
-
-    if AStyleObj <> nil then
-    begin
-      if FImageMap.IsEmpty then
-      begin
-        AImageMap := ((AStyleObj as TStyleObject).Source.MultiResBitmap.Bitmaps[FImageScale]);
-
-
-        FImageMap.SetSize(Round(AImageMap.Width), Round(AImageMap.Height));
-        FImageMap.Clear(claNull);
-
-        FImageMap.Canvas.BeginScene;
-        try
-          FImageMap.Canvas.DrawBitmap(AImageMap,
-                                      RectF(0, 0, AImageMap.Width, AImageMap.Height),
-                                      RectF(0, 0, FImageMap.Width, FImageMap.Height),
-                                      1,
-                                      True);
-
-        finally
-          FImageMap.Canvas.EndScene;
-        end;
-      end;
-      AImageScale := FImageMap.BitmapScale;
-
-
-      ABitmapLink := nil;
-      if AStyleObj = nil then
-        Exit;
-      if (AStyleObj.ClassType = TCheckStyleObject) then
-      begin
-        if AState = 'checked' then
-          ABitmapLink := TCheckStyleObject(AStyleObj).ActiveLink
-        else
-          ABitmapLink := TCheckStyleObject(AStyleObj).SourceLink
-
-      end;
-
-      if ABitmapLink = nil then
-        ABitmapLink := AStyleObj.SourceLink;
-
-{$IFDEF XE8_OR_NEWER}
-
-      AImgRect := ABitmapLink.LinkByScale(AImageScale, True).SourceRect;
-{$ELSE}
-      AImgRect := ABitmapLink.LinkByScale(AImageScale).SourceRect;
-{$ENDIF}
-      Result.SetSize(Round(AImgRect.Width), Round(AImgRect.Height));
-      Result.Clear(claNull);
-      Result.Canvas.BeginScene;
-
-      r := AImgRect.Rect;
-
-      Result.Canvas.DrawBitmap(FImageMap, r, RectF(0, 0, Result.Width,
-        Result.Height), 1, False);
-      Result.Canvas.EndScene;
-    end;
-  finally
-{$IFDEF NEXTGEN}
-    FreeAndNil(AIds);
-{$ELSE}
-    AIds.Free;
-{$ENDIF}
-  end;
-end;   *)
-                           (*
-procedure TksTableViewAccessoryImageList.CalculateImageScale;
-begin
-  if FImageScale = 0 then
+  if AFill <> claNull then
   begin
-    FImageScale := Min(Trunc(GetScreenScale), 3);
-    {$IFDEF MSWINDOWS}
-    FImageScale := 1;
-    {$ENDIF}
+    ACanvas.Fill.Color := AFill;
+    ACanvas.Fill.Kind := TBrushKind.Solid;
+    ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
   end;
-end;            *)
+  AAcc := GetAccessoryImage(AAccessory);
+  if AAcc <> nil then
+    AAcc.DrawToCanvas(ACanvas, ARect, False);
+end;
 
 function TksTableViewAccessoryImageList.GetAccessoryFromResource
   (AStyleName: array of string; const AState: string = ''): TksTableViewAccessoryImage;
 var
   AStyleObj: TStyleObject;
   AImgRect: TBounds;
-//  AIds: TStrings;
   r: TRectF;
   ABitmapLink: TBitmapLinks;
   AImageMap: TBitmap;
@@ -408,110 +300,80 @@ var
   AScale: single;
   ICount: integer;
 begin
-  //CalculateImageScale;
-
   Result := TksTableViewAccessoryImage.Create;
-  //AIds := TStringList.Create;
-  try
-    ///AIds.Text := Trim(StringReplace(AStyleName, '.', #10#13, [rfReplaceAll]));
 
-    if AUnitTesting then
+  if AUnitTesting then
+  begin
+    if FActiveStyle = nil then
+      FActiveStyle := TStyleManager.ActiveStyle(Nil);
+    AStyleObj := TStyleObject(FActiveStyle)
+  end
+  else
+    AStyleObj := TStyleObject(TStyleManager.ActiveStyle(nil));
+
+
+  for ICount := Low(AStyleName) to High(AStyleName) do
+    AStyleObj := TStyleObject(AStyleObj.FindStyleResource(AStyleName[ICount]));
+
+  if AStyleObj <> nil then
+  begin
+    if FImageMap.IsEmpty then
     begin
-      if FActiveStyle = nil then
-        FActiveStyle := TStyleManager.ActiveStyle(Nil);
-      AStyleObj := TStyleObject(FActiveStyle)
-    end
-    else
-      AStyleObj := TStyleObject(TStyleManager.ActiveStyle(nil));
+      FImageScale := GetScreenScale(False);
 
-
-    for ICount := Low(AStyleName) to High(AStyleName) do
-      AStyleObj := TStyleObject(AStyleObj.FindStyleResource(AStyleName[ICount]));
-
-
-    {while AIds.Count > 0 do
-    begin
-      AStyleObj := TStyleObject(AStyleObj.FindStyleResource(Trim(AIds[0])));
-      AIds.Delete(0);
-    end; }
-
-    if AStyleObj <> nil then
-    begin
-      if FImageMap.IsEmpty then
+      for i := 0 to (AStyleObj as TStyleObject).Source.MultiResBitmap.Count-1 do
       begin
-        //AImageMap := ((AStyleObj as TStyleObject).Source.Bitmap);// MultiResBitmap.Bitmaps[FImageScale]);
-        FImageScale := GetScreenScale(False);
-        //FImageScale := GetScreenScale(True);
-
-        for i := 0 to (AStyleObj as TStyleObject).Source.MultiResBitmap.Count-1 do
+        AScale := (AStyleObj as TStyleObject).Source.MultiResBitmap[i].Scale;
+        if Round(AScale) <= FImageScale then
         begin
-          AScale := (AStyleObj as TStyleObject).Source.MultiResBitmap[i].Scale;
-          if Round(AScale) <= FImageScale then
-          begin
-            FImageScale := Round(AScale);
-            Break;
-          end;
-        end;
-        //tdialogservice.ShowMessage(FImageScale.ToString);
-
-
-        AImageMap := ((AStyleObj as TStyleObject).Source.MultiResBitmap.Bitmaps[FImageScale]);
-
-
-        //FImageScale := 1.5;
-        // AImageMap.BitmapScale;
-        FImageMap.SetSize(Round(AImageMap.Width), Round(AImageMap.Height));
-        FImageMap.Clear(claNull);
-
-        FImageMap.Canvas.BeginScene;
-        try
-          FImageMap.Canvas.DrawBitmap(AImageMap,
-                                      RectF(0, 0, AImageMap.Width, AImageMap.Height),
-                                      RectF(0, 0, FImageMap.Width, FImageMap.Height),
-                                      1,
-                                      True);
-        finally
-          FImageMap.Canvas.EndScene;
+          FImageScale := Round(AScale);
+          Break;
         end;
       end;
+      AImageMap := ((AStyleObj as TStyleObject).Source.MultiResBitmap.Bitmaps[FImageScale]);
+      FImageMap.SetSize(Round(AImageMap.Width), Round(AImageMap.Height));
+      FImageMap.Clear(claNull);
 
-      ABitmapLink := nil;
-      if AStyleObj = nil then
-        Exit;
-      if (AStyleObj.ClassType = TCheckStyleObject) then
-      begin
-        if AState = 'checked' then
-          ABitmapLink := TCheckStyleObject(AStyleObj).ActiveLink
-        else
-          ABitmapLink := TCheckStyleObject(AStyleObj).SourceLink
-
+      FImageMap.Canvas.BeginScene;
+      try
+        FImageMap.Canvas.DrawBitmap(AImageMap,
+                                    RectF(0, 0, AImageMap.Width, AImageMap.Height),
+                                    RectF(0, 0, FImageMap.Width, FImageMap.Height),
+                                    1,
+                                    True);
+      finally
+        FImageMap.Canvas.EndScene;
       end;
+    end;
 
-      if ABitmapLink = nil then
-        ABitmapLink := AStyleObj.SourceLink;
+    ABitmapLink := nil;
+    if AStyleObj = nil then
+      Exit;
+    if (AStyleObj.ClassType = TCheckStyleObject) then
+    begin
+      if AState = 'checked' then
+        ABitmapLink := TCheckStyleObject(AStyleObj).ActiveLink
+      else
+        ABitmapLink := TCheckStyleObject(AStyleObj).SourceLink
+    end;
+
+    if ABitmapLink = nil then
+      ABitmapLink := AStyleObj.SourceLink;
 
 {$IFDEF XE8_OR_NEWER}
-      AImgRect := ABitmapLink.LinkByScale(FImageScale, True).SourceRect;
-      //AImgRect := ABitmapLink.Links[0].SourceRect;
+    AImgRect := ABitmapLink.LinkByScale(FImageScale, True).SourceRect;
 {$ELSE}
-      AImgRect := ABitmapLink.LinkByScale(FImageScale).SourceRect;
+    AImgRect := ABitmapLink.LinkByScale(FImageScale).SourceRect;
 {$ENDIF}
-      Result.SetSize(Round(AImgRect.Width), Round(AImgRect.Height));
-      Result.Clear(claNull);
-      Result.Canvas.BeginScene;
+    Result.SetSize(Round(AImgRect.Width), Round(AImgRect.Height));
+    Result.Clear(claNull);
+    Result.Canvas.BeginScene;
 
-      r := AImgRect.Rect;
+    r := AImgRect.Rect;
 
-      Result.Canvas.DrawBitmap(FImageMap, r, RectF(0, 0, Result.Width,
-        Result.Height), 1, True);
-      Result.Canvas.EndScene;
-    end;
-  finally
-{$IFDEF NEXTGEN}
-   // FreeAndNil(AIds);
-{$ELSE}
-  //  AIds.Free;
-{$ENDIF}
+    Result.Canvas.DrawBitmap(FImageMap, r, RectF(0, 0, Result.Width,
+      Result.Height), 1, True);
+    Result.Canvas.EndScene;
   end;
 end;
 
@@ -614,10 +476,22 @@ end;
 initialization
   AUnitTesting := False;
   AAccessories := TksTableViewAccessoryImageList.Create;
+  ASwitchChecked := TSwitch.Create(nil);
+  ASwitchUnchecked := TSwitch.Create(nil);
+  ASwitchChecked.Tag := 0;
+  ASwitchUnchecked.Tag := 0;
+  ASwitchChecked.IsChecked := True;
 
-finalization
+  ASwitchUnchecked.IsChecked := False;
 
-FreeAndNil(AAccessories);
+  finalization
 
+  FreeAndNil(AAccessories);
+
+  if ASwitchChecked.Parent <> nil then
+  begin
+    ASwitchChecked.DisposeOf;
+    ASwitchUnchecked.DisposeOf;
+  end;
 
 end.
