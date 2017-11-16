@@ -125,12 +125,13 @@ var
   AAccessories: TksTableViewAccessoryImageList;
 
 
-  //procedure PlaySystemSound(ASound: TksSound); overload;
+
+  procedure PlaySystemSound(ASound: TksSound);
   //procedure PlaySystemSound(ASoundID: integer); overload;
 
 implementation
 
-uses ksCommon, SysUtils,FMX.Styles, FMX.Styles.Objects, Math
+uses ksCommon, SysUtils,FMX.Styles, FMX.Styles.Objects, Math, ksSystemSound
 
 {$IFDEF DEBUG}
 
@@ -140,6 +141,14 @@ uses ksCommon, SysUtils,FMX.Styles, FMX.Styles.Objects, Math
 
 // ------------------------------------------------------------------------------
        {
+procedure PlaySystemSound(ASoundID: integer); overload;
+var
+  AObj: TksSystemSound;
+begin
+  AObj := TksSystemSound.Create;
+  AObj.Play(ASoundID);
+end;   }
+
 procedure PlaySystemSound(ASound: TksSound);
 var
   AObj: TksSystemSound;
@@ -148,13 +157,6 @@ begin
   AObj.Play(ASound);
 end;
 
-procedure PlaySystemSound(ASoundID: integer); overload;
-var
-  AObj: TksSystemSound;
-begin
-  AObj := TksSystemSound.Create;
-  AObj.Play(ASoundID);
-end;   }
 
 { TksTableViewAccessoryImageList }
 
