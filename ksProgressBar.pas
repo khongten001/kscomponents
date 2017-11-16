@@ -122,6 +122,8 @@ var
   v,m: integer;
 begin
   inherited;
+  if Locked then
+    Exit;
   AState := Canvas.SaveState;
   try
     Canvas.BeginScene;

@@ -293,6 +293,8 @@ var
   AScale: single;
 begin
   inherited;
+  if Locked then
+    Exit;
   ASaveState := Canvas.SaveState;
   try
     Canvas.IntersectClipRect(RectF(0, 0, Width, Height));

@@ -230,6 +230,8 @@ var
   s: single;
 begin
   inherited;
+  if Locked then
+    Exit;
   ABmp := nil;
   s := GetScreenScale(False);
 

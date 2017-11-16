@@ -151,6 +151,8 @@ var
   ASaveState: TCanvasSaveState;
 begin
   inherited;
+  if Locked then
+    Exit;
   ASaveState := Canvas.SaveState;
   try
     canvas.IntersectClipRect(ClipRect);

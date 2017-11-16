@@ -219,6 +219,8 @@ var
   ABtnText: string;
 begin
   inherited;
+  if Locked then
+    Exit;
   Canvas.Fill.Color := claWhite;
   Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
   if (csDesigning in ComponentState) then

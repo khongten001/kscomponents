@@ -121,6 +121,8 @@ var
   ACaption: string;
 begin
   inherited;
+  if Locked then
+    Exit;
   r := RectF(0, 0, Width, Height);
   Canvas.BeginScene;
   Canvas.DrawBitmap(FBitmap, RectF(0, 0, FBitmap.Width, FBitmap.Height), r, 1, True);

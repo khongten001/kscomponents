@@ -377,6 +377,8 @@ end;    *)
 procedure TksSegmentButtons.Paint;
 begin
   inherited;
+  if Locked then
+    Exit;
   if (csDesigning in ComponentState) then
   begin
     DrawDesignBorder(claDimgray, claDimgray);
@@ -630,7 +632,8 @@ end;    *)
 procedure TksSegmentSpeedButton.Paint;
 begin
   inherited;
-
+  if Locked then
+    Exit;
   Canvas.Stroke.Color := claBlack;
   if FIsPressed then
     Canvas.Fill.Color := GetColorOrDefault(FOwner.TintColor, claDodgerblue)

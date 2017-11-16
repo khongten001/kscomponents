@@ -647,6 +647,8 @@ var
   ARect: TRectF;
 begin
   inherited;
+  if Locked then
+    Exit;
   Canvas.Fill.Color := FAppearence.BackgroundColor;
   if (SelectedTab <> nil) then
   begin
@@ -827,6 +829,8 @@ var
   ATabControl: TksTabControl;
 begin
   inherited;
+  if Locked then
+    Exit;
   ATabControl := TksTabControl(FTabControl);
   with Canvas do
   begin

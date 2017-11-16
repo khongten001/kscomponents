@@ -48,6 +48,11 @@ type
     procedure BeforeTransition(AType: TksTransitionMethod);
   end;
 
+  IksPostFormTransition = interface
+  ['{CD11BABA-8659-4F42-A6BC-5E03B74690EE}']
+    procedure AfterTransition(AType: TksTransitionMethod);
+  end;
+
   TksTransitionType = (ksFtSlideInFromLeft,
                        ksFtSlideInFromTop,
                        ksFtSlideInFromRight,
@@ -381,6 +386,7 @@ var
   AFrom, ATo: TCommonCustomForm;
   AAnimateForm: TfrmFormTransitionUI;
   AFormIntf: IksFormTransition;
+  APostFormIntf: IksPostFormTransition;
 begin
   if _InTransition then
     Exit;
@@ -459,6 +465,8 @@ begin
       AForm.Visible := True;
       AFrom.Visible := False;
     end;
+    if Supports(ATo, IksPostFormTransition, APostFormIntf) then
+      APostFormIntf.AfterTransition(ksTmPush);
 
   finally
     if not ARecordPush then

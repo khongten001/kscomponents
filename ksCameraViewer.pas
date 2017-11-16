@@ -178,8 +178,8 @@ var
   AViewBmp: TBitmap;
 begin
   inherited;
-    if FBuffer.Width = 0 then
-      Exit;
+  if (FBuffer.Width = 0) or (Locked) then
+    Exit;
   ABmp := TBitmap.Create((Owner as TForm).Width, (Owner as TForm).Height);
   try
     ABmp.Canvas.BeginScene;

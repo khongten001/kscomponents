@@ -195,8 +195,7 @@ type
 
   TksVListItemBaseObject = class(TPersistent)
   private
-    [weak]
-    FOwner: TksVListItem;
+    [weak]FOwner: TksVListItem;
     FID: string;
     FVertAlign: TVerticalAlignment;
     FHorzAlign: TAlignment;
@@ -349,6 +348,7 @@ type
 
   TksVListObjectList = class(TObjectList<TksVListItemBaseObject>)
   public
+    function ObjectByID(AID: string): TksVListItemBaseObject;
     procedure ClearCache;
   end;
 
@@ -447,7 +447,7 @@ type
     //procedure BeginUpdate;
     ///procedure EndUpdate;
     //procedure CacheItem;
-    //procedure ClearCache;
+    procedure ClearCache;
 
     // procedure ShowActionButtons(AAlign: TksVListActionButtonAlign);
     // procedure HideActionButtons;
@@ -463,8 +463,7 @@ type
     property Title: TksVListItemTextObject read FTitle write SetTitle;
     property SubTitle: TksVListItemTextObject read FSubTitle write SetSubTitle;
     property Detail: TksVListItemTextObject read FDetail write SetDetail;
-    property Accessory: TksVListItemAccessoryObject read FAccessory
-      write SetAccessory;
+    property Accessory: TksVListItemAccessoryObject read FAccessory write SetAccessory;
     property ItemRect: TRectF read FItemRect;
     property Selected: Boolean read FSelected write SetSelected;
     property Purpose: TksVListItemPurpose read FPurpose write SetPurpose
@@ -487,7 +486,7 @@ type
     //property OnSelectPickerDate: TksItemSelectPickerDateEvent read FOnSelectPickerDate write FOnSelectPickerDate;
     property OnDateSelected: TksItemDateSelectedEvent read FOnDateSelected write FOnDateSelected;
     property OnTimeSelected: TksItemTimeSelectedEvent read FOnTimeSelected write FOnTimeSelected;
-
+    property Objects: TksVListObjectList read FObjects;
   end;
 
   TksVListItemList = class(tobjectlist<tksvlistitem>)
@@ -838,13 +837,14 @@ begin
  // FDetail.CacheTextToBmp(FSelected);
 
 end; }
-    {
+
 procedure TksVListItem.ClearCache;
 begin
   FTitle.ClearCache;
   FSubTitle.ClearCache;
   FDetail.ClearCache;
-end; }
+  FChanged := True;
+end;
 
 procedure TksVListItem.Changed;
 begin
@@ -2036,13 +2036,9 @@ var
   AState: TCanvasSaveState;
   AItem: TksVListItem;
   AViewPort: TRectF;
-  //ARefreshArea: TRectF;
-  //ARefreshLabel: string;
   ATopItem: integer;
-  //ARect: TRectF;
-  //r: TRectF;
 begin
-  if FUpdateCount > 0 then
+  if (FUpdateCount > 0) or (Locked) then
     Exit;
 
   AViewPort := Viewport;
@@ -2944,16 +2940,6 @@ begin
   {$ENDIF}
   FTextSize := Point(0, 0);
   CalculateSize;
-
-  //FCachedSize := FCachedSize.Empty;
-  //if FCached = nil then
-  //  Exit;
-  {if FCached.IsEmpty = False then
-  begin
-    FCached.Clear(claNull);
-    FCached.SetSize(0, 0);
-    FWidth := 0;
-  end;   }
   inherited;
 end;
 
@@ -3448,33 +3434,9 @@ end;
 
 procedure TksVListItemImageObject.SetBitmap(const Value: TBitmap);
 begin
-  (*FOwnsImage := True;
-  //if FOwnsImage then
-  begin
-    if FBitmap = nil then
-    begin
-      {if FWidth = 0 then FWidth := Value.Width / GetScreenScale;
-      if FHeight = 0 then FHeight := Value.Height / GetScreenScale;
-
-      FBitmap := TBitmap.Create(Round(FWidth*GetScreenScale), Round(FHeight*GetScreenScale));
-      FBitmap.Clear(claNull);
-                               }
-      FBitmap := TBitmap.Create;
-      FBitmap.Assign(Value);
-    end;
-    {FBitmap.Canvas.BeginScene;
-    try
-      FBitmap.Canvas.DrawBitmap(Value, RectF(0, 0, Value.Width, Value.Height),
-        RectF(0, 0, FBitmap.Width, FBitmap.Height), 1, False);
-    finally
-      FBitmap.Canvas.EndScene;
-    end;    }
-  end
-  //else
-  //  FBitmap := Value;*)
-  //FBitmap.Clear(claNull);
-
   FBitmap.Assign(Value);
+  FRenderImage.Clear(claNull);
+  FRenderImage.SetSize(0, 0);
 end;
 
 procedure TksVListItemImageObject.SetImageShape(const Value: TksImageShape);
@@ -3974,6 +3936,21 @@ begin
     Items[ICount].ClearCache;
 end;
 
+
+function TksVListObjectList.ObjectByID(AID: string): TksVListItemBaseObject;
+var
+  AObj: TksVListItemBaseObject;
+begin
+  Result := nil;
+  for AObj in Self do
+  begin
+    if AObj.ID = AID then
+    begin
+      Result := AObj;
+      Exit;
+    end;
+  end;
+end;
 
 end.
 

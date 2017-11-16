@@ -100,6 +100,8 @@ type
     FTileColumns: integer;
     FTilePadding: integer;
     FShowCaptions: Boolean;
+    FImageHeight: Integer;
+    FImageWidth: Integer;
     procedure SetShowCaptions(const Value: Boolean);
     procedure SetTileColumns(const Value: integer);
     procedure SetTilePadding(const Value: integer);
@@ -113,6 +115,8 @@ type
     property TileColumns: integer read FTileColumns write SetTileColumns default 2;
     property TilePadding: integer read FTilePadding write SetTilePadding default 10;
     property ShowCaptions: Boolean read FShowCaptions write SetShowCaptions default True;
+    property ImageHeight: Integer read FImageHeight write FImageHeight default 32;
+    property ImageWidth: Integer read FImageWidth write FImageWidth default 32;
   end;
 
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
@@ -281,8 +285,8 @@ begin
   OffsetRect(ATile, (ACol-1) * AWidth, (ARow-1)*AHeight);
 
   AGraphic := ATile;
-  AGraphic.Height := 32; //ATile.Height - 30;
-  AGraphic.Width := 32;
+  AGraphic.Height := TileOptions.FImageHeight;
+  AGraphic.Width := TileOptions.FImageWidth;
 
   OffsetRect(AGraphic, (ATile.Width - AGraphic.Width) / 2, (ATile.Height - AGraphic.Height) / 3);
 
@@ -438,7 +442,8 @@ begin
   FTileRows := 3;
   FTilePadding := 10;
   FShowCaptions := True;
-
+  FImageHeight := 32;
+  FImageWidth := 32;
 end;
 
 procedure TksTileMenuTileOptions.RecreateMenu;
