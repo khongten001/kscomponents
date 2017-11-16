@@ -6754,6 +6754,7 @@ begin
   FWidth := 80;
   FTextColor := claWhite;
   FIsDeleteButton := AIsDelete;
+  FIcon := TBitmap.Create;
 end;
 
 // ------------------------------------------------------------------------------
@@ -6768,48 +6769,39 @@ procedure TksTableViewActionButton.Render(ACanvas: TCanvas; ARect: TRectF);
 var
   ATextRect: TRectF;
   AIconRect: TRectF;
-  AClipRect: TRectF;
   AState: TCanvasSaveState;
 begin
+  // fix provided by Alain Thiffault for resizing of icons
   AState := ACanvas.SaveState;
   try
-
     ATextRect := ARect;
     AIconRect := ARect;
-    ARect.Right := ARect.Right +1;
+    ACanvas.Fill.Kind  := TBrushKind.Solid;
     ACanvas.Fill.Color := Color;
     ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
-    ACanvas.Font.Size := 14;
+    ACanvas.Font.Size := 12;
     ACanvas.Fill.Color := TextColor;
+    ATextRect := ARect;
+    ATextRect.Height := CalculateTextHeight(Text, ACanvas.Font, False, TTextTrimming.Character);
+    if Text = '' then
+      ATextRect.Height := 0;
 
-    AClipRect := ARect;
-    InflateRect(AClipRect, -2, -2);
-    ACanvas.IntersectClipRect(AClipRect);
+  if FIcon.IsEmpty = False then
+  begin
+    AIconRect := RectF(ARect.Left, ARect.Top, ARect.Left + (ARect.Height / 2.5),
+      ARect.Top + (ARect.Height / 2.5));
+    OffsetRect(AIconRect, (ARect.Width - AIconRect.Width) / 2,
+      ((ARect.Height - AIconRect.Height) / 2));
+    if FText <> '' then
+      OffsetRect(AIconRect, 0, -6);
+    OffsetRect(ATextRect, 0, AIconRect.Bottom - ATextRect.Top);
+    ACanvas.DrawBitmap(FIcon, RectF(0, 0, FIcon.Width, FIcon.Height),
+      AIconRect, 1, False);
+  end
+  else
+    OffsetRect(ATextRect, 0, (ARect.Height - ATextRect.Height) / 2);
+  ACanvas.FillText(ATextRect, FText, False, 1, [], TTextAlign.Center, TTextAlign.Center);
 
-    if FAccessory <> atNone then
-    begin
-      if FIcon = nil then
-      begin
-        FIcon := TksTableViewAccessoryImage.Create;
-        FIcon.Assign(AAccessories.GetAccessoryImage(FAccessory));
-        (FIcon as TksTableViewAccessoryImage).Color := FTextColor;
-      end;
-
-      if (Text <> '')then
-      begin
-        AIconRect.Bottom := AIconRect.CenterPoint.Y;
-        AIconRect.Top := AIconRect.Bottom - 28;
-      end;
-      ATextRect.Top := ATextRect.CenterPoint.Y;
-      ATextRect.Bottom := ATextRect.CenterPoint.Y;
-      OffsetRect(ATextRect, 0, 4);
-
-      (FIcon as TksTableViewAccessoryImage).DrawToCanvas(ACanvas, AIconRect, False);
-    end;
-    ACanvas.FillText(ATextRect, Text, False, 1, [], TTextAlign.Center);
-
-    if Trunc(ARect.Width) = 0 then
-      FreeAndNil(FIcon);
   finally
     ACanvas.RestoreState(AState);
   end;
@@ -6817,8 +6809,13 @@ end;
 
 procedure TksTableViewActionButton.SetAccessory(const Value: TksAccessoryType);
 begin
+  // fix provided by Alain Thiffault for resizing of icons
   if FAccessory <> Value then
+  begin
     FAccessory := Value;
+    FIcon.Assign(AAccessories.GetAccessoryImage(Value));
+    FIcon.ReplaceOpaqueColor(FTextColor);
+  end;
 end;
 
 { TksDeleteButton }
