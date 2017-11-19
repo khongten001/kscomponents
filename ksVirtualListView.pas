@@ -32,7 +32,7 @@ interface
 uses System.Classes, System.Types, ksTypes, FMX.Graphics, System.UITypes,
   System.Generics.Collections, FMX.Types, FMX.InertialMovement, System.UIConsts,
   FMX.StdCtrls, FMX.Controls, FMX.Platform, FMX.Objects, FMX.Edit,
-  FMX.TextLayout, ksListViewFilter;
+  FMX.TextLayout, ksListViewFilter, System.RTTI;
 
 const
   C_VLIST_ITEM_DEFAULT_HEIGHT = 44;
@@ -335,11 +335,8 @@ type
 
   TksVListItemSwitchObject = class(TksVListItemBaseObject)
   private
-    FSwitch: TBitmap;
     FChecked: Boolean;
-
     procedure SetChecked(const Value: Boolean);
-    procedure RedrawSwitch;
   protected
     procedure Clicked; override;
   public
@@ -378,6 +375,7 @@ type
   private
     [weak]FOwner: TksVListItemList;
     // FCachedRow: TBitmap;
+    FData: TDictionary<string, TValue>;
     FBackground: TAlphaColor;
     FCanSelect: Boolean;
     FChecked: Boolean;
@@ -454,7 +452,10 @@ type
     procedure ShowTimePicker(ASelected: TDateTime);
     procedure ShowPicker;
     procedure DoTimePickerChanged(Sender: TObject; ATime: TDateTime);
-  protected
+    function GetItemData(const AIndex: string): TValue;
+
+    procedure SetItemData(const AIndex: string; const Value: TValue);
+    function GetHasData(const AIndex: string): Boolean;  protected
     function MatchesFilter(AFilter: string): Boolean;
   public
     constructor Create(Owner: TksVListItemList); virtual;
@@ -493,6 +494,9 @@ type
       default None;
     property TagInt: integer read FTagInt write FTagInt default 0;
     property TagStr: string read FTagStr write FTagStr;
+    property HasData[const AIndex: string]: Boolean read GetHasData;
+    property Data[const AIndex: string]: TValue read GetItemData write SetItemData;
+
     property State: TksVListItemState read FState write FState default Normal;
     property Offset: integer read FOffset write SetOffset default 0;
     property IconSize: integer read FIconSize write SetIconSize default 28;
@@ -975,8 +979,9 @@ begin
   FreeAndNil(FAccessory);
   FreeAndNil(FActionButtons);
   FreeAndNil(FPickerItems);
+  FreeAndNil(FData);
   inherited;
-  end;
+end;
 
 procedure TksVListItem.DoClicked(var AHandled: Boolean);
 begin
@@ -1122,6 +1127,13 @@ procedure TksVListItem.SetImage(const Value: TksVListItemImageObject);
 begin
   FImage.Assign(Value);
   Changed;
+end;
+
+procedure TksVListItem.SetItemData(const AIndex: string; const Value: TValue);
+begin
+  if FData = nil then
+    FData := TDictionary<string, TValue>.Create;
+  FData.AddOrSetValue(AIndex, Value);
 end;
 
 procedure TksVListItem.SetItemFont(AName: string; ASize: integer;
@@ -1567,6 +1579,17 @@ ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
     ACanvas.DrawLine(PointF(0, ARect.Top+(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Top+(ACanvas.Stroke.Thickness/2)), 1);
 
   ACanvas.DrawLine(PointF(0, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), 1);
+end;
+
+function TksVListItem.GetHasData(const AIndex: string): Boolean;
+begin
+  Result := (FData <> nil) and FData.ContainsKey(AIndex);
+end;
+
+function TksVListItem.GetItemData(const AIndex: string): TValue;
+begin
+  if (FData <> nil) and not FData.TryGetValue(AIndex, Result) then
+    Result := TValue.Empty;
 end;
 
 {
@@ -2406,7 +2429,6 @@ procedure TksVirtualListView.MouseDown(Button: TMouseButton; Shift: TShiftState;
 var
   ABtn: TksVListActionButton;
   ACanDelete: Boolean;
-  AObj: TksVListItemBaseObject;
 begin
   inherited;
 
@@ -2455,15 +2477,6 @@ begin
   ResetItemOffsets(nil);
 
   if FMouseDownItem <> nil then
-  begin
-    AObj := FMouseDownItem.Objects.ObjectAtPos(FMouseDownItem, x, y);
-    if AObj <> nil then
-    begin
-      AObj.Clicked;
-    end;
-  end;
-
-  if FMouseDownItem <> nil then
     FLongTapTimer := CreateTimer(C_LONG_TAP_DURATION, LongTapTimerProc)
 end;
 
@@ -2490,6 +2503,7 @@ var
   AItem: TksVListItem;
   ASwipeDirection: TksVListSwipeDirection;
   ADidSwipe: Boolean;
+  AObj: TksVListItemBaseObject;
 begin
   inherited;
   if FMouseDownItem <> nil then
@@ -2561,6 +2575,15 @@ begin
       end;
     end;
 
+  end;
+
+  if FMouseDownItem <> nil then
+  begin
+    AObj := FMouseDownItem.Objects.ObjectAtPos(FMouseDownItem, x, y);
+    if AObj <> nil then
+    begin
+      AObj.Clicked;
+    end;
   end;
 
 
@@ -4031,17 +4054,17 @@ constructor TksVListItemSwitchObject.Create(AItem: TksVListItem);
 begin
   inherited;
   //FSwitch := TSwitch.Create(FOwner.FOwner.FOwner);
-  FSwitch := TBitmap.Create;
+  //FSwitch := TBitmap.Create;
   //FSwitch.BitmapScale := GetScreenScale;
 
   FWidth := SwitchWidth;
-  FHeight := SwidthHeight;
+  FHeight := SwitchHeight;
   FChecked := False;
 end;
 
 destructor TksVListItemSwitchObject.Destroy;
 begin
-  FSwitch.DisposeOf;
+  //FSwitch.DisposeOf;
   //FSwitch.DisposeOf;
   inherited;
 end;
@@ -4057,24 +4080,12 @@ begin
   ACanvas.Stroke.Color := claBlack;
   ACanvas.Stroke.Thickness := 1;
 
-  if FSwitch.IsEmpty then
-    RedrawSwitch;
-  ACanvas.DrawBitmap(FSwitch, RectF(0, 0, FWidth*GetScreenScale(False), Height*GetScreenScale(False)), ARect, 1);
-end;
-
-procedure TksVListItemSwitchObject.RedrawSwitch;
-begin
-  FSwitch.Clear(claNull);
-  FSwitch.SetSize(Round(SwitchWidth*GetscreenScale(False)), Round(SwidthHeight*GetscreenScale(False)));
-  FSwitch.Canvas.BeginScene(nil) ;
-  SwitchImage(FSwitch.Canvas, RectF(0, 0, FSwitch.Width, FSwitch.Height), FChecked);
-  FSwitch.Canvas.EndScene;
+  SwitchImage(ACanvas, ARect, FChecked);
 end;
 
 procedure TksVListItemSwitchObject.SetChecked(const Value: Boolean);
 begin
   FChecked := Value;
-  RedrawSwitch;
   Changed;
 end;
 

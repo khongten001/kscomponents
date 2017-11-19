@@ -119,7 +119,7 @@ var
   AAccessories: TksTableViewAccessoryImageList;
 
   function SwitchWidth: single;
-  function SwidthHeight: single;
+  function SwitchHeight: single;
 
   procedure SwitchImage(ACanvas: TCanvas; ARect: TRectF; AChecked: Boolean);
 
@@ -128,46 +128,74 @@ implementation
 uses FMX.Forms, ksCommon, SysUtils,FMX.Styles, FMX.Styles.Objects, Math, ksSystemSound;
 
 var
-  ASwitchChecked: TSwitch;
-  ASwitchUnchecked: TSwitch;
+  ASwitchSize: TSizeF;
+  ASwitchBmp: array[False..True] of TBitmap;
 
 // ------------------------------------------------------------------------------
 
-function SwitchWidth: single;
+procedure InitialiseSwitchSize;
+var
+  ASwitch: TSwitch;
 begin
-  Result := ASwitchChecked.Width;
+  ASwitch := TSwitch.Create(nil);
+  try
+    ASwitchSize.Width := ASwitch.Width;
+    ASwitchSize.Height := ASwitch.Height;
+  finally
+    ASwitch.DisposeOf;
+  end;
 end;
 
-function SwidthHeight: single;
+function SwitchWidth: single;
 begin
-  Result := ASwitchChecked.Height;
+  if ASwitchSize.IsZero then
+    InitialiseSwitchSize;
+  Result := ASwitchSize.Width;
+end;
+
+function SwitchHeight: single;
+begin
+  if ASwitchSize.IsZero then
+    InitialiseSwitchSize;
+  Result := ASwitchSize.Height;
 end;
 
 procedure SwitchImage(ACanvas: TCanvas; ARect: TRectF; AChecked: Boolean);
 var
   ASwitch: TSwitch;
-  //AState: TCanvasSaveState;
+  ASaveState: TCanvasSaveState;
 begin
-  case AChecked of
-    True: ASwitch := ASwitchChecked;
-    False: ASwitch := ASwitchUnchecked;
-  end;
-
-  if ASwitch.Tag = 0 then
-  begin
-    ASwitch.Visible := False;
-    Application.MainForm.AddObject(ASwitch);
-    ASwitch.ApplyStyleLookup;
-    Application.ProcessMessages;
-    ASwitch.Tag := 1;
-    //EXit;
-  end;
-  //AState := ACanvas.SaveState;
+  ASaveState := ACanvas.SaveState;
   try
-   // ACanvas.IntersectClipRect(ARect);
-    ASwitch.PaintTo(ACanvas, ARect, nil);
+    if ASwitchBmp[AChecked].IsEmpty = False then
+    begin
+      ACanvas.DrawBitmap(ASwitchBmp[AChecked],
+                         RectF(0, 0, ASwitchBmp[AChecked].Width, ASwitchBmp[AChecked].Height),
+                         ARect,
+                         1);
+      Exit;
+    end;
+
+    ASwitch := TSwitch.Create(nil);
+    try
+      Application.MainForm.AddObject(ASwitch);
+      ASwitch.IsChecked := AChecked;
+      ASwitch.Visible := False;
+      ASwitch.ApplyStyleLookup;
+
+
+      ASwitchBmp[AChecked].SetSize(Round(ASwitch.Width), Round(ASwitch.Height));
+      ASwitchBmp[AChecked].Canvas.BeginScene(nil);
+      ASwitch.PaintTo(ASwitchBmp[AChecked].Canvas, RectF(0, 0, ASwitch.Width, ASwitch.Height), nil);
+      ASwitchBmp[AChecked].Canvas.EndScene;
+      Application.MainForm.RemoveObject(ASwitch);
+
+      SwitchImage(ACanvas, ARect, AChecked);
+    finally
+      ASwitch.DisposeOf;
+    end;
   finally
- //   ACanvas.RestoreState(AState);
+    ACanvas.RestoreState(ASaveState);
   end;
 end;
 
@@ -476,22 +504,16 @@ end;
 initialization
   AUnitTesting := False;
   AAccessories := TksTableViewAccessoryImageList.Create;
-  ASwitchChecked := TSwitch.Create(nil);
-  ASwitchUnchecked := TSwitch.Create(nil);
-  ASwitchChecked.Tag := 0;
-  ASwitchUnchecked.Tag := 0;
-  ASwitchChecked.IsChecked := True;
 
-  ASwitchUnchecked.IsChecked := False;
+  ASwitchBmp[True] := TBitmap.Create;
+  ASwitchBmp[False] := TBitmap.Create;
+
 
   finalization
 
   FreeAndNil(AAccessories);
 
-  if ASwitchChecked.Parent <> nil then
-  begin
-    ASwitchChecked.DisposeOf;
-    ASwitchUnchecked.DisposeOf;
-  end;
+  FreeAndNil(ASwitchBmp[True]);
+  FreeAndNil(ASwitchBmp[False]);
 
 end.

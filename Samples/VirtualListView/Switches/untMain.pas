@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, ksTypes, ksVirtualListView,
-  FMX.Objects, FMX.Controls.Presentation, FMX.StdCtrls, ksToolBar;
+  FMX.Objects, FMX.Controls.Presentation, FMX.StdCtrls, ksToolBar, ksTableView;
 
 type
   TForm99 = class(TForm)
@@ -32,11 +32,13 @@ var
   AItem: TksVListItem;
   ICount: integer;
 begin
-  for ICount := 0 to 100 do
+  ksVirtualListView1.BeginUpdate;
+  for ICount := 1 to 100 do
   begin
     AItem := ksVirtualListView1.Items.Add('SWITCH '+IntToStr(ICount), '', '');
     AItem.AddSwitch(0, 0, True);
   end;
+  ksVirtualListView1.EndUpdate;
 end;
 
 procedure TForm99.ksVirtualListView1ItemSwitchClick(Sender: TObject;
