@@ -16,6 +16,8 @@ type
       Shift: TShiftState);
     procedure PaintBox1Click(Sender: TObject);
     procedure PaintBox1Paint(Sender: TObject; Canvas: TCanvas);
+    procedure ksVirtualListView1MouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Single);
   private
     FCanSelect: Boolean;
     FOnSelectItem: TksVListItemClickEvent;
@@ -113,6 +115,16 @@ begin
   Key := 0;
 end;
 
+procedure TfrmSlideMenuUI.ksVirtualListView1MouseUp(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+begin
+  if ksVirtualListView1.Items.ItemAtPos(x, y) = nil then
+  begin
+    CloseMenu;
+    FCallingForm.Visible := True;
+  end;
+end;
+
 procedure TfrmSlideMenuUI._Image1Click(Sender: TObject);
 begin
   SelectItem(Self, ksVirtualListView1.Items[ksVirtualListView1.ItemIndex]);
@@ -153,7 +165,9 @@ end;
 
 procedure TfrmSlideMenuUI.PaintBox1Click(Sender: TObject);
 begin
-  SelectItem(Self, ksVirtualListView1.Items[ksVirtualListView1.ItemIndex]);
+  CloseMenu;
+  FCallingForm.Visible := True;
+  //SelectItem(Self, ksVirtualListView1.Items[ksVirtualListView1.ItemIndex]);
 
 end;
 

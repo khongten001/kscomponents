@@ -54,7 +54,7 @@ const
   C_DEFAULT_MENU_TOOLBAR_FONT_SIZE = 14;
   C_DEFAULT_MENU_SLIDE_SPEED = 0.15;
 
-  C_DEFAULT_MENU_SELECTED_COLOR = claWhite;
+  //C_DEFAULT_MENU_SELECTED_COLOR = claWhite;
   C_DEFAULT_MENU_SELECTED_FONT_COLOR = claWhite;
   C_DEFAULT_MENU_FONT_COLOR = claBlack;
   C_DEFAULT_MENU_BACKGROUND_COLOR = claWhite;
@@ -148,6 +148,7 @@ type
     destructor Destroy; override;
     procedure AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom); deprecated 'Use OnBuildMenu event instead';
     procedure OpenMenu(ACallingForm: TCommonCustomForm);
+    //procedure CloseMenu;
   published
     property Appearence: TksSlideMenuAppearence read FAppearence write FAppearence;
     property OnSelectMenuItemEvent: TSelectMenuItemEvent read FOnSelectMenuItemEvent write FOnSelectMenuItemEvent;
@@ -342,6 +343,12 @@ procedure TksSlideMenu.AddMenuItem(AID, AText: string; const AForm: TCommonCusto
 begin
   FItems.AddItem(AID, AText, AForm, AIcon);
 end;
+      {
+procedure TksSlideMenu.CloseMenu;
+begin
+  FMenuForm.CloseMenu;
+  FCallingForm.Visible := True;
+end;  }
 
 constructor TksSlideMenu.Create(AOwner: TComponent);
 begin

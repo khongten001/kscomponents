@@ -26,6 +26,7 @@ object frmSlideMenuUI: TfrmSlideMenuUI
     Size.Width = 250.000000000000000000
     Size.Height = 364.000000000000000000
     Size.PlatformDefault = False
+    OnMouseUp = ksVirtualListView1MouseUp
   end
   object PaintBox1: TPaintBox
     Position.X = 256.000000000000000000
