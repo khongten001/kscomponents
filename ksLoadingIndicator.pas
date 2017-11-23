@@ -3,7 +3,7 @@ unit ksLoadingIndicator;
 interface
 
 uses FMX.Forms, Classes, FMX.Controls, FMX.Objects, ksTypes, FMX.Graphics,
-  FMX.StdCtrls
+  FMX.StdCtrls, FMX.Layouts
   {$IFDEF IOS}
   , iOSapi.UIKit, iOSapi.Foundation
   {$ENDIF}
@@ -16,13 +16,16 @@ type
 
 
 
-  TksLoadingIndicator = class(TRectangle)
+  TksLoadingIndicator = class(TLayout)
   private
+    FRectangle: TRectangle;
+    FBackground: TRectangle;
     FLoadingText: string;
     FFadeBackground: Boolean;
     FIsModal: Boolean;
     FLabel: TLabel;
     procedure SetIsModal(const Value: Boolean);
+    procedure SetFadeBackground(const Value: Boolean);
   protected
   public
     constructor Create(AOwner: TComponent); override;
@@ -32,18 +35,17 @@ type
   published
     property IsModal: Boolean read FIsModal write SetIsModal default False;
     property LoadingText: string read FLoadingText write FLoadingText;
-    property FadeBackground: Boolean read FFadeBackground write FFadeBackground default False;
+    property FadeBackground: Boolean read FFadeBackground write SetFadeBackground default False;
   end;
 
 
-  procedure ShowLoadingIndicator(AForm: TCommonCustomForm);
+  procedure ShowLoadingIndicator(AForm: TCommonCustomForm;
+                                 const AFade: Boolean = False;
+                                 const AModal: Boolean = False);
   procedure HideLoadingIndicator(AForm: TCommonCustomForm);
   function IsLoadingIndicatorVisible(AForm: TCommonCustomForm): Boolean;
   function FindLoadingIndicator(AForm: TCommonCustomForm): TksLoadingIndicator;
 
-
-
-//procedure Register;
 
 
 implementation
@@ -55,12 +57,6 @@ uses
   {$ENDIF}
   ;
 
-var
-  APos: TPointF;
-  {$IFDEF IOS}
-  //FIndicatorBackground: UIView;
-  //FIndicator: UIActivityIndicatorView;
-  {$ENDIF}
 
 
 function FindLoadingIndicator(AForm: TCommonCustomForm): TksLoadingIndicator;
@@ -93,57 +89,19 @@ begin
   end;
 end;
 
-procedure ShowLoadingIndicator(AForm: TCommonCustomForm);
+procedure ShowLoadingIndicator(AForm: TCommonCustomForm;
+                               const AFade: Boolean = False;
+                               const AModal: Boolean = False);
 var
-  {$IFDEF IOS}
-  //ACenter: NSPoint;
-  {$ENDIF}
   ALoadingIndicator: TksLoadingIndicator;
 begin
-(*  {$IFDEF IOS}
-  if FIndicator = nil then
-  begin
-    ACenter.x := MainScreen.bounds.size.width/2;
-    ACenter.y := MainScreen.bounds.size.height/2;
-
-    FIndicatorBackground := TUIView.Alloc;
-    FIndicatorBackground.setUserInteractionEnabled(True);
-    FIndicatorBackground := TUIView.Wrap(FIndicatorBackground.initWithFrame(CGRectMake(0, 0, 70, 70)));
-    FIndicatorBackground.setCenter(CGPointMake(ACenter.x, ACenter.y));
-    FIndicatorBackground.setHidden(False);
-    FIndicatorBackground.setAutoresizingMask(UIViewAutoresizingFlexibleWidth or UIViewAutoresizingFlexibleHeight);
-    FIndicatorBackground.setBackgroundColor(AlphaColorToUIColor(claDimgray));
-    FIndicatorBackground.layer.setCornerRadius(10);
-
-    FIndicator := TUIActivityIndicatorView.Alloc;
-    FIndicator.initWithActivityIndicatorStyle(UIActivityIndicatorViewStyleWhiteLarge);
-    FIndicator.setCenter(CGPointMake(35, 35));
-
-    FIndicatorBackground.addSubview(FIndicator);
-  end;
-  FIndicator.startAnimating;
-  SharedApplication.keyWindow.rootViewController.view.AddSubview(FIndicatorBackground);
-  //SharedApplication.keyWindow.rootViewController.view.AddSubview(FIndicator);
-  Application.ProcessMessages;
-  Exit;
-  {$ENDIF} *)
-
   Application.ProcessMessages;
   ALoadingIndicator := FindLoadingIndicator(AForm);
   if ALoadingIndicator = nil then
     ALoadingIndicator := TksLoadingIndicator.Create(AForm);
 
-  {$IFDEF ANDROID}
-  ALoadingIndicator.Position.X := (AForm.Width-ALoadingIndicator.Width) / 2;
-  ALoadingIndicator.Position.Y := ((AForm.Height-ALoadingIndicator.Height) / 2)+30;
-  APos.X := ALoadingIndicator.Position.X;
-  APos.Y := ALoadingIndicator.Position.Y;
-  {$ELSE}
-  ALoadingIndicator.Position.X := (AForm.Width-ALoadingIndicator.Width) / 2;
-  ALoadingIndicator.Position.Y := ((AForm.Height-ALoadingIndicator.Height) / 2)+30;
-  APos.X := ALoadingIndicator.Position.X;
-  APos.Y := ALoadingIndicator.Position.Y;
-  {$ENDIF}
+  ALoadingIndicator.FadeBackground := AFade;
+  ALoadingIndicator.IsModal := AModal;
 
   AForm.AddObject(ALoadingIndicator);
 
@@ -155,20 +113,10 @@ procedure HideLoadingIndicator(AForm: TCommonCustomForm);
 var
   ALoadingIndicator: TksLoadingIndicator;
 begin
-(*  {$IFDEF IOS}
-
-  {if FIndicator <> nil then
-  begin
-    FIndicator.stopAnimating;
-    FIndicatorBackground.removeFromSuperview;
-    Exit;
-  end; }
-  {$ENDIF}  *)
   if AForm = nil then
     Exit;
 
   ALoadingIndicator := FindLoadingIndicator(AForm);
-  //TAnimator.AnimateFloat(ALoadingIndicator, 'Opacity', 0);
   if ALoadingIndicator <> nil then
     AForm.RemoveObject(ALoadingIndicator);
 
@@ -180,30 +128,46 @@ constructor TksLoadingIndicator.Create(AOwner: TComponent);
 begin
   inherited;
 
+  Align := TAlignLayout.Client;
 
   HitTest := False;
   FLoadingText := 'LOADING';
   FFadeBackground := False;
   FIsModal := False;
-  Stroke.Kind := TBrushKind.None;
-  Stroke.Color := claNull;
-  Fill.Color := claBlack;
-  Width := 90;
-  Height := 70;
-  {$IFNDEF MSWINDOWS}
-  XRadius := 5;
-  YRadius := 5;
-  {$ENDIF}
-  Opacity := 0.7;
 
-  FLabel := TLabel.Create(Self);
+  FBackground := TRectangle.Create(Self);
+  FBackground.Align := TAlignLayout.Client;
+  FBackground.Stroke.Kind := TBrushKind.None;
+  FBackground.Fill.Kind := TBrushKind.Solid;
+  FBackground.Fill.Color := claBlack;
+  FBackground.HitTest := False;
+  FBackground.Opacity := 0.3;
+  AddObject(FBackground);
+
+
+  FRectangle := TRectangle.Create(Self);
+  FRectangle.Align := TAlignLayout.Center;
+  FRectangle.Stroke.Kind := TBrushKind.None;
+  FRectangle.Stroke.Color := claNull;
+  FRectangle.Fill.Color := claBlack;
+  FRectangle.Width := 90;
+  FRectangle.Height := 70;
+
+  FRectangle.XRadius := 5;
+  FRectangle.YRadius := 5;
+
+  FRectangle.Opacity := 1;
+
+  FLabel := TLabel.Create(FRectangle);
   FLabel.Align := TAlignLayout.Client;
   FLabel.TextSettings.FontColor := claWhite;
   FLabel.Text := FLoadingText;
   FLabel.TextSettings.HorzAlign := TTextAlign.Center;
   FLabel.TextSettings.VertAlign := TTextAlign.Center;
   FLabel.StyledSettings := [];
-  AddObject(FLabel);
+
+  FRectangle.AddObject(FLabel);
+  AddObject(FRectangle);
 end;
 
 
@@ -218,9 +182,19 @@ begin
 end;
 
 
+procedure TksLoadingIndicator.SetFadeBackground(const Value: Boolean);
+begin
+  FFadeBackground := Value;
+  case Value of
+    True: FBackground.Opacity := 0.3;
+    False: FBackground.Opacity := 0;
+  end;
+end;
+
 procedure TksLoadingIndicator.SetIsModal(const Value: Boolean);
 begin
   FIsModal := Value;
+  FBackground.HitTest := Value;
 end;
 
 procedure TksLoadingIndicator.ShowLoading;
@@ -228,11 +202,6 @@ begin
   ShowLoadingIndicator(Owner as TForm);
 
 end;
-
-initialization
-
-
-  APos := PointF(0, 0);
 
 
 end.
