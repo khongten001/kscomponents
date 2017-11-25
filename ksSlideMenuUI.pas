@@ -169,7 +169,6 @@ begin
   {$ELSE}
   SetBounds(ACallingForm.Left, ACallingForm.Top, ACallingForm.Width, ACallingForm.Height);
   {$ENDIF}
-  Application.ProcessMessages;
 
   Visible := True;
 end;
