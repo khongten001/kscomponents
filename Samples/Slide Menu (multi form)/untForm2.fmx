@@ -7,32 +7,7 @@ object Form2: TForm2
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
-  DesignerMasterStyle = 2
-  object ToolBar1: TToolBar
-    Size.Width = 356.000000000000000000
-    Size.Height = 44.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 0
-    object Label1: TLabel
-      Align = Contents
-      StyledSettings = [Family, Style, FontColor]
-      Size.Width = 356.000000000000000000
-      Size.Height = 44.000000000000000000
-      Size.PlatformDefault = False
-      TextSettings.Font.Size = 16.000000000000000000
-      TextSettings.HorzAlign = Center
-      Text = 'FORM 2'
-    end
-    object SpeedButton1: TSpeedButton
-      Align = Left
-      Size.Width = 44.000000000000000000
-      Size.Height = 44.000000000000000000
-      Size.PlatformDefault = False
-      StyleLookup = 'detailstoolbutton'
-      Text = 'SpeedButton1'
-      OnClick = SpeedButton1Click
-    end
-  end
+  DesignerMasterStyle = 0
   object ToolBar2: TToolBar
     Align = Bottom
     Position.Y = 436.000000000000000000
@@ -910,5 +885,24 @@ object Form2: TForm2
     Size.Width = 177.000000000000000000
     Size.Height = 121.000000000000000000
     Size.PlatformDefault = False
+  end
+  object ksToolbar1: TksToolbar
+    Font.Size = 14.000000000000000000
+    Text = 'FORM 2'
+    Size.Width = 356.000000000000000000
+    Size.Height = 44.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    OnMenuButtonClick = ksToolbar1MenuButtonClick
+    object SpeedButton1: TSpeedButton
+      Align = MostRight
+      Position.X = 312.000000000000000000
+      Size.Width = 44.000000000000000000
+      Size.Height = 44.000000000000000000
+      Size.PlatformDefault = False
+      StyleLookup = 'detailstoolbutton'
+      Text = 'SpeedButton1'
+      OnClick = SpeedButton1Click
+    end
   end
 end

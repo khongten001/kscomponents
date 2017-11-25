@@ -191,20 +191,15 @@ begin
         if ALoadingIndicator <> nil then
           ALoadingIndicator.Visible := False;
 
-        //Result := TBitmap.Create;
         AScale := GetScreenScale(False);
         ABmp.Clear(claNull);
         ABmp.BitmapScale := AScale;
-        ABmp.Width := Round(AForm.Width * AScale);
-        ABmp.Height := Round(AForm.Height * AScale);
+        ABmp.Width := Round(AForm.ClientWidth * AScale);
+        ABmp.Height := Round(AForm.ClientHeight * AScale);
         ABmp.Canvas.BeginScene;
         TForm(AForm).PaintTo(ABmp.Canvas);
         ABmp.Canvas.EndScene;
-        {if ABmp.IsEmpty then
-        begin
-          FreeAndNil(ABmp);
-          GenerateFormImageExt(AForm, ABmp);
-        end;  }
+
         if ALoadingIndicator <> nil then
           ALoadingIndicator.Visible := True;
       end);

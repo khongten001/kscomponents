@@ -9,7 +9,7 @@ object frmSlideMenuUI: TfrmSlideMenuUI
   FormFactor.Devices = [Desktop]
   OnKeyUp = FormKeyUp
   DesignerMasterStyle = 0
-  object ksVirtualListView1: TksVirtualListView
+  object lvMenu: TksVirtualListView
     Align = Left
     Appearence.Background = claDarkslategray
     Appearence.SeparatorColor = xFF1B2E2E
@@ -26,7 +26,7 @@ object frmSlideMenuUI: TfrmSlideMenuUI
     Size.Width = 250.000000000000000000
     Size.Height = 364.000000000000000000
     Size.PlatformDefault = False
-    OnMouseUp = ksVirtualListView1MouseUp
+    OnMouseUp = lvMenuMouseUp
   end
   object PaintBox1: TPaintBox
     Position.X = 256.000000000000000000

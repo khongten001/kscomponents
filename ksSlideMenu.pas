@@ -124,8 +124,6 @@ type
     procedure AddHeader(AText: string);
   end;
 
-  //TksSlideMenuState = (ksMsOpening, ksMsOpen, ksMsClosing, ksMsClosed);
-
   [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
     {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
@@ -147,7 +145,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom); deprecated 'Use OnBuildMenu event instead';
-    procedure OpenMenu(ACallingForm: TCommonCustomForm);
+    procedure OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
     //procedure CloseMenu;
   published
     property Appearence: TksSlideMenuAppearence read FAppearence write FAppearence;
@@ -367,7 +365,7 @@ begin
   inherited;
 end;
 
-procedure TksSlideMenu.OpenMenu(ACallingForm: TCommonCustomForm);
+procedure TksSlideMenu.OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
 begin
   if FItems.Count = 0 then
   begin
@@ -387,7 +385,7 @@ begin
   end;
 
   ACallingForm.Visible := False;
-  FMenuForm.OpenMenu(ACallingForm);
+  FMenuForm.OpenMenu(ACallingForm, APosition = mpLeft);
 end;
 
 procedure TksSlideMenu.RebuildMenu;
@@ -399,7 +397,7 @@ var
   AItem: TksVListItem;
   ABmp: TBitmap;
 begin
-  lv := FMenuForm.ksVirtualListView1;
+  lv := FMenuForm.lvMenu;
   lv.Appearence.SelectedColor := FAppearence.SelectedItemColor;
   lv.Appearence.SelectedFontColor := FAppearence.SelectedFontColor;
   lv.Appearence.ItemBackground := FAppearence.ItemColor;

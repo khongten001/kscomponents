@@ -5,16 +5,16 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls, FMX.Controls.Presentation,
-  FMX.Objects, ksTypes, FMX.TabControl, ksSlideMenu;
+  FMX.Objects, ksTypes, FMX.TabControl, ksSlideMenu, ksToolBar;
 
 type
   TForm1 = class(TForm)
-    ToolBar1: TToolBar;
-    Label1: TLabel;
-    SpeedButton1: TSpeedButton;
     ToolBar2: TToolBar;
     Image1: TImage;
+    ksToolbar1: TksToolbar;
+    SpeedButton1: TSpeedButton;
     procedure SpeedButton1Click(Sender: TObject);
+    procedure ksToolbar1MenuButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -30,9 +30,14 @@ uses System.UIConsts, untMenu;
 
 {$R *.fmx}
 
+procedure TForm1.ksToolbar1MenuButtonClick(Sender: TObject);
+begin
+  dmMenu.menuLeft.OpenMenu(Self);
+end;
+
 procedure TForm1.SpeedButton1Click(Sender: TObject);
 begin
-  dmMenu.ksSlideMenu1.OpenMenu(Self);
+  dmMenu.menuRight.OpenMenu(Self, mpRight);
 end;
 
 end.

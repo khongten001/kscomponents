@@ -185,10 +185,6 @@ end;
 procedure TksLoadingIndicator.SetFadeBackground(const Value: Boolean);
 begin
   FFadeBackground := Value;
-<<<<<<< HEAD
-=======
-  //FBackground.Visible := Value;
->>>>>>> eb3bf4c2c30557c9e4c05566d961bef8a7d0fdbc
   case Value of
     True: FBackground.Opacity := 0.3;
     False: FBackground.Opacity := 0;
