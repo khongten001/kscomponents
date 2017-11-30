@@ -383,6 +383,7 @@ type
     FSelected: Boolean;
     FItemRect: TRectF;
     FImage: TksVListItemImageObject;
+    FQuantity: TksVListItemTextObject;
     FTitle: TksVListItemTextObject;
     FSubTitle: TksVListItemTextObject;
     FDetail: TksVListItemTextObject;
@@ -424,6 +425,7 @@ type
     procedure SetDetail(const Value: TksVListItemTextObject);
     procedure SetImage(const Value: TksVListItemImageObject);
     procedure SetTitle(const Value: TksVListItemTextObject);
+    procedure SetQuantity(const Value: TksVListItemTextObject);
     procedure SetHeight(const Value: integer);
     procedure UpdateStandardObjectPositions;
     procedure SetSelected(const Value: Boolean);
@@ -485,6 +487,7 @@ type
     property Height: integer read FHeight write SetHeight;
     property Image: TksVListItemImageObject read FImage write SetImage;
     property Title: TksVListItemTextObject read FTitle write SetTitle;
+    property Quantity: TksVListItemTextObject read FQuantity write SetQuantity;
     property SubTitle: TksVListItemTextObject read FSubTitle write SetSubTitle;
     property Detail: TksVListItemTextObject read FDetail write SetDetail;
     property Accessory: TksVListItemAccessoryObject read FAccessory write SetAccessory;
@@ -525,7 +528,8 @@ type
    // function GetItem(index: integer): TksVListItem;
     //function GetCount: integer;
     function GetCheckedCount: integer;
-    function GetFirstChecked: TksVListItem;
+
+    function GetFirstChecked: TksVListItem;
 
   public
     constructor Create(AOwner: TksVirtualListView); virtual;
@@ -533,6 +537,7 @@ type
 
     function Add: TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
+    function Add(ATitle, ASubTitle, ADetail,AQuantity: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem; overload;
     function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem; overload;
@@ -541,7 +546,7 @@ type
     function AddInputSelector(ATitle, ASubTitle, ADetail, ATagStr: string): TksVListItem;
     function AddHeader(AText: string): TksVListItem;
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
-    function Insert(AIndex: integer; ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
+    function Insert(AIndex: integer; ATitle, ASubTitle, ADetail,AQuantity: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
     function ItemAtPos(x, y: single): TksVListItem;
     function ItemByTagStr(ATagStr: string): TksVListItem;
     procedure Clear;
@@ -869,6 +874,7 @@ end;
 procedure TksVListItem.ClearCache;
 begin
   FTitle.ClearCache;
+  FQuantity.ClearCache;
   FSubTitle.ClearCache;
   FDetail.ClearCache;
   FChanged := True;
@@ -915,6 +921,10 @@ begin
 
     FTitle := TksVListItemTextObject.Create(Self);
     FTitle.VertAlign := TVerticalAlignment.taVerticalCenter;
+
+    FQuantity := TksVListItemTextObject.Create(Self);
+    FQuantity.VertAlign := TVerticalAlignment.taVerticalCenter;
+
 
     FSubTitle := TksVListItemTextObject.Create(Self);
     FSubTitle.VertAlign := TVerticalAlignment.taVerticalCenter;
@@ -973,6 +983,7 @@ begin
   FreeAndNil(FSwipeCalc);
   FreeAndNil(FObjects);
   FreeAndNil(FTitle);
+  FreeAndNil(FQuantity);
   FreeAndNil(FSubTitle);
   FreeAndNil(FDetail);
   FreeAndNil(FImage);
@@ -1038,7 +1049,8 @@ begin
                      //Interact with UI
                     if Assigned(FOnSelectPickerItem) then
                       FOnSelectPickerItem(FOwner.FOwner, Self, AItem);
-                  end);
+
+                  end);
    end);
  ATask.Start;
 end;
@@ -1161,6 +1173,7 @@ begin
     end;
   end;
   SetFont(FTitle);
+  SetFont(FQuantity);
   SetFont(FDetail);
   SetFont(FSubTitle);
 end;
@@ -1199,6 +1212,7 @@ begin
       FSelected := Value;
     FObjects.ClearCache;
     FTitle.ClearCache;
+    FQuantity.ClearCache;
     FSubTitle.ClearCache;
     FDetail.ClearCache;
     FAccessory.ClearCache;
@@ -1217,6 +1231,12 @@ end;
 procedure TksVListItem.SetTitle(const Value: TksVListItemTextObject);
 begin
   FTitle.Assign(Value);
+  Changed;
+end;
+
+procedure TksVListItem.SetQuantity(const Value: TksVListItemTextObject);
+begin
+  FQuantity.Assign(Value);
   Changed;
 end;
 
@@ -1362,14 +1382,26 @@ procedure TksVListItem.UpdateStandardObjectPositions;
 begin
   Inc(FUpdateCount);
   try
-    FTitle.FLeft := 0;
+    FQuantity.FLeft := 0;
+    fQuantity.FWidth:=0;
+    FQuantity.FTop := 0;
+    if (FQuantity.Visible) and (FQuantity.Text <> '') then
+     fQuantity.FWidth:=10;
+    FTitle.FLeft := fQuantity.FWidth+1;
+
     FTitle.FTop := 0;
     FTitle.FVertAlign := TVerticalAlignment.taVerticalCenter;
+
+
+    FQuantity.FVertAlign := TVerticalAlignment.taVerticalCenter;
+
+
 
     if (FSubTitle.Visible) and (FSubTitle.Text <> '') then
     begin
       FTitle.FTop := (0 - (16 / 2)) - GetScreenScale;
-      FSubTitle.FLeft := 0;
+      FQuantity.FTop:=FTitle.FTop;
+      FSubTitle.FLeft := fQuantity.FWidth+1;
       FSubTitle.FTop := 0;
       if FTitle.Visible then
         FSubTitle.FTop := ((16 / 2)) + GetScreenScale;
@@ -1515,7 +1547,7 @@ begin
     end;
 
     ACanvas.Stroke.Color :=  ACanvas.Fill.Color;//FOwner.FOwner.Appearence.SelectedColor;
-ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
+    ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
 
     ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);
 
@@ -1560,6 +1592,7 @@ ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
 
 
     Title.DrawToCanvas(ACanvas, AInternalRect);
+    Quantity.DrawToCanvas(ACanvas, AInternalRect);
     SubTitle.DrawToCanvas(ACanvas, AInternalRect);
     FDetail.DrawToCanvas(ACanvas, AInternalRect);
 
@@ -2640,11 +2673,19 @@ begin
   Result.Title.Font.Size := 13;
   Result.SubTitle.Text := ASubTitle;
   Result.SubTitle.Font.Size := 13;
+  Result.Quantity.Text := '';
+  Result.Quantity.Font.Size := 13;
 
   Result.Detail.Text := ADetail;
   Result.Detail.Font.Size := 13;
   Result.Accessory.AccessoryType := AAccessory;
   Changed(True);
+end;
+
+function TksVListItemList.Add(ATitle, ASubTitle, ADetail,AQuantity: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
+begin
+ Result := Add(ATitle, ASubtitle, ADetail, AAccessory);
+ result.Quantity.Text:=AQuantity;
 end;
 
 function TksVListItemList.Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem;
@@ -2733,13 +2774,14 @@ begin
 end;
 
 function TksVListItemList.Insert(AIndex: integer;
-  ATitle, ASubTitle, ADetail: string;
+  ATitle, ASubTitle, ADetail,AQuantity: string;
   const AAccessory: TksAccessoryType = atNone): TksVListItem;
 begin
   Result := TksVListItem.Create(Self);
   Result.Title.Text := ATitle;
   Result.SubTitle.Text := ASubTitle;
   Result.Detail.Text := ADetail;
+  Result.Quantity.Text := AQuantity;
   Result.Accessory.AccessoryType := AAccessory;
   //FItems.
   inherited Insert(AIndex, Result);
@@ -4095,6 +4137,5 @@ begin
 end;
 
 end.
-
 
 
