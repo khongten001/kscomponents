@@ -66,6 +66,7 @@ type
     property Align;
     property Logo: TBitmap read FLogo write SetLogo;
     property Margins;
+    property Padding;
     property Position;
     property Width;
     property TintColor: TAlphaColor read FTintColor write SetTintColor default $FF336A97;

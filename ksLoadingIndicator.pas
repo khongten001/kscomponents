@@ -24,8 +24,10 @@ type
     FFadeBackground: Boolean;
     FIsModal: Boolean;
     FLabel: TLabel;
+    FOpacity: single;
     procedure SetIsModal(const Value: Boolean);
     procedure SetFadeBackground(const Value: Boolean);
+    procedure SetOpacity(const Value: single);
   protected
   public
     constructor Create(AOwner: TComponent); override;
@@ -36,12 +38,16 @@ type
     property IsModal: Boolean read FIsModal write SetIsModal default False;
     property LoadingText: string read FLoadingText write FLoadingText;
     property FadeBackground: Boolean read FFadeBackground write SetFadeBackground default False;
+    property Opacity: single read FOpacity write SetOpacity;
   end;
 
 
   procedure ShowLoadingIndicator(AForm: TCommonCustomForm;
+                                 AOpacity: single); overload;
+  procedure ShowLoadingIndicator(AForm: TCommonCustomForm;
                                  const AFade: Boolean = False;
-                                 const AModal: Boolean = False);
+                                 const AModal: Boolean = False;
+                                 const AOpacity: single = 1); overload;
   procedure HideLoadingIndicator(AForm: TCommonCustomForm);
   function IsLoadingIndicatorVisible(AForm: TCommonCustomForm): Boolean;
   function FindLoadingIndicator(AForm: TCommonCustomForm): TksLoadingIndicator;
@@ -90,8 +96,15 @@ begin
 end;
 
 procedure ShowLoadingIndicator(AForm: TCommonCustomForm;
+                               AOpacity: single); overload;
+begin
+  ShowLoadingIndicator(AForm, False, False, AOpacity);
+end;
+
+procedure ShowLoadingIndicator(AForm: TCommonCustomForm;
                                const AFade: Boolean = False;
-                               const AModal: Boolean = False);
+                               const AModal: Boolean = False;
+                               const AOpacity: single = 1);
 var
   ALoadingIndicator: TksLoadingIndicator;
 begin
@@ -102,6 +115,7 @@ begin
 
   ALoadingIndicator.FadeBackground := AFade;
   ALoadingIndicator.IsModal := AModal;
+  ALoadingIndicator.Opacity := AOpacity;
 
   AForm.AddObject(ALoadingIndicator);
 
@@ -156,9 +170,9 @@ begin
   FRectangle.XRadius := 5;
   FRectangle.YRadius := 5;
 
-  FRectangle.Opacity := 1;
+  FRectangle.Opacity := FOpacity;
 
-  FLabel := TLabel.Create(FRectangle);
+  FLabel := TLabel.Create(Self);
   FLabel.Align := TAlignLayout.Client;
   FLabel.TextSettings.FontColor := claWhite;
   FLabel.Text := FLoadingText;
@@ -166,8 +180,8 @@ begin
   FLabel.TextSettings.VertAlign := TTextAlign.Center;
   FLabel.StyledSettings := [];
 
-  FRectangle.AddObject(FLabel);
   AddObject(FRectangle);
+  AddObject(FLabel);
 end;
 
 
@@ -197,6 +211,12 @@ begin
   FBackground.HitTest := Value;
 end;
 
+procedure TksLoadingIndicator.SetOpacity(const Value: single);
+begin
+  FOpacity := Value;
+  FRectangle.Opacity := Value;
+end;
+
 procedure TksLoadingIndicator.ShowLoading;
 begin
   ShowLoadingIndicator(Owner as TForm);
@@ -205,6 +225,7 @@ end;
 
 
 end.
+
 
 
 

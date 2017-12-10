@@ -323,9 +323,9 @@ type
   public
     constructor Create(AItem: TksVListItem); override;
     destructor Destroy; override;
+    procedure SetOpaqueColor(AColor: TAlphaColor); virtual;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
     procedure SetProperties(ABitmap: TBitmap; AOpaqueColor, ABackgroundColor: TAlphaColor);
-    procedure SetOpaqueColor(AColor: TAlphaColor);
     property IsEmpty: Boolean read GetIsEmpty;
     property Bitmap: TBitmap read FBitmap write SetBitmap;
     property Background: TAlphaColor read FBackground write SetBackground;
@@ -354,14 +354,14 @@ type
     FColor: TAlphaColor;
     procedure RedrawAccessory;
     procedure SetAccessoryType(const Value: TksAccessoryType);
-    //procedure SetColor(const Value: TAlphaColor);
+    procedure SetColor(const Value: TAlphaColor);
   protected
-    //procedure SetBitmap(const Value: TBitmap); override;
+    procedure Changed; override;
   public
     constructor Create(AItem: TksVListItem); override;
-    procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
+    procedure SetOpaqueColor(AColor: TAlphaColor); override;
     property AccessoryType: TksAccessoryType read FAccessoryType write SetAccessoryType default atNone;
-    //property Color: TAlphaColor read FColor write SetColor default claNull;
+    property Color: TAlphaColor read FColor write SetColor default claNull;
   end;
 
   TksVListObjectList = class(TObjectList<TksVListItemBaseObject>)
@@ -525,7 +525,8 @@ type
    // function GetItem(index: integer): TksVListItem;
     //function GetCount: integer;
     function GetCheckedCount: integer;
-    function GetFirstChecked: TksVListItem;
+
+    function GetFirstChecked: TksVListItem;
 
   public
     constructor Create(AOwner: TksVirtualListView); virtual;
@@ -535,6 +536,7 @@ type
     function Add(ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem; overload;
+    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string; AItems: TStrings): TksVListItem; overload;
     function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem; overload;
     function AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
@@ -766,10 +768,13 @@ type
     property NoItemsText: TksNoItemsText read FNoItemsText write SetNoItemsText;
     property Opacity;
     property Position;
+    property Padding;
+    property Margins;
     property PullToRefresh: TksVListPullToRefreshOptions read FPullToRefresh write FPullToRefresh;
     property SelectionOptions: TksVListSelectionOptions read FSelectionOptions write FSelectionOptions;
     property Size;
     property Width;
+    property Visible;
 
     property Ani: TksAniCalc read FAniCalc;
 
@@ -1038,7 +1043,8 @@ begin
                      //Interact with UI
                     if Assigned(FOnSelectPickerItem) then
                       FOnSelectPickerItem(FOwner.FOwner, Self, AItem);
-                  end);
+
+                  end);
    end);
  ATask.Start;
 end;
@@ -1960,6 +1966,8 @@ begin
     Exit;
   KillTimer(FLongTapTimer);
 
+  if FAniCalc = nil then
+    Exit;
   if (FAniCalc.Down) then
   begin
     if (FMousePt.y > FMouseDownPos.y - 4) and (FMousePt.y < FMouseDownPos.y + 4)
@@ -2666,20 +2674,14 @@ end;
 function TksVListItemList.AddHeader(AText: string): TksVListItem;
 begin
   Result := Add(AText, '', '');
-  //Result.BeginUpdate;
-  try
-    Result.Background := GetColorOrDefault(FOwner.Appearence.HeaderColor, claNull);
-    Result.Title.Font.Size := 13;
-    Result.Title.TextSettings.FontColor := claBlack;
-    Result.Detail.Font.Size := 12;
-    Result.Detail.TextSettings.FontColor := claDimgray;
-
-    Result.Purpose := Header;
-    Result.CanSelect := False;
-    Result.Title.VertAlign := TVerticalAlignment.taAlignBottom;
-  finally
-  //  Result.EndUpdate;
-  end;
+  Result.Background := GetColorOrDefault(FOwner.Appearence.HeaderColor, claNull);
+  Result.Title.Font.Size := 13;
+  Result.Title.TextSettings.FontColor := claBlack;
+  Result.Detail.Font.Size := 12;
+  Result.Detail.TextSettings.FontColor := claDimgray;
+  Result.Purpose := Header;
+  Result.CanSelect := False;
+  Result.Title.VertAlign := TVerticalAlignment.taAlignBottom;
 end;
 
 function TksVListItemList.AddInputSelector(ATitle, ASubTitle, ADetail,
@@ -2691,16 +2693,38 @@ begin
 end;
 
 function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
-  AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem;
+  AImage: TBitmap; ATagStr: string; AItems: TStrings): TksVListItem;
 var
   ICount: integer;
 begin
   Result := Add(ATitle, ASubTitle, ADetail, AImage, atMore);
-  for ICount := Low(AItems) to High(AItems) do
+  for ICount := 0 to AItems.Count-1 do
     Result.PickerItems.Add(AItems[ICount]);
 
   Result.SelectorType := TksVListItemSelectorType.ksSelectorPicker;
   Result.TagStr := ATagStr;
+end;
+
+function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
+  AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem;
+var
+  AStr: string;
+  AStrings: TStrings;
+begin
+  AStrings := TStringList.Create;
+  try
+    for AStr in AItems do
+      AStrings.Add(AStr);
+    Result := AddPickerSelector(ATitle, ASubTitle, ADetail, AImage, ATagStr, AStrings);
+  finally
+    FreeAndNil(AStrings);
+  end;
+  //Result := Add(ATitle, ASubTitle, ADetail, AImage, atMore);
+  //for ICount := Low(AItems) to High(AItems) do
+   // Result.PickerItems.Add(AItems[ICount]);
+
+  //Result.SelectorType := TksVListItemSelectorType.ksSelectorPicker;
+  //Result.TagStr := ATagStr;
 end;
 
 function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
@@ -3003,6 +3027,7 @@ end;
 procedure TksVListItemTextObject.ClearCache;
 begin
   inherited;
+  FTextSize := PointF(0, 0);
   {$IFDEF IOS}
   FreeAndNil(FCached);
   FCached := TBitmap.Create;
@@ -3414,7 +3439,6 @@ procedure TksVListItemImageObject.DrawToCanvas(ACanvas: TCanvas;
   AItemRect: TRectF);
 var
   ARect: TRectF;
-  ABmp: TBitmap;
 begin
   inherited;
   ARect := CalcObjectRect(AItemRect);
@@ -3429,7 +3453,7 @@ begin
   if FRenderImage.IsEmpty then
     FRenderImage.Assign(FBitmap);
 
-  if (Self is TksVListItemAccessoryObject) and
+  {if (Self is TksVListItemAccessoryObject) and
      (FOwner.Selected) and
      (FOwner.FOwner.FOwner.Appearence.SelectedFontColor <> claNull) then
   begin
@@ -3442,7 +3466,7 @@ begin
       FreeAndNil(ABmp);
     end;
   end
-  else
+  else }
   begin
 
     //if FImageShape = ksImageRect then
@@ -3569,6 +3593,12 @@ end;  }
 
 { TksVListItemAccessoryObject }
 
+procedure TksVListItemAccessoryObject.Changed;
+begin
+  inherited;
+  RedrawAccessory;
+end;
+
 constructor TksVListItemAccessoryObject.Create(AItem: TksVListItem);
 begin
   inherited;
@@ -3576,58 +3606,15 @@ begin
   FColor := claNull;
 end;
 
-procedure TksVListItemAccessoryObject.DrawToCanvas(ACanvas: TCanvas;
-  AItemRect: TRectF);
-var
-  ABmp: TBitmap;
-begin
-  {if FAccessoryType <> atNone then
-  begin
-    Bitmap := AAccessories.GetAccessoryImage(FAccessoryType);
-    FWidth := Bitmap.Width/GetScreenScale(False);
-    FHeight := Bitmap.Height/GetScreenScale(False);
-    inherited;
-  end;  }
-  //inherited;
-
-  ABmp := AAccessories.GetAccessoryImage(FAccessoryType);
-
-  //if Bitmap <> nil then
-  //begin
-  //frmMain.imgAvailable.Bitmap := AAccessories.GetAccessoryImage(atMore);
-
-  if (ABmp.Width > 0) and (ABmp.Height > 0) then
-  begin
-    FWidth := ABmp.Width/GetScreenScale(False);
-    FHeight := ABmp.Height/GetScreenScale(False);
-    ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), CalcObjectRect(AItemRect), 1, True);
-  end;
-
-  //end;
-  //ACanvas.Stroke.Color := claBlack;
-  //ACanvas.DrawRect(CalcObjectRect(AItemRect), 0, 0, AllCorners, 1);
-end;
 
 
 procedure TksVListItemAccessoryObject.RedrawAccessory;
 begin
   Bitmap := AAccessories.GetAccessoryImage(FAccessoryType);
-
-  {FreeAndNil(FBitmap);
-  Bitmap := AAccessories.GetAccessoryImage(FAccessoryType);
+  FWidth := Bitmap.Width / GetScreenScale(False);
+  FHeight := Bitmap.Height / GetScreenScale(False);
   if FColor <> claNull then
-    SetOpaqueColor(FColor);
-
-  if Bitmap.IsEmpty then
-  begin
-    FWidth := 0;
-    FHeight := 0;
-  end    }
-  {else
-  begin
-    FWidth := Bitmap.Width / GetScreenScale;
-    FHeight := Bitmap.Height / GetScreenScale;
-  end;   }
+    ReplaceOpaqueColor(Bitmap, FColor);
 end;
 
 procedure TksVListItemAccessoryObject.SetAccessoryType
@@ -3641,24 +3628,16 @@ begin
   end;
 end;
 
-{procedure TksVListItemAccessoryObject.SetBitmap(const Value: TBitmap);
-begin
-  inherited SetBitmap(Value);
-  FWidth := FWidth / GetScreenScale;
-  FHeight := FHeight / GetScreenScale;
-end; }
-
-{
 procedure TksVListItemAccessoryObject.SetColor(const Value: TAlphaColor);
 begin
-  FOwnsImage := False;
   FColor := Value;
-  if Value <> claNull then
-  begin
-    FOwnsImage := True;
-    RedrawAccessory;
-  end;
-end;    }
+  RedrawAccessory;
+end;
+
+procedure TksVListItemAccessoryObject.SetOpaqueColor(AColor: TAlphaColor);
+begin
+  Color := AColor;
+end;
 
 { TksVksListActionButton }
 

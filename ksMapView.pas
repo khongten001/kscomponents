@@ -78,8 +78,6 @@ type
   TksMapView = class(TMapView, IksMapView)
   private
     FMarkers: TksMapMarkers;
-  protected
-    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -147,12 +145,8 @@ begin
   inherited;
 end;
 
-procedure TksMapView.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
-  Y: Single);
-begin
-  inherited;
-end;
 
+
 { TksMapMarkers }
 
 procedure TksMapMarkers.Clear;

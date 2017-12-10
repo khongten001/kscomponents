@@ -416,7 +416,7 @@ begin
       AItem := lv.Items.Add(FItems[ICount].FText, '', '', atMore);
       AItem.TagInt := ICount;
       AItem.Title.TextSettings.FontColor := FAppearence.FontColor;
-      AItem.Accessory.SetOpaqueColor(FAppearence.AccessoryColor);
+      AItem.Accessory.Color := FAppearence.AccessoryColor;
       if lv.ItemIndex = -1 then
         AItem.Selected := True;
 

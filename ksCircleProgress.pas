@@ -64,12 +64,15 @@ type
     property Height;
     property Width;
     property Size;
+    property Margins;
+    property Padding;
     property Position;
     property BackgroundColor: TAlphaColor read FBackgroundColor write SetBackgroundColor default claGainsboro;
     property Color: TAlphaColor read FColor write SetColor default claDodgerblue;
     property Value: single read FValue write SetValue;
     property Text: string read FText write SetText;
     property Thickness: integer read FThickness write SetThickness default 15;
+    property Visible;
   end;
 
   procedure Register;

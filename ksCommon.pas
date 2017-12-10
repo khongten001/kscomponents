@@ -157,8 +157,10 @@ end;          }
   {
 procedure ReleasePickers;
 begin
-  HidePickers;
-  if _Pickers.Count > 0 then
+
+  HidePickers;
+
+  if _Pickers.Count > 0 then
   begin
     for ICount := 0 to _Pickers.Count-1 do
       TCustomPicker(_Pickers[ICount]).DisposeOf;

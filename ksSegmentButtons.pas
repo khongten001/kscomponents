@@ -147,6 +147,7 @@ type
     property FontSize: integer read FFontSize write SetFontSize default 14;
     property ItemIndex: integer read FItemIndex write SetItemIndex default -1;
     property Margins;
+    property Padding;
     property Position;
     property Width;
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claNull;

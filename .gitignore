@@ -220,3 +220,7 @@ Samples/Circle Progress/CircleProgress.res
 /Samples/PinCode/PinCode.dpr
 /Samples/PinCode/PinCode.res
 /Samples/Pin Code/PinCode.res
+/Samples/VirtualListView/Accessories/AccessoriesDemo.res
+/Samples/VirtualListView/Check Marks/CheckMarks.RES
+/Samples/VirtualListView/Item Selector/ItemSelector.RES
+/Samples/VirtualListView/ListView Filter/ListViewFilter.RES

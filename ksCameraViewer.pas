@@ -57,7 +57,9 @@ type
     property Active: Boolean read FActive write SetActive;
     property Align;
     property Height;
+    property Margins;
     property Size;
+    property Padding;
     property Position;
     property Visible;
     property Width;

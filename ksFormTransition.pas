@@ -29,7 +29,7 @@ interface
 {$I ksComponents.inc}
 
 uses System.UITypes, FMX.Controls, FMX.Layouts, FMX.Objects, System.Classes,
-  FMX.Types, Generics.Collections, FMX.Graphics, System.UIConsts, FMX.Effects,
+  FMX.Types, FMX.Graphics, System.UIConsts, FMX.Effects,
   FMX.StdCtrls, System.Types, FMX.Forms, ksTypes, System.Generics.Collections;
 
 const
@@ -263,6 +263,10 @@ begin
       AFrom := AInfo.FToForm;
       ATo := _InternalTransitionList.First.FFromForm;
 
+
+      {$IFDEF XE10_2_OR_NEWER}
+      AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
+      {$ENDIF}
       {if Supports(ATo, IksFormTransition, AFormIntf) then
         AFormIntf.BeforeTransition(ksTmPop);  }
 
@@ -340,7 +344,9 @@ begin
 
     AAnimateForm := TfrmFormTransitionUI.Create(nil);
     try
-
+      {$IFDEF XE10_2_OR_NEWER}
+      AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
+      {$ENDIF}
        // moved to here...
       if Supports(ATo, IksFormTransition, AFormIntf) then
         AFormIntf.BeforeTransition(ksTmPop);
@@ -393,6 +399,13 @@ begin
 
   AFrom := Screen.ActiveForm;
   ATo := AForm;
+  {$IFDEF MSWINDOWS}
+    {$IFDEF XE10_OR_NEWER}
+
+    if AFrom <> nil then
+      ATo.Bounds := AFrom.Bounds;
+    {$ENDIF}
+  {$ENDIF}
   _InTransition := True;
   if (ShowLoadingIndicatorOnTransition) and (AFrom <> nil) then
     ShowLoadingIndicator(AFrom);
@@ -436,7 +449,9 @@ begin
     begin
       AAnimateForm := TfrmFormTransitionUI.Create(nil);
       try
-
+        {$IFDEF XE10_2_OR_NEWER}
+        AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
+        {$ENDIF}
 
         AAnimateForm.Initialise(AFrom, ATo);
         AAnimateForm.Visible := True;
@@ -463,7 +478,8 @@ begin
       if Supports(ATo, IksFormTransition, AFormIntf) then
         AFormIntf.BeforeTransition(ksTmPush);
       AForm.Visible := True;
-      AFrom.Visible := False;
+      if AFrom <> nil then
+        AFrom.Visible := False;
     end;
     if Supports(ATo, IksPostFormTransition, APostFormIntf) then
       APostFormIntf.AfterTransition(ksTmPush);
@@ -472,7 +488,7 @@ begin
     if not ARecordPush then
       FreeAndNil(AInfo);
     _InTransition := False;
-    if ShowLoadingIndicatorOnTransition then
+    if (ShowLoadingIndicatorOnTransition) and (AFrom <> nil) then
       HideLoadingIndicator(AFrom);
   end;
 end;
