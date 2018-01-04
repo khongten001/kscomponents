@@ -124,8 +124,10 @@ begin
   else
   begin
     if (Assigned(FOnBackButtonClick))and (FShowBackButton)  then
+    begin
       FOnBackButtonClick(Self);
-    FFormTransition.Pop;
+    	FFormTransition.Pop;
+    end;
   end;
 end;
 
