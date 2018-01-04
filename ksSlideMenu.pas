@@ -109,6 +109,7 @@ type
   end;
 
   TksSlideMenuItem = class
+
     FID: string;
     FText: string;
     FBitmap: TBitmap;
@@ -146,6 +147,7 @@ type
     destructor Destroy; override;
     procedure AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom); deprecated 'Use OnBuildMenu event instead';
     procedure OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
+    procedure ShowForm(AID : string);
     //procedure CloseMenu;
   published
     property Appearence: TksSlideMenuAppearence read FAppearence write FAppearence;
@@ -415,6 +417,7 @@ begin
     begin
       AItem := lv.Items.Add(FItems[ICount].FText, '', '', atMore);
       AItem.TagInt := ICount;
+      AItem.TagStr := FItems[ICount].FID;
       AItem.Title.TextSettings.FontColor := FAppearence.FontColor;
       AItem.Accessory.Color := FAppearence.AccessoryColor;
       if lv.ItemIndex = -1 then
@@ -542,6 +545,26 @@ begin
     if Assigned(FAfterSelectMenuItemEvent) then
       FAfterSelectMenuItemEvent(Self, mi.FID);
   end;
+end;
+
+procedure TksSlideMenu.ShowForm(AID : string);
+var
+  listItem: TksVListItem;
+begin
+  if AID = '' then
+  	exit;
+
+  for listItem in FMenuForm.lvMenu.Items do
+  begin
+    if (listItem.TagStr = AID) then
+    begin
+    	FMenuForm.lvMenu.DeselectAll();
+      listItem.Selected := True;
+      SelectItem(nil, listItem);
+      Exit;
+    end;
+  end;
+
 end;
 
 {TksSlideMenuItemExtList }
