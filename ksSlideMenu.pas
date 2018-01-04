@@ -148,6 +148,7 @@ type
     procedure AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom); deprecated 'Use OnBuildMenu event instead';
     procedure OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
     procedure ShowForm(AID : string);
+    procedure SelectMenuItem(AID : string);
     //procedure CloseMenu;
   published
     property Appearence: TksSlideMenuAppearence read FAppearence write FAppearence;
@@ -552,7 +553,7 @@ var
   listItem: TksVListItem;
 begin
   if AID = '' then
-  	exit;
+  	Exit;
 
   for listItem in FMenuForm.lvMenu.Items do
   begin
@@ -566,6 +567,28 @@ begin
   end;
 
 end;
+
+              
+procedure TksSlideMenu.SelectMenuItem(AID : string);
+var
+  listItem: TksVListItem;
+begin
+  if AID = '' then
+  	Exit;
+
+  for listItem in FMenuForm.lvMenu.Items do
+  begin
+    if (listItem.TagStr = AID) then
+    begin
+    	FMenuForm.lvMenu.DeselectAll();
+      listItem.Selected := True;
+      Exit;
+    end;
+  end;
+
+end;
+
+
 
 {TksSlideMenuItemExtList }
 
