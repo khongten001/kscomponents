@@ -128,6 +128,13 @@ begin
       FOnBackButtonClick(Self);
     	FFormTransition.Pop;
     end;
+
+    if (FShowBackButton)  then
+    begin
+    	FFormTransition.Pop;
+    end;
+
+
   end;
 end;
 
