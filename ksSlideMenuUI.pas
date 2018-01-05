@@ -149,6 +149,11 @@ begin
   end;
 
   FCallingForm := ACallingForm;
+  FullScreen := ACallingForm.FullScreen;
+  SystemStatusBar.Visibility := ACallingForm.SystemStatusBar.Visibility;
+  SystemStatusBar.BackgroundColor := ACallingForm.SystemStatusBar.BackgroundColor;
+
+
   FCanSelect := False;
   if lvMenu.ItemIndex = -1 then
     lvMenu.ItemIndex := 0;
