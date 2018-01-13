@@ -369,6 +369,7 @@ begin
 end;
 
 procedure TksSlideMenu.OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
+var frm :TForm;
 begin
   if FItems.Count = 0 then
   begin
@@ -382,6 +383,16 @@ begin
   if FMenuForm = nil then
   begin
     FMenuForm :=  TfrmSlideMenuUI.Create(nil);
+
+    frm:=ACallingForm as TForm;
+    if (frm <> nil) then
+    	FMenuForm.FullScreen := frm.FullScreen;     // NOT working in Android
+
+    {$IFDEF XE10_2_OR_NEWER}
+   	if ACallingForm.SystemStatusBar <> nil then
+      FMenuForm.SystemStatusBar.Assign(ACallingForm.SystemStatusBar);
+  	{$ENDIF}
+
     FMenuForm.Caption := ACallingForm.Caption;
     FMenuForm.OnSelectItem := SelectItem;
     RebuildMenu;
