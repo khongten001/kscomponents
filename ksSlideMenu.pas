@@ -385,8 +385,6 @@ begin
     FMenuForm :=  TfrmSlideMenuUI.Create(nil);
 
     frm:=ACallingForm as TForm;
-    if (frm <> nil) then
-    	FMenuForm.FullScreen := frm.FullScreen;     // NOT working in Android
 
     {$IFDEF XE10_2_OR_NEWER}
    	if ACallingForm.SystemStatusBar <> nil then
