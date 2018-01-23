@@ -397,7 +397,14 @@ begin
   if _InTransition then
     Exit;
 
+  if (Screen.ActiveForm = nil) then // can happen when main form calls push in onShow in Android
+  	Exit;
+
   AFrom := Screen.ActiveForm;
+
+
+
+
   ATo := AForm;
   {$IFDEF MSWINDOWS}
     {$IFDEF XE10_OR_NEWER}
@@ -445,17 +452,11 @@ begin
     if ARecordPush then
       _InternalTransitionList.Add(AInfo);
 
-    if (ATransition <> TksTransitionType.ksFtNoTransition) and (AFrom <> nil) then
+    if ATransition <> TksTransitionType.ksFtNoTransition then
     begin
       AAnimateForm := TfrmFormTransitionUI.Create(nil);
       try
         {$IFDEF XE10_2_OR_NEWER}
-
-
-
-
-
-
         if AFrom.SystemStatusBar <> nil then
         	AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
         {$ENDIF}
