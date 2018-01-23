@@ -142,7 +142,7 @@ constructor TksLoadingIndicator.Create(AOwner: TComponent);
 begin
   inherited;
 
-  Align := TAlignLayout.Client;
+  Align := TAlignLayout.Contents;
 
   HitTest := False;
   FLoadingText := 'LOADING';

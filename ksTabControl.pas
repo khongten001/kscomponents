@@ -844,13 +844,14 @@ begin
       if FTabControl.TabPosition = ksTbpNone then
       Exit;
 
-      Clear(claBlue);
 
       Fill.Kind := TBrushKind.Solid;
 
-      Canvas.Clear(ATabControl.Appearence.BackgroundColor);
+      if ATabControl.Appearence.BackgroundColor <> claNull then
+        Canvas.Clear(ATabControl.Appearence.BackgroundColor);
+
       Stroke.Kind := TBrushKind.Solid;
-      Stroke.Color := claBlack;
+      Stroke.Color := claDimgray;
 
       if (csDesigning in ComponentState) then
         DrawDesignBorder(claDimgray, claDimgray);

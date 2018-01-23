@@ -44,6 +44,7 @@ type
     FColor: TAlphaColor;
     FCaptionType: TksCircleProgressCaptionType;
     FText: string;
+    FTextColor: TAlphaColor;
     FThickness: integer;
     procedure RecreateBitmap;
     procedure SetValue(const Value: single);
@@ -71,6 +72,7 @@ type
     property Color: TAlphaColor read FColor write SetColor default claDodgerblue;
     property Value: single read FValue write SetValue;
     property Text: string read FText write SetText;
+    property TextColor: TAlphaColor read FTextColor write FTextColor default claNull;
     property Thickness: integer read FThickness write SetThickness default 15;
     property Visible;
   end;
@@ -103,6 +105,7 @@ begin
   FBitmap := TBitmap.Create;
   FCaptionType := TksCircleProgressCaptionType.ksCirclePercent;
   FColor := claDodgerblue;
+  FTextColor := claNull;
   FBackgroundColor := claGainsboro;
   FText := '';
   FValue := 0;
@@ -136,6 +139,8 @@ begin
   end;
   Canvas.Fill.Color := FColor;
   Canvas.Font.Size := 24;
+  if FTextColor <> claNull then
+    Canvas.Fill.Color := FTextColor;
   Canvas.FillText(ClipRect, ACaption, False, 1, [], TTextAlign.Center, TTextAlign.Center);
   Canvas.EndScene;
 end;
@@ -265,5 +270,6 @@ begin
 end;
 
 end.
+
 
 

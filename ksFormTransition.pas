@@ -445,12 +445,13 @@ begin
     if ARecordPush then
       _InternalTransitionList.Add(AInfo);
 
-    if ATransition <> TksTransitionType.ksFtNoTransition then
+    if (ATransition <> TksTransitionType.ksFtNoTransition) and (AFrom <> nil) then
     begin
       AAnimateForm := TfrmFormTransitionUI.Create(nil);
       try
         {$IFDEF XE10_2_OR_NEWER}
-        AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
+        if AFrom <> nil then
+          AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
         {$ENDIF}
 
         AAnimateForm.Initialise(AFrom, ATo);

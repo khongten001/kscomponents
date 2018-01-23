@@ -177,7 +177,7 @@ var
 begin
   FListView.Items.Add('This is a test', '', '');
   AHeight := FormatFloat('0.00', FListView.Items[0].Title.Height);
-  Assert.AreEqual('16.96', AHeight);
+  Assert.AreEqual('18.29', AHeight);
 end;
 
 procedure TksVirtualListViewTest.TestTextHeightMultiLine;
@@ -186,7 +186,7 @@ var
 begin
   FListView.Items.Add('This is a test'+#13+'This is the second line...'+#13+'And the third :-)', '', '');
   AHeight := FormatFloat('0.00', FListView.Items[0].Title.Height);
-  Assert.AreEqual('48.88', AHeight);
+  Assert.AreEqual('52.87', AHeight);
 end;
 
 procedure TksVirtualListViewTest.TestTextWidth;
@@ -195,7 +195,7 @@ var
 begin
   FListView.Items.Add('This is a test', '', '');
   AWidth := FormatFloat('0.00', FListView.Items[0].Title.Width);
-  Assert.AreEqual('65.54', AWidth);
+  Assert.AreEqual('70.92', AWidth);
 end;
 
 procedure TksVirtualListViewTest.TestTopItem;
