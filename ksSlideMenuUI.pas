@@ -149,6 +149,7 @@ begin
   end;
 
   FCallingForm := ACallingForm;
+
   FCanSelect := False;
   if lvMenu.ItemIndex = -1 then
     lvMenu.ItemIndex := 0;

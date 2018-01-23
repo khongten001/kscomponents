@@ -109,6 +109,7 @@ type
   end;
 
   TksSlideMenuItem = class
+
     FID: string;
     FText: string;
     FBitmap: TBitmap;
@@ -146,6 +147,8 @@ type
     destructor Destroy; override;
     procedure AddMenuItem(AID, AText: string; const AForm: TCommonCustomForm = nil; const AIcon: TksStandardIcon = Custom); deprecated 'Use OnBuildMenu event instead';
     procedure OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
+    procedure ShowForm(AID : string);
+    procedure SelectMenuItem(AID : string);
     //procedure CloseMenu;
   published
     property Appearence: TksSlideMenuAppearence read FAppearence write FAppearence;
@@ -366,6 +369,7 @@ begin
 end;
 
 procedure TksSlideMenu.OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
+var frm :TForm;
 begin
   if FItems.Count = 0 then
   begin
@@ -379,6 +383,14 @@ begin
   if FMenuForm = nil then
   begin
     FMenuForm :=  TfrmSlideMenuUI.Create(nil);
+
+    frm:=ACallingForm as TForm;
+
+    {$IFDEF XE10_2_OR_NEWER}
+   	if ACallingForm.SystemStatusBar <> nil then
+      FMenuForm.SystemStatusBar.Assign(ACallingForm.SystemStatusBar);
+  	{$ENDIF}
+
     FMenuForm.Caption := ACallingForm.Caption;
     FMenuForm.OnSelectItem := SelectItem;
     RebuildMenu;
@@ -415,6 +427,7 @@ begin
     begin
       AItem := lv.Items.Add(FItems[ICount].FText, '', '', atMore);
       AItem.TagInt := ICount;
+      AItem.TagStr := FItems[ICount].FID;
       AItem.Title.TextSettings.FontColor := FAppearence.FontColor;
       AItem.Accessory.Color := FAppearence.AccessoryColor;
       if lv.ItemIndex = -1 then
@@ -543,6 +556,48 @@ begin
       FAfterSelectMenuItemEvent(Self, mi.FID);
   end;
 end;
+
+procedure TksSlideMenu.ShowForm(AID : string);
+var
+  listItem: TksVListItem;
+begin
+  if AID = '' then
+  	Exit;
+
+  for listItem in FMenuForm.lvMenu.Items do
+  begin
+    if (listItem.TagStr = AID) then
+    begin
+    	FMenuForm.lvMenu.DeselectAll();
+      listItem.Selected := True;
+      SelectItem(nil, listItem);
+      Exit;
+    end;
+  end;
+
+end;
+
+              
+procedure TksSlideMenu.SelectMenuItem(AID : string);
+var
+  listItem: TksVListItem;
+begin
+  if AID = '' then
+  	Exit;
+
+  for listItem in FMenuForm.lvMenu.Items do
+  begin
+    if (listItem.TagStr = AID) then
+    begin
+    	FMenuForm.lvMenu.DeselectAll();
+      listItem.Selected := True;
+      Exit;
+    end;
+  end;
+
+end;
+
+
 
 {TksSlideMenuItemExtList }
 
