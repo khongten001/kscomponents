@@ -450,8 +450,14 @@ begin
       AAnimateForm := TfrmFormTransitionUI.Create(nil);
       try
         {$IFDEF XE10_2_OR_NEWER}
-        if AFrom <> nil then
-          AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
+
+
+
+
+
+
+        if AFrom.SystemStatusBar <> nil then
+        	AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
         {$ENDIF}
 
         AAnimateForm.Initialise(AFrom, ATo);
