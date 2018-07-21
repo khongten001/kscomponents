@@ -115,6 +115,7 @@ type
     property Icon: TBitmap read FIcon write SetIcon;
     property StandardIcon: TksTabItemIcon read FIconType write SetIconType;
     property TabIndex: integer read FTabIndex write SetTabIndex;// stored False;
+    property HitTest;
     property HighlightStyle: TksTabBarHighlightStyle read FHighlightStyle write SetHighlightStyle default ksTbHighlightSingleColor;
     property Background: TAlphaColor read FBackground write SetBackground default claWhite;
   end;
@@ -204,6 +205,7 @@ type
     property Visible;
     // events
     property BeforeChange: TNotifyEvent read FBeforeChange write FBeforeChange;
+    property OnResize;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnClickTab: TksTabBarClickTabEvent read FOnClickTab write FOnClickTab;
   end;
@@ -288,7 +290,7 @@ begin
 
   InflateRect(r, 0, -3);
 
-  ACanvas.Font.Size := 10;
+  ACanvas.Font.Size := 9;
   ACanvas.FillText(r, FText, False, 1, [], TTextAlign.Center, TTextAlign.Trailing);
   InflateRect(r, 0, -3);
 
@@ -810,6 +812,8 @@ begin
   begin
     if ATab <> nil then
     begin
+      if ATab.HitTest = False then
+        Exit;
       TCommonCustomForm(FTabControl.Owner).Focused := nil;
       TCommonCustomForm(FTabControl.Owner).Designer.SelectComponent(ATab);
       TCommonCustomForm(FTabControl.Owner).Designer.Modified;
@@ -817,8 +821,11 @@ begin
     Repaint;
   end;
  {$ENDIF}
-  if ATab <> nil then
-    FTabControl.DoClickTab(ATab);
+  if (ATab <> nil) then
+  begin
+    if ATab.HitTest then
+      FTabControl.DoClickTab(ATab);
+  end;
 end;
 
 procedure TksTabBar.Paint;

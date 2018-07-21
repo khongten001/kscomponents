@@ -369,7 +369,6 @@ begin
 end;
 
 procedure TksSlideMenu.OpenMenu(ACallingForm: TCommonCustomForm; const APosition: TksMenuPosition = mpLeft);
-var frm :TForm;
 begin
   if FItems.Count = 0 then
   begin
@@ -383,8 +382,6 @@ begin
   if FMenuForm = nil then
   begin
     FMenuForm :=  TfrmSlideMenuUI.Create(nil);
-
-    frm:=ACallingForm as TForm;
 
     {$IFDEF XE10_2_OR_NEWER}
    	if ACallingForm.SystemStatusBar <> nil then

@@ -47,6 +47,9 @@ type
     [weak]FPrevPicker: TCustomListPicker;
     [weak]FDatePicker: TCustomDateTimePicker;
     [weak]FTimePicker: TCustomDateTimePicker;
+    {$IFDEF IOS}
+    [weak]FDateTimePicker: TCustomDateTimePicker;
+    {$ENDIF}
     FPickerItems: TStrings;
     {$IFDEF DPF}
     FActionSheet: TDPFUIActionSheet;
@@ -56,7 +59,9 @@ type
     FOnItemSelected: TksSelectPickerItemEvent;
     FOnDateSelected: TksSelectPickerDateEvent;
     FOnTimeSelected: TksSelectPickerDateEvent;
-    //FOnItemSelected: TOnValueChanged;
+    {$IFDEF IOS}
+    FOnDateTimeSelected: TksSelectPickerDateEvent;
+    {$ENDIF}
     {$IFDEF DPF}
     procedure DoActionSheetButtonClick(Sender: TObject; ButtonIndex: Integer);
     procedure DoSelectItem(Sender: TObject; const AItemIndex: integer);
@@ -65,6 +70,9 @@ type
     procedure DoDateSelected(Sender: TObject; const ADate: TDateTime);
     function CreateListPicker: TCustomListPicker;
     procedure DoTimeSelected(Sender: TObject; const ATime: TDateTime);
+    {$IFDEF IOS}
+    procedure DoDateTimeSelected(Sender: TObject; const ADateTime: TDateTime);
+    {$ENDIF}
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -74,6 +82,9 @@ type
     procedure ShowItemPicker(AParent: TControl; AItems: TStrings; ATitle: string; AIndex: integer; AOnSelect: TksSelectPickerItemEvent); overload;
     procedure ShowDatePicker(ATitle: string; ASelected: TDateTime; AOnSelect: TksSelectPickerDateEvent); overload;
     procedure ShowTimePicker(ATitle: string; ASelected: TDateTime; AOnSelect: TksSelectPickerTimeEvent);
+    {$IFDEF IOS}
+    procedure ShowDateTimePicker(ATitle: string; ASelected: TDateTime; AOnSelect: TksSelectPickerTimeEvent);
+    {$ENDIF}
     function CreateDatePicker: TCustomDateTimePicker;
     procedure HidePickers;//nst AForce: Boolean = False);
   end;
@@ -100,6 +111,11 @@ begin
     FDatePicker := CreateDatePicker;
     FTimePicker := CreateDatePicker;
     FTimePicker.ShowMode := TDatePickerShowMode.Time;
+    {$IFDEF IOS}
+    FDateTimePicker := CreateDatePicker;
+    FDateTimePicker.ShowMode := TDatePickerShowMode.DateTime;
+    {$ENDIF}
+
   end;
 end;
 
@@ -120,6 +136,9 @@ begin
   FPicker.DisposeOf;
   FDatePicker.DisposeOf;
   FTimePicker.DisposeOf;
+  {$IFDEF IOS}
+  FDateTimePicker.DisposeOf;
+  {$ENDIF}
   FreeAndNil(FPickerITems);
   {$IFDEF DPF}
   FActionSheet.DisposeOf;
@@ -165,13 +184,20 @@ begin
  aTask.Start;
 end;
 
+{$IFDEF IOS}
+procedure TksPickerService.DoDateTimeSelected(Sender: TObject;
+  const ADateTime: TDateTime);
+begin
+  if Assigned(FOnDateTimeSelected) then
+    FOnDateTimeSelected(Self, ADateTime);
+end;
+{$ENDIF}
+
 procedure TksPickerService.DoTimeSelected(Sender: TObject;
   const ATime: TDateTime);
 begin
   if Assigned(FOnTimeSelected) then
     FOnTimeSelected(Self, ATime);
-
-  //FPicker.Parent.RemoveObject(TFmxObject(Sender));
 end;
 
 procedure TksPickerService.DoItemSelected(Sender: TObject;
@@ -195,7 +221,11 @@ end;
 
 procedure TksPickerService.HidePickers;
 begin
-  FPickerService.CloseAllPickers;
+  try
+    FPickerService.CloseAllPickers;
+  except
+    //
+  end;
 end;
 
 procedure TksPickerService.ShowActionSheet(AItems: array of string;
@@ -260,9 +290,8 @@ begin
   FOnDateSelected := AOnSelect;
   FDatePicker.OnDateChanged := DoDateSelected;
   if ASelected = 0 then
-    FDatePicker.Date := Date
-  else
-    FDatePicker.Date := ASelected;
+    ASelected := Date;
+  FDatePicker.Date := ASelected;
   FDatePicker.Show;
 end;
 
@@ -271,9 +300,24 @@ procedure TksPickerService.ShowTimePicker(ATitle: string;
 begin
   FOnTimeSelected := AOnSelect;
   FTimePicker.OnDateChanged := DoTimeSelected;
+  if ASelected = 0 then
+    ASelected := EncodeTime(9,0,0,0);
   FTimePicker.Date := ASelected;
   FTimePicker.Show;
 end;
+
+{$IFDEF IOS}
+procedure TksPickerService.ShowDateTimePicker(ATitle: string;
+  ASelected: TDateTime; AOnSelect: TksSelectPickerTimeEvent);
+begin
+  FOnDateTimeSelected := AOnSelect;
+  FDateTimePicker.OnDateChanged := DoDateTimeSelected;
+  if ASelected = 0 then
+    ASelected := Trunc(Date)+EncodeTime(9,0,0,0);
+  FDateTimePicker.Date := ASelected;
+  FDateTimePicker.Show;
+end;
+{$ENDIF}
 
 procedure TksPickerService.ShowItemPicker(AParent: TControl; AItems: TStrings; ATitle: string;
   AIndex: integer; AOnSelect: TksSelectPickerItemEvent);

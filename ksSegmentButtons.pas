@@ -111,6 +111,7 @@ type
   TksSegmentButtons = class(TksControl)
   private
     FGroupID: string;
+    FInitialIndex: integer;
     FItemIndex: integer;
     FBtnWidth: single;
     FFontSize: integer;
@@ -120,6 +121,7 @@ type
     FBackgroundColor: TAlphaColor;
     FOnSelectSegment: TksSelectSegmentButtonEvent;
     FChanged: Boolean;
+    FMouseUpCalled: Boolean;
     procedure UpdateButtons;
     procedure SetItemIndex(const Value: integer);
     procedure SetSegments(const Value: TksSegmentButtonCollection);
@@ -134,7 +136,7 @@ type
     procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    {procedure DoMouseLeave; override;                }
+    procedure DoMouseLeave; override;
     procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -313,16 +315,24 @@ begin
 end;
 
 
-{
+
 procedure TksSegmentButtons.DoMouseLeave;
 begin
   inherited;
-  if FMouseDown then
+  if FMouseUpCalled then
+    Exit;
+  if FInitialIndex <> FItemIndex then
   begin
-    FMouseDown := False;
-    Tap(Point(0, 0));
+    FItemIndex := FInitialIndex;
+    FChanged := False;
+    UpdateButtons;
+
+     {
+    if Assigned(FOnSelectSegment) then
+      FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]); }
+
   end;
-end;    }
+end;
 
 function TksSegmentButtons.GetSelected: TKsSegmentButton;
 begin
@@ -344,24 +354,31 @@ var
   ASegment: TksSegmentButton;
 begin
   inherited;
+  FMouseUpCalled := False;
+  FInitialIndex := FItemIndex;
   HitTest := False;
-  FChanged := False;
-  ASegment := ButtonFromPos(x, y);
-  if ASegment <> nil then
-  begin
-    if ASegment.Index <> FItemIndex then
+  try
+    FChanged := False;
+    ASegment := ButtonFromPos(x, y);
+    if ASegment <> nil then
     begin
-      ItemIndex := ASegment.Index;
+      if ASegment.Index <> FItemIndex then
+      begin
+        ItemIndex := ASegment.Index;
+
+      end;
     end;
+    //Application.ProcessMessages;
+  finally
+    HitTest := True;
   end;
-  //Application.ProcessMessages;
-  HitTest := True;
 end;
 
 procedure TksSegmentButtons.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
   Y: Single);
 begin
   inherited;
+  FMouseUpCalled := True;
   if FChanged then
   begin
     if Assigned(FOnSelectSegment) then
@@ -461,7 +478,8 @@ begin
 
           IsPressed := ICount = FItemIndex;
           Width := FBtnWidth;
-          Height := 30;
+          Height := 34;
+
           {TextSettings.FontColorForState.Focused := FTintColor;
           TextSettings.FontColorForState.Active := FTintColor;
           TextSettings.FontColorForState.Normal := FTintColor;

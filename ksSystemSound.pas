@@ -20,7 +20,7 @@ type
 
 implementation
 
-uses Types
+uses Types, System.SysUtils
 {$IFDEF ANDROID}
     ,androidapi.jni.media, FMX.Helpers.Android, androidapi.jni.JavaTypes, Androidapi.JNI.GraphicsContentViewText,Androidapi.JNIBridge,
     androidapi.helpers

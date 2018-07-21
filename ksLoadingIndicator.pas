@@ -109,17 +109,21 @@ var
   ALoadingIndicator: TksLoadingIndicator;
 begin
   Application.ProcessMessages;
-  ALoadingIndicator := FindLoadingIndicator(AForm);
-  if ALoadingIndicator = nil then
-    ALoadingIndicator := TksLoadingIndicator.Create(AForm);
+  try
+    ALoadingIndicator := FindLoadingIndicator(AForm);
+    if ALoadingIndicator = nil then
+      ALoadingIndicator := TksLoadingIndicator.Create(AForm);
 
-  ALoadingIndicator.FadeBackground := AFade;
-  ALoadingIndicator.IsModal := AModal;
-  ALoadingIndicator.Opacity := AOpacity;
+    ALoadingIndicator.FadeBackground := AFade;
+    ALoadingIndicator.IsModal := AModal;
+    ALoadingIndicator.Opacity := AOpacity;
 
-  AForm.AddObject(ALoadingIndicator);
+    AForm.AddObject(ALoadingIndicator);
 
-  ALoadingIndicator.BringToFront;
+    ALoadingIndicator.BringToFront;
+  except
+    //
+  end;
   Application.ProcessMessages;
 end;
 
@@ -130,9 +134,13 @@ begin
   if AForm = nil then
     Exit;
 
-  ALoadingIndicator := FindLoadingIndicator(AForm);
-  if ALoadingIndicator <> nil then
-    AForm.RemoveObject(ALoadingIndicator);
+  try
+    ALoadingIndicator := FindLoadingIndicator(AForm);
+    if ALoadingIndicator <> nil then
+      AForm.RemoveObject(ALoadingIndicator);
+  except
+    //
+  end;
 
 end;
 
@@ -225,6 +233,8 @@ end;
 
 
 end.
+
+
 
 
 

@@ -1,6 +1,6 @@
 {*******************************************************************************
 *                                                                              *
-*  TksFormTransition - Push/Pop Form Queue Component                                *
+*  TksFormTransition - Push/Pop Form Queue Component                           *
 *                                                                              *
 *  https://bitbucket.org/gmurt/kscomponents                                    *
 *                                                                              *
@@ -70,7 +70,7 @@ type
   public
     property FromForm: TCommonCustomForm read FFromForm;
     property ToForm: TCommonCustomForm read FToForm;
-    property Transition: TksTransitionType read FTransition;
+    property Transition: TksTransitionType read FTransition write FTransition;
   end;
 
   TksFormTransitionList = class(TObjectList<TksFormTransitionItem>)
@@ -109,11 +109,13 @@ type
   procedure PopTo(AFormClass: string);
   procedure PopAllForms;
   procedure ClearFormTransitionStack;
+  procedure ClearLastFormTransition;
 
   procedure Register;
 
 var
   ShowLoadingIndicatorOnTransition: Boolean;
+  DisableTransitions: Boolean;
 
 implementation
 
@@ -200,6 +202,11 @@ end;
 procedure ClearFormTransitionStack;
 begin
   _InternalTransitionList.Clear;
+end;
+
+procedure ClearLastFormTransition;
+begin
+  _InternalTransitionList.Delete(_InternalTransitionList.Count-1);
 end;
 
 { TksFormTransition }
@@ -309,6 +316,7 @@ var
   AFormIntf: IksFormTransition;
   ALevels: Integer;
   ICount: integer;
+  ALastTransition: TksTransitionType;
 begin
 
   Screen.ActiveForm.Focused := nil;
@@ -325,6 +333,8 @@ begin
   AFrom := AInfo.FToForm;
   ATo := AInfo.FFromForm;
 
+  ALastTransition := _InternalTransitionList.Last.FTransition;
+
   if AFormClass <> '' then
   begin
     while ATo.ClassName <> AFormClass do
@@ -334,6 +344,8 @@ begin
       Inc(ALevels);
     end;
   end;
+
+  AInfo.Transition := ALastTransition;
 
   if ShowLoadingIndicatorOnTransition then
     ShowLoadingIndicator(AFrom);
@@ -393,17 +405,20 @@ var
   AAnimateForm: TfrmFormTransitionUI;
   AFormIntf: IksFormTransition;
   APostFormIntf: IksPostFormTransition;
+  ATran: TksTransitionType;
 begin
+
   if _InTransition then
     Exit;
+
+  ATran := ATransition;
+  if DisableTransitions then
+    ATran := ksFtNoTransition;
 
   if (Screen.ActiveForm = nil) then // can happen when main form calls push in onShow in Android
   	Exit;
 
   AFrom := Screen.ActiveForm;
-
-
-
 
   ATo := AForm;
   {$IFDEF MSWINDOWS}
@@ -428,8 +443,6 @@ begin
 
     if FInitalizedForms.IndexOf(ATo) = -1 then
     begin
-      //ATo.Visible := True;
-      //ATo.Visible := False;
       FInitalizedForms.Add(ATo);
     end;
     {$ENDIF}
@@ -441,18 +454,14 @@ begin
     if TransitionExists(AFrom, ATo) then
       Exit;
 
-
-    {if Supports(ATo, IksFormTransition, AFormIntf) then
-      AFormIntf.BeforeTransition(ksTmPush); }
-
     AInfo := TksFormTransitionItem.Create;
     AInfo.FFromForm := AFrom;
     AInfo.FToForm := ATo;
-    AInfo.FTransition := ATransition;
+    AInfo.FTransition := ATran;
     if ARecordPush then
       _InternalTransitionList.Add(AInfo);
 
-    if ATransition <> TksTransitionType.ksFtNoTransition then
+    if (ATran <> TksTransitionType.ksFtNoTransition) and (DisableTransitions = False) then
     begin
       AAnimateForm := TfrmFormTransitionUI.Create(nil);
       try
@@ -529,6 +538,7 @@ initialization
 
   _InternalTransitionList := TksFormTransitionList.Create(True);
   _InTransition := False;
+  DisableTransitions := False;
 
 finalization
 
