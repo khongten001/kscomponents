@@ -678,7 +678,7 @@ begin
   RenderText(Canvas, ClipRect, FText, Canvas.Font, Canvas.Fill.Color, False, TTextAlign.Center, TTextAlign.Center, TTextTrimming.Character);
 
   if FBadge > 0 then
-    GenerateBadge(Canvas, PointF(ClipRect.Right-20, ClipRect.Top-6), FBadge, claRed, claNull, claWhite);
+    GenerateBadge(Canvas, PointF(ClipRect.Right-20, ClipRect.Top-6), FBadge, claRed, claWhite);
 end;
 
 procedure TksSegmentSpeedButton.SetBadge(const Value: integer);

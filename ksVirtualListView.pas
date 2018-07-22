@@ -349,10 +349,12 @@ type
     FBackground: TAlphaColor;
     FOpacity: single;
     FImageShape: TksImageShape;
+    FBadge: integer;
     function GetIsEmpty: Boolean;
     procedure SetBackground(const Value: TAlphaColor);
     procedure SetOpacity(const Value: single);
     procedure SetImageShape(const Value: TksImageShape);
+    procedure SetBadge(const Value: integer);
   protected
     procedure SetBitmap(const Value: TBitmap); virtual;
   public
@@ -366,6 +368,7 @@ type
     property Background: TAlphaColor read FBackground write SetBackground;
     property Opacity: single read FOpacity write SetOpacity;
     property ImageShape: TksImageShape read FImageShape write SetImageShape;
+    property Badge: integer read FBadge write SetBadge default 0;
   end;
 
   TksVListItemSwitchObject = class(TksVListItemBaseObject)
@@ -3783,6 +3786,7 @@ begin
   //FCached := nil;
   FBackground := claNull;
   FOpacity := 1;
+  FBadge := 0;
 end;
 
 destructor TksVListItemImageObject.Destroy;
@@ -3810,58 +3814,10 @@ begin
   if FRenderImage.IsEmpty then
     FRenderImage.Assign(FBitmap);
 
-  {if (Self is TksVListItemAccessoryObject) and
-     (FOwner.Selected) and
-     (FOwner.FOwner.FOwner.Appearence.SelectedFontColor <> claNull) then
-  begin
-    ABmp := TBitmap.Create;
-    try
-      ABmp.Assign(FRenderImage);
-      ReplaceOpaqueColor(ABmp, FOwner.FOwner.FOwner.Appearence.SelectedFontColor);
-      ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, FOpacity, False);
-    finally
-      FreeAndNil(ABmp);
-    end;
-  end
-  else }
-  begin
+  ACanvas.DrawBitmap(FRenderImage, RectF(0, 0, FBitmap.Width, FBitmap.Height), ARect, FOpacity, True);
 
-    //if FImageShape = ksImageRect then
-      ACanvas.DrawBitmap(FRenderImage, RectF(0, 0, FBitmap.Width, FBitmap.Height), ARect, FOpacity, True);
-   // else
-    begin
-      // circle cropping...
-      {ABmp := TBitmap.Create(FBitmap.Width, FBitmap.Height);
-      try
-        ABmp.Canvas.BeginScene;
-        ABmp.Canvas.Fill.Bitmap.Bitmap := FBitmap;
-        ABmp.Canvas.Fill.Kind := TBrushKind.Bitmap;
-        ABmp.Canvas.FillEllipse(RectF(0, 0, FBitmap.Width, FBitmap.Height), 1);
-        ABmp.Canvas.EndScene;
-
-        ACanvas.DrawBitmap(ABmp, RectF(0, 0, FBitmap.Width, FBitmap.Height), ARect, FOpacity, True);
-        ABmp.Free;
-
-        ABmp := TBitmap.Create(Round(ARect.Width*4), Round(ARect.Height*4));
-
-        ABmp.Clear(claNull);
-        ABmp.Canvas.BeginScene;
-        ABmp.Canvas.Stroke.Thickness := 2;
-        ABmp.Canvas.Stroke.Color := claDimgray;
-        ABmp.Canvas.Stroke.Kind := TBrushKind.Solid;
-        ABmp.Canvas.DrawEllipse(RectF(1, 1, ABmp.Width-1, ABmp.Height-1), 1);
-        ABmp.Canvas.EndScene;
-
-        ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, FOpacity, True);
-        //ACanvas.Stroke.Color := claDimgray;
-        //ACanvas.Stroke.Kind := TBrushKind.Solid;
-        //ACanvas.DrawEllipse(ARect, 1);
-
-      finally
-        ABmp.Free;
-      end; }
-    end;
-  end;
+  if FBadge > 0 then
+    GenerateBadge(ACanvas,  PointF(ARect.Right-12, ARect.Top-4), FBadge, claRed, claWhite);
 end;
 
 function TksVListItemImageObject.GetIsEmpty: Boolean;
@@ -3880,6 +3836,12 @@ begin
     FBackground := Value;
     Changed;
   end;
+end;
+
+procedure TksVListItemImageObject.SetBadge(const Value: integer);
+begin
+  FBadge := Value;
+  Changed;
 end;
 
 procedure TksVListItemImageObject.SetBitmap(const Value: TBitmap);

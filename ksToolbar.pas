@@ -119,6 +119,7 @@ begin
   HideKeyboard;
   Application.ProcessMessages;
 
+
   if FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0 then
   begin
     if (Assigned(FOnMenuButtonClick)) and (FShowMenuButton) then
@@ -178,8 +179,6 @@ end;
 destructor TksToolbar.Destroy;
 begin
   FreeAndNil(FFormTransition);
-  //FreeAndNil(FMenuBmp);
-  //FreeAndNil(FBackBmp);
   FreeAndNil(FFont);
   inherited;
 end;
@@ -290,17 +289,20 @@ end;
 
 procedure TksToolbar.UpdateButton;
 begin
-  if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) then
+  if Root is TCommonCustomForm then
   begin
-    FButton.Visible := FShowMenuButton;
-    if FButton.StyleLookup <> 'detailstoolbutton' then
-      FButton.StyleLookup := 'detailstoolbutton';
-  end
-  else
-  begin
-    FButton.Visible := FShowBackButton;
-    if FButton.StyleLookup <> 'arrowlefttoolbutton' then
-      FButton.StyleLookup := 'arrowlefttoolbutton'
+    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) then
+    begin
+      FButton.Visible := FShowMenuButton;
+      if FButton.StyleLookup <> 'detailstoolbutton' then
+        FButton.StyleLookup := 'detailstoolbutton';
+    end
+    else
+    begin
+      FButton.Visible := FShowBackButton;
+      if FButton.StyleLookup <> 'arrowlefttoolbutton' then
+        FButton.StyleLookup := 'arrowlefttoolbutton'
+    end;
   end;
 end;
 

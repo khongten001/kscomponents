@@ -67,7 +67,7 @@ uses FMX.Controls, FMX.Graphics, System.UITypes, FMX.Types, Types,
     AText: string; AFont: TFont; ATextColor: TAlphaColor; AWordWrap: Boolean;
     AHorzAlign: TTextAlign; AVertAlign: TTextAlign; ATrimming: TTextTrimming);
 
-  procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ABackgroundColor, ATextColor: TAlphaColor);
+  procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ATextColor: TAlphaColor);
 
   procedure ShowMessage(AText: string);
 
@@ -488,16 +488,7 @@ begin
   end;
 end;
 
-procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ABackgroundColor, ATextColor: TAlphaColor);
-
- {procedure DrawEllipse(ACanvas: TCanvas; ARect: TRectF; AColor: TAlphaColor);
-  begin
-    ACanvas.Fill.Color := AColor;
-    ACanvas.FillEllipse(ARect, 1);
-    ACanvas.Stroke.Color := AColor;
-    ACanvas.Stroke.Thickness := 1;
-    ACanvas.DrawEllipse(ARect, 1);
-  end;    }
+procedure GenerateBadge(ACanvas: TCanvas; ATopLeft: TPointF; AValue: integer; AColor, ATextColor: TAlphaColor);
 var
   ABmp: TBitmap;
   AOutlineRect: TRectF;
@@ -527,7 +518,7 @@ begin
     ABmp.Canvas.FillEllipse(r, 1);
 
     //InflateRect();
-    ABmp.Canvas.Stroke.Color := claBlack;
+    ABmp.Canvas.Stroke.Color := claWhite;
     ABmp.Canvas.stroke.Thickness := 4*s;
     ABmp.Canvas.Stroke.Kind := TBrushKind.Solid;
     ABmp.Canvas.DrawEllipse(r, 1);
@@ -544,20 +535,17 @@ begin
   finally
     FreeAndNil(ABmp);
   end;
+
 end;
 
 initialization
 
-//  TPlatformServices.Current.SupportsPlatformService(IFMXPickerService, APickerService);
 
   AScreenScale := 0;
   ATextLayout := TTextLayoutManager.DefaultTextLayout.Create;
-  //_Pickers := TList<TCustomPicker>.Create;
 
 finalization
 
-//  HidePickers(True);
-  //FreeAndNil(_Pickers);
   FreeAndNil(ATextLayout);
 
 
