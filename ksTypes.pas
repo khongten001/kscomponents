@@ -186,6 +186,7 @@ begin
 
       ASwitchBmp[AChecked].SetSize(Round(ASwitch.Width), Round(ASwitch.Height));
       ASwitchBmp[AChecked].Canvas.BeginScene(nil);
+      ASwitchBmp[AChecked].Canvas.Clear(claNull);
       ASwitch.PaintTo(ASwitchBmp[AChecked].Canvas, RectF(0, 0, ASwitch.Width, ASwitch.Height), nil);
       ASwitchBmp[AChecked].Canvas.EndScene;
       Application.MainForm.RemoveObject(ASwitch);

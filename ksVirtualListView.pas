@@ -61,9 +61,9 @@ type
   TksVListCheckBoxAlign = (ksCbLeftAlign, ksCbRightAlign);
   TksVListActionButtonAlign = (ksAbLeftAlign, ksAbRightAlign);
   TksVListSwipeDirection = (ksSwipeFromLeft, ksSwipeFromRight);
-  TksVListItemPurpose = (None, Header);
+  TksVListItemPurpose = (None, Header, Seperator);
   TksVListItemState = (Normal, Deleting, Deleted, Sliding);
-  TksVListItemSelectorType = (ksSelectorNone, ksSelectorEdit, ksSelectorPicker, ksSelectorDate, ksSelectorTime);
+  TksVListItemSelectorType = (ksSelectorNone, ksSelectorEdit, ksSelectorPicker, ksSelectorDate, ksSelectorTime, ksSelectorDateTime);
   TksImageShape = (ksImageRect, ksImageCircle);
 
   TksVListItemClickEvent = procedure(Sender: TObject; AItem: TksVListItem) of object;
@@ -78,9 +78,11 @@ type
 
   TksItemDateSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ADate: TDateTime) of object;
   TksItemTimeSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ATime: TDateTime) of object;
+  TksItemDateTimeSelectedEvent = procedure(Sender: TObject; ARow: TksVListItem; ADateTime: TDateTime) of object;
   TksItemGetPickerItemsEvent = procedure(Sender: TObject; ARow: TksVListItem; var ASelected: string; AItems: TSTrings) of object;
 
   TksItemSwitchClicked = procedure(Sender: TObject; AItem: TksVListItem; ASwitchID: string; AChecked: Boolean) of object;
+  TksItemSegmentButtonClicked = procedure(Sender: TObject; AItem: TksVListItem; ASegID: string; AItemIndex: integer) of object;
 
   TksVirtualListViewAppearence = class(TPersistent)
   private
@@ -221,7 +223,7 @@ type
     function CalcObjectRect(AItemRect: TRectF): TRectF; virtual;
     procedure Changed; virtual;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); virtual;
-    procedure Clicked; virtual;
+    procedure Clicked(x, y: single); virtual;
   public
     constructor Create(AItem: TksVListItem); virtual;
     procedure ClearCache; virtual;
@@ -260,6 +262,7 @@ type
     procedure SetFont(const Value: TFont);
     procedure SetMaxWidth(const Value: integer);
     procedure SetPasswordField(const Value: Boolean);
+    procedure TextSettingsChanged(Sender: TObject);
   protected
     procedure Changed; override;
     function ActualTextWidth: single;
@@ -279,16 +282,48 @@ type
     property PasswordField: Boolean read FPasswordField write SetPasswordField;
   end;
 
+  TksVListItemLineObject = class(TksVListItemBaseObject)
+  private
+    FStroke: TStrokeBrush;
+  public
+    constructor Create(AItem: TksVListItem); override;
+    destructor Destroy; override;
+    procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
+    property Stroke: TStrokeBrush read FStroke;
+  end;
+
+
   TksVListItemShapeObject = class(TksVListItemBaseObject)
   private
     FStroke: TStrokeBrush;
     FFill: TBrush;
     FCornerRadius: single;
+    //FCanvas: TBitmap;
   public
     constructor Create(AItem: TksVListItem); override;
     destructor Destroy; override;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
     property CornerRadius: single read FCornerRadius write FCornerRadius;
+    property Fill: TBrush read FFill;
+    property Stroke: TStrokeBrush read FStroke;
+  end;
+
+  TksVListItemSegmentButtons = class(TksVListItemShapeObject)
+  private
+    FCaptions: TStrings;
+    FItemIndex: integer;
+    FColor: TAlphaColor;
+    FHideInactiveText: Boolean;
+    procedure SetItemIndex(const Value: integer);
+    procedure SetColor(const Value: TAlphaColor);
+  public
+    constructor Create(AItem: TksVListItem); override;
+    destructor Destroy; override;
+    procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
+    procedure Clicked(x, y: single); override;
+    property ItemIndex: integer read FItemIndex write SetItemIndex;
+    property Color: TAlphaColor read FColor write SetColor default claDodgerBlue;
+    property HideInactiveText: Boolean read FHideInactiveText write FHideInactiveText default False;
   end;
 
   TksVListItemBubbleObject = class(TksVListItemTextObject)
@@ -314,23 +349,26 @@ type
     FBackground: TAlphaColor;
     FOpacity: single;
     FImageShape: TksImageShape;
+    FBadge: integer;
     function GetIsEmpty: Boolean;
     procedure SetBackground(const Value: TAlphaColor);
     procedure SetOpacity(const Value: single);
     procedure SetImageShape(const Value: TksImageShape);
+    procedure SetBadge(const Value: integer);
   protected
     procedure SetBitmap(const Value: TBitmap); virtual;
   public
     constructor Create(AItem: TksVListItem); override;
     destructor Destroy; override;
+    procedure SetOpaqueColor(AColor: TAlphaColor); virtual;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
     procedure SetProperties(ABitmap: TBitmap; AOpaqueColor, ABackgroundColor: TAlphaColor);
-    procedure SetOpaqueColor(AColor: TAlphaColor);
     property IsEmpty: Boolean read GetIsEmpty;
     property Bitmap: TBitmap read FBitmap write SetBitmap;
     property Background: TAlphaColor read FBackground write SetBackground;
     property Opacity: single read FOpacity write SetOpacity;
     property ImageShape: TksImageShape read FImageShape write SetImageShape;
+    property Badge: integer read FBadge write SetBadge default 0;
   end;
 
   TksVListItemSwitchObject = class(TksVListItemBaseObject)
@@ -338,13 +376,26 @@ type
     FChecked: Boolean;
     procedure SetChecked(const Value: Boolean);
   protected
-    procedure Clicked; override;
+    procedure Clicked(x, y: single); override;
   public
     constructor Create(AItem: TksVListItem); override;
     destructor Destroy; override;
     procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
     procedure Toggle;
     property Checked: Boolean read FChecked write SetChecked default False;
+  end;
+
+  TksVListItemProgressBarObject = class(TksVListItemShapeObject)
+  private
+    FBackground: TAlphaColor;
+    FMax: integer;
+    FValue: integer;
+    procedure SetMax(const Value: integer);
+    procedure SetValue(const Value: integer);
+  public
+    procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
+    property Max: integer read FMax write SetMax;
+    property Value: integer read FValue write SetValue;
   end;
 
 
@@ -354,14 +405,14 @@ type
     FColor: TAlphaColor;
     procedure RedrawAccessory;
     procedure SetAccessoryType(const Value: TksAccessoryType);
-    //procedure SetColor(const Value: TAlphaColor);
+    procedure SetColor(const Value: TAlphaColor);
   protected
-    //procedure SetBitmap(const Value: TBitmap); override;
+    procedure Changed; override;
   public
     constructor Create(AItem: TksVListItem); override;
-    procedure DrawToCanvas(ACanvas: TCanvas; AItemRect: TRectF); override;
+    procedure SetOpaqueColor(AColor: TAlphaColor); override;
     property AccessoryType: TksAccessoryType read FAccessoryType write SetAccessoryType default atNone;
-    //property Color: TAlphaColor read FColor write SetColor default claNull;
+    property Color: TAlphaColor read FColor write SetColor default claNull;
   end;
 
   TksVListObjectList = class(TObjectList<TksVListItemBaseObject>)
@@ -412,12 +463,15 @@ type
     FOnSelectPickerItem: TksItemSelectPickerItemEvent;
     //FOnSelectPickerDate: TksItemSelectPickerDateEvent;
     FSelectedDate: TDateTime;
+    FSelectedDateTime: TDateTime;
     FSelectedTime: TDateTime;
     FSelectedItem: string;
     FPickerItems: TStrings;
+    FDefaultPickerItem: string;
     FEditFieldKeyboardType: TVirtualKeyboardType;
     FSelectorType: TksVListItemSelectorType;
     FOnDateSelected: TksItemDateSelectedEvent;
+    FOnDateTimeSelected: TksItemDateTimeSelectedEvent;
     FOnTimeSelected: TksItemTimeSelectedEvent;
     // procedure CacheRowToBitmap;
     procedure Changed;
@@ -448,28 +502,42 @@ type
     //procedure DoDatePickerChanged(Sender: TObject; const ADateTime: TDateTime);
     procedure DoItemPickerChanged(Sender: TObject; AItem: string; AValueIndex: Integer);
     procedure DoDatePickerChanged(Sender: TObject; ADate: TDateTime);
+    procedure DoTimePickerChanged(Sender: TObject; ATime: TDateTime);
+    {$IFDEF IOS}
+    procedure DoDateTimePickerChanged(Sender: TObject; ADateTime: TDateTime);
+    {$ENDIF}
 
     procedure ShowEditInput;
     procedure ShowDatePicker(ASelected: TDateTime);
+    {$IFDEF IOS}
+    procedure ShowDateTimePicker(ASelected: TDateTime);
+    {$ENDIF}
     procedure ShowTimePicker(ASelected: TDateTime);
     procedure ShowPicker;
-    procedure DoTimePickerChanged(Sender: TObject; ATime: TDateTime);
     function GetItemData(const AIndex: string): TValue;
 
     procedure SetItemData(const AIndex: string; const Value: TValue);
-    function GetHasData(const AIndex: string): Boolean;  protected
+    function GetHasData(const AIndex: string): Boolean;
+    procedure SetSelectedDate(const Value: TDateTime);
+    procedure SetSelectedTime(const Value: TDateTime);
+    procedure SetSelectorType(const Value: TksVListItemSelectorType);  protected
     function MatchesFilter(AFilter: string): Boolean;
   public
     constructor Create(Owner: TksVListItemList); virtual;
     destructor Destroy; override;
     function IsItemVisible(AViewPort: TRectF): Boolean;
     function AddText(x, y: single; AText: string): TksVListItemTextObject; overload;
+    function AddText(x, y: single; AText: string; AFontColor: TAlphaColor; AFontSize: integer): TksVListItemTextObject; overload;
     function AddText(x, y, AWidth: single; AText: string): TksVListItemTextObject; overload;
     function AddDetailText(y: single; AText: string): TksVListItemTextObject; overload;
     function AddImage(x, y, AWidth, AHeight: single; ABitmap: TBitmap): TksVListItemImageObject;
     function AddSwitch(x, y: single; AChecked: Boolean; const AID: string = ''): TksVListItemSwitchObject;
     function DrawRect(x, y, AWidth, AHeight, ACornerRadius: single; AStroke, AFill: TAlphaColor): TksVListItemShapeObject;
+    function DrawLine(x, y, x2, y2: single;  AStroke: TAlphaColor): TksVListItemLineObject;
     function AddChatBubble(AText, ASender: string; ALeftAlign: Boolean): TksVListItemBubbleObject;
+    procedure AddProgressBar(x, y, w, h: single; AValue, AMax: integer; AFill, ABackground, ABorder: TAlphaColor);
+
+    function AddSegmentButtons(ATitles: array of string; AWidth: Integer; const AHeight: integer = 30): TksVListItemSegmentButtons;
     //procedure BeginUpdate;
     ///procedure EndUpdate;
     //procedure CacheItem;
@@ -503,12 +571,13 @@ type
     property State: TksVListItemState read FState write FState default Normal;
     property Offset: integer read FOffset write SetOffset default 0;
     property IconSize: integer read FIconSize write SetIconSize default 28;
-    property SelectedDate: TDateTime read FSelectedDate write FSelectedDate;
+    property SelectedDate: TDateTime read FSelectedDate write SetSelectedDate;
+    property SelectedTime: TDateTime read FSelectedTime write SetSelectedTime;
     property PickerItems: TStrings read FPickerItems;
     // events...
     property OnClick: TNotifyEvent read FOnClick write FOnClick;
     property CheckBoxVisible: Boolean read FCheckBoxVisible write FCheckBoxVisible default True;
-    property SelectorType: TksVListItemSelectorType read FSelectorType write FSelectorType default ksSelectorNone;
+    property SelectorType: TksVListItemSelectorType read FSelectorType write SetSelectorType default ksSelectorNone;
     property EditFieldKeyboardType: TVirtualKeyboardType read FEditFieldKeyboardType write FEditFieldKeyboardType default TVirtualKeyboardType.Alphabet;
     property OnEditInput: TksItemEditInputEvent read FOnEditInput write FOnEditInput;
     property BeforeSelectPickerItem: TksItemBeforeSelectPickerItemEvent read FBeforeSelectPickerItem write FBeforeSelectPickerItem;
@@ -516,6 +585,7 @@ type
     //property OnSelectPickerDate: TksItemSelectPickerDateEvent read FOnSelectPickerDate write FOnSelectPickerDate;
     property OnDateSelected: TksItemDateSelectedEvent read FOnDateSelected write FOnDateSelected;
     property OnTimeSelected: TksItemTimeSelectedEvent read FOnTimeSelected write FOnTimeSelected;
+    property OnDateTimeSelected: TksItemDateTimeSelectedEvent read FOnDateTimeSelected write FOnDateTimeSelected;
     property Objects: TksVListObjectList read FObjects;
   end;
 
@@ -539,12 +609,15 @@ type
     function Add(ATitle, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail,AQuantity: string; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
     function Add(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; const AAccessory: TksAccessoryType = atNone): TksVListItem; overload;
-    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem; overload;
+    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string; AItems: array of string; const ADefaultItem: string = ''): TksVListItem; overload;
+    function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string; AItems: TStrings; const ADefaultItem: string = ''): TksVListItem; overload;
     function AddPickerSelector(ATitle, ASubTitle, ADetail: string; AImage: TBitmap; ATagStr: string): TksVListItem; overload;
     function AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
+    function AddDateTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddInputSelector(ATitle, ASubTitle, ADetail, ATagStr: string): TksVListItem;
     function AddHeader(AText: string): TksVListItem;
+    function AddSeperator(const AText: string = ''): TksVListItem;
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
     function Insert(AIndex: integer; ATitle, ASubTitle, ADetail,AQuantity: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
     function ItemAtPos(x, y: single): TksVListItem;
@@ -552,8 +625,11 @@ type
     procedure Clear;
     procedure Delete(AIndex: integer; AAnimate: Boolean); overload;
     procedure Delete(AItem: TksVListItem; const AAnimate: Boolean = False); overload;
+
+    procedure SetCheckedByTagStr(ATagStr: string; AChecked: Boolean);
    // property Count: integer read GetCount;
     property CheckedCount: integer read GetCheckedCount;
+    property FirstChecked: TksVListItem read GetFirstChecked;
     //property Items[index: integer]: TksVListItem read GetItem; default;
   //  function IndexOf(AItem: TksVListItem): integer;
   end;
@@ -643,7 +719,7 @@ type
     FOnPullRefresh: TNotifyEvent;
     FTimerService: IFMXTimerService;
     FLongTapTimer: TFmxHandle;
-    FDeletedItemCleanup: TFmxHandle;
+    //FDeletedItemCleanup: TFmxHandle;
     FMousePt: TPointF;
     FMouseDownItem: TksVListItem;
     FEventService: IFMXApplicationEventService;
@@ -652,13 +728,14 @@ type
     FDeleteButton: TksVListDeleteButton;
     FItemHeight: integer;
     FItemIndex: integer;
-    FPullRefreshTimer: TFmxHandle;
+    //FPullRefreshTimer: TFmxHandle;
 
     //FEventThread: TThread;
     FRefreshing: Boolean;
 
     // events..FOnItemSwitchClick.
     FOnItemSwitchClick: TksItemSwitchClicked;
+    FOnItemSegmentButtonClick: TksItemSegmentButtonClicked;
     FOnItemClick: TksVListItemClickEvent;
     FOnItemLongTap: TksVListItemLongTapEvent;
     FOnItemSwipe: TksVListItemSwipeEvent;
@@ -671,10 +748,12 @@ type
     FOnItemEditInputEvent: TksItemEditInputEvent;
     FOnItemDateSelectedEvent: TksItemDateSelectedEvent;
     FOnItemTimeSelectedEvent: TksItemTimeSelectedEvent;
+    FOnItemDateTimeSelectedEvent: TksItemDateTimeSelectedEvent;
     FBeforeItemPickerSelectedEvent: TksItemBeforeSelectPickerItemEvent;
     FOnItemPickerSelectedEvent: TksItemSelectPickerItemEvent;
     FOnGetPickerItemsEvent: TksItemGetPickerItemsEvent;
     FScrollingDisabled: Boolean;
+    FShowScrollBar: Boolean;
 
     //FFont: TFont;
     procedure SetScrollPos(const Value: integer);
@@ -705,6 +784,10 @@ type
 
     procedure FilterChanged(Sender: TObject);
     procedure SetFilterEdit(const Value: TksListViewFilter);    //procedure SetFont(const Value: TFont);
+
+    //procedure DisableTimers;
+    //procedure EnableTimers;
+
   protected
     procedure Paint; override;
     procedure DrawPullToRefresh;
@@ -722,11 +805,12 @@ type
     procedure DoItemEditInput(Sender: TObject; ARow: TksVListItem; AText: string);
     procedure DoItemDateSelected(Sender: TObject; ARow: TksVListItem; ADate: TDateTime);
     procedure DoItemTimeSelected(Sender: TObject; ARow: TksVListItem; ATime: TDateTime);
+    procedure DoItemDateTimeSelected(Sender: TObject; ARow: TksVListItem; ADateTime: TDateTime);
 
     procedure DoBeforeItemPickerSelected(Sender: TObject; ARow: TksVListItem; var AText: string);
     procedure DoItemPickerSelected(Sender: TObject; ARow: TksVListItem; AText: string);
-    procedure DoPullRefresh;
-    // procedure Tap(const Point:TPointF); override;
+    //procedure DoPullRefresh;
+     //procedure Tap(const Point:TPointF); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -743,6 +827,7 @@ type
     procedure ScrollTo(const Value: integer);
     procedure ScrollToBottom(AAnimated: Boolean);
     procedure ScrollToFirstChecked;
+    procedure ScrollToItem(AItem: TksVListItem);
 
     procedure UpdateScrollLimmits;
     procedure CheckAll;
@@ -757,6 +842,7 @@ type
     property TopItem: TksVListItem read GetTopItem;
     property TotalItemHeight: single read FTotalItemHeight;
     property ScrollingDisabled: Boolean read FScrollingDisabled write FScrollingDisabled default False;
+    property ShowScrollBar: Boolean read FShowScrollBar write FShowScrollBar default True;
   published
     property Align;
     property Appearence: TksVirtualListViewAppearence read FAppearence write SetAppearence;
@@ -771,10 +857,13 @@ type
     property NoItemsText: TksNoItemsText read FNoItemsText write SetNoItemsText;
     property Opacity;
     property Position;
+    property Padding;
+    property Margins;
     property PullToRefresh: TksVListPullToRefreshOptions read FPullToRefresh write FPullToRefresh;
     property SelectionOptions: TksVListSelectionOptions read FSelectionOptions write FSelectionOptions;
     property Size;
     property Width;
+    property Visible;
 
     property Ani: TksAniCalc read FAniCalc;
 
@@ -782,6 +871,7 @@ type
     property OnItemLongTap: TksVListItemLongTapEvent read FOnItemLongTap write FOnItemLongTap;
     property OnItemClick: TksVListItemClickEvent read FOnItemClick write FOnItemClick;
     property OnItemSwitchClick: TksItemSwitchClicked read FOnItemSwitchClick write FOnItemSwitchClick;
+    property OnItemSegmentButtonClick: TksItemSegmentButtonClicked read FOnItemSegmentButtonClick write FOnItemSegmentButtonClick;
     property OnItemSwipe: TksVListItemSwipeEvent read FOnItemSwipe write FOnItemSwipe;
     property OnMouseDown;
     property OnMouseMove;
@@ -792,6 +882,8 @@ type
     property OnActionButtonClick: TksItemActionButtonClickEvent read FOnActionButtonClick write FOnActionButtonClick;
     property OnItemEditInput: TksItemEditInputEvent read FOnItemEditInputEvent write FOnItemEditInputEvent;
     property OnItemDateSelected: TksItemDateSelectedEvent read FOnItemDateSelectedEvent write FOnItemDateSelectedEvent;
+    property OnItemTimeSelected: TksItemTimeSelectedEvent read FOnItemTimeSelectedEvent write FOnItemTimeSelectedEvent;
+    property OnItemDateTimeSelected: TksItemDateTimeSelectedEvent read FOnItemDateTimeSelectedEvent write FOnItemDateTimeSelectedEvent;
     property OnItemPickerSelected: TksItemSelectPickerItemEvent read FOnItemPickerSelectedEvent write FOnItemPickerSelectedEvent;
     property BeforeItemPickerSelected: TksItemBeforeSelectPickerItemEvent read FBeforeItemPickerSelectedEvent write FBeforeItemPickerSelectedEvent;
     property OnGetPickerItems: TksItemGetPickerItemsEvent read FOnGetPickerItemsEvent write FOnGetPickerItemsEvent;
@@ -858,6 +950,42 @@ begin
   FObjects.Add(Result);
 end;
 
+procedure TksVListItem.AddProgressBar(x, y, w, h: single; AValue, AMax: integer; AFill, ABackground,
+  ABorder: TAlphaColor);
+var
+  ABar: TksVListItemProgressBarObject;
+begin
+  ABar := TksVListItemProgressBarObject.Create(Self);
+  ABar.FLeft := x;
+  ABar.FTop := y;
+  ABar.Width := w;
+  ABar.Height := h;
+  ABar.Fill.Color := AFill;
+  ABar.Stroke.Color := ABorder;
+  ABar.FBackground := ABackground;
+  ABar.Value := AValue;
+  ABar.Max := AMax;
+  FObjects.Add(ABar);
+end;
+
+function TksVListItem.AddSegmentButtons(ATitles: array of string; AWidth: Integer; const AHeight: integer = 30): TksVListItemSegmentButtons;
+var
+  AStr: string;
+begin
+  Self.CanSelect := False;
+  Result := TksVListItemSegmentButtons.Create(Self);
+  Result.HideInactiveText := True;
+  Result.Width := AWidth;
+  Result.Height := AHeight;
+  Result.CornerRadius := 0;
+  Result.HorzAlign := TAlignment.taRightJustify;
+  Result.FStroke.Color := claBlack;
+  Result.FFill.Color := claWhite;
+  for AStr in ATitles do
+    Result.FCaptions.Add(AStr);
+  FObjects.Add(Result);
+end;
+
 function TksVListItem.AddSwitch(x, y: single; AChecked: Boolean;
   const AID: string = ''): TksVListItemSwitchObject;
 begin
@@ -869,6 +997,14 @@ begin
   Result.FChecked := AChecked;
   FCanSelect := False;
   FObjects.Add(Result);
+end;
+
+function TksVListItem.AddText(x, y: single; AText: string;
+  AFontColor: TAlphaColor; AFontSize: integer): TksVListItemTextObject;
+begin
+  Result := AddText(x, y, AText);
+  Result.TextSettings.FontColor := AFontColor;
+  Result.TextSettings.Font.Size := AFontSize;
 end;
 
 procedure TksVListItem.ClearCache;
@@ -909,6 +1045,7 @@ begin
   FCanSelect := True;
   FBackground := claNull;
   FSelectedDate := Now;
+  FSelectedDateTime := Now;
   FEditFieldKeyboardType := TVirtualKeyboardType.Alphabet;
   //BeginUpdate;
   try
@@ -1005,6 +1142,9 @@ begin
     ksSelectorEdit: ShowEditInput;
     ksSelectorDate: ShowDatePicker(FSelectedDate);
     ksSelectorTime: ShowTimePicker(FSelectedTime);
+    {$IFDEF IOS}
+    ksSelectorDateTime: ShowDateTimePicker(FSelectedDateTime);
+    {$ENDIF}
     ksSelectorPicker: ShowPicker;
   else
     Exit;
@@ -1020,6 +1160,19 @@ begin
   if Assigned(FOnDateSelected) then
     FOnDateSelected(FOwner.FOwner, Self, ADate);
 end;
+
+{$IFDEF IOS}
+procedure TksVListItem.DoDateTimePickerChanged(Sender: TObject;
+  ADateTime: TDateTime);
+begin
+  FSelectedDateTime := ADateTime;
+  FDetail.Text := FormatDateTime('ddd, dd mmm, yyyy - hh:nn', ADateTime);
+  FDetail.ClearCache;
+  if Assigned(FOnDateTimeSelected) then
+    FOnDateTimeSelected(FOwner.FOwner, Self, ADateTime);
+end;
+{$ENDIF}
+
 
 procedure TksVListItem.DoTimePickerChanged(Sender: TObject; ATime: TDateTime);
 begin
@@ -1194,10 +1347,11 @@ begin
   if FPurpose <> Value then
   begin
     FPurpose := Value;
-    if FPurpose = Header then
-      FHeight := FOwner.FOwner.HeaderHeight
-    else
-      FHeight := FOwner.FOwner.ItemHeight;
+    case FPurpose of
+      Header    : FHeight := FOwner.FOwner.HeaderHeight;
+      None      : FHeight := FOwner.FOwner.ItemHeight;
+      Seperator : FHeight := Round((FOwner.FOwner.ItemHeight * 0.8));
+    end;
     Changed;
   end;
 end;
@@ -1222,6 +1376,44 @@ begin
   end;
 end;
 
+procedure TksVListItem.SetSelectedDate(const Value: TDateTime);
+begin
+  if FSelectedDate <> Value then
+  begin
+    FSelectedDate := Value;
+    if FSelectedDate = -1 then
+      FDetail.Text := ''
+    else
+      FDetail.Text := FormatDateTime('ddd, dd mmm, yyyy', FSelectedDate);
+    FDetail.ClearCache;
+    Changed;
+  end;
+end;
+
+procedure TksVListItem.SetSelectedTime(const Value: TDateTime);
+begin
+  if FSelectedTime <> Value then
+  begin
+    FSelectedTime := Value;
+    if FSelectedTime = -1 then
+      FDetail.Text := ''
+    else
+      FDetail.Text := FormatDateTime('hh:nn', FSelectedTime);
+    FDetail.ClearCache;
+    Changed;
+  end;
+end;
+
+procedure TksVListItem.SetSelectorType(const Value: TksVListItemSelectorType);
+begin
+  if FSelectorType <> Value then
+  begin
+    FSelectorType := Value;
+    if Value = ksSelectorNone then
+      FAccessory.AccessoryType := atNone;
+  end;
+end;
+
 procedure TksVListItem.SetSubTitle(const Value: TksVListItemTextObject);
 begin
   FSubTitle.Assign(Value);
@@ -1243,7 +1435,9 @@ end;
 procedure TksVListItem.ShowEditInput;
 {$IFDEF XE10_OR_NEWER}
 var
+  {$IFNDEF ANDROID}
   ATask: ITask;
+  {$ENDIF}
   AStr: string;
 {$ENDIF}
 begin
@@ -1301,7 +1495,9 @@ begin
   AItems := TStringList.Create;
   try
     ASelected := '';
+    //if FPickerItems <> nil then
     AItems.Assign(FPickerItems);
+
     if Assigned(FOwner.FOwner.OnGetPickerItems) then
       FOwner.FOwner.OnGetPickerItems(FOwner.FOwner, Self, ASelected, AItems);
 
@@ -1311,6 +1507,16 @@ begin
       AIndex := AItems.IndexOf(ASelected)
     else
       AIndex := 0;
+
+    if FPickerItems.Count > 0 then
+    begin
+      if (FDefaultPickerItem <> '') and (FDetail.Text = '') then
+      begin
+        if (FPickerItems.IndexOf(FDefaultPickerItem) > -1) then
+          AIndex := FPickerItems.IndexOf(FDefaultPickerItem);
+      end;
+    end;
+
     PickerService.ShowItemPicker(FOwner.FOwner, AItems, '',  AIndex, DoItemPickerChanged);
   finally
     FreeAndNil(AItems);
@@ -1322,6 +1528,14 @@ begin
   PickerService.HidePickers;
   PickerService.ShowDatePicker('', ASelected, DoDatePickerChanged);
 end;
+
+{$IFDEF IOS}
+procedure TksVListItem.ShowDateTimePicker(ASelected: TDateTime);
+begin
+  PickerService.HidePickers;
+  PickerService.ShowDateTimePicker('', ASelected, DoDateTimePickerChanged);
+end;
+{$ENDIF}
 
 procedure TksVListItem.ShowTimePicker(ASelected: TDateTime);
 begin
@@ -1461,6 +1675,18 @@ begin
   FObjects.Add(Result);
 end;
 
+function TksVListItem.DrawLine(x, y, x2, y2: single; AStroke: TAlphaColor): TksVListItemLineObject;
+begin
+  Result := TksVListItemLineObject.Create(Self);
+  Result.FLeft := x;
+  Result.FTop := y;
+  Result.Width := x2-x;
+  Result.Height := y2-y;
+  Result.FStroke.Color := AStroke;
+  FObjects.Add(Result);
+end;
+
+
 procedure TksVListItem.DrawToCanvas(ACanvas: TCanvas; AScrollPos: single;
   ADrawToCache: Boolean);
 
@@ -1472,17 +1698,14 @@ procedure TksVListItem.DrawToCanvas(ACanvas: TCanvas; AScrollPos: single;
   end;
 
 var
-//  AState: TCanvasSaveState;
   ARect: TRectF;
   AInternalRect: TRectF;
   ACheckBoxRect: TRectF;
   ACheckBoxes: TksVListCheckBoxOptions;
-  //ASeperatorStart: single;
   r: TRectF;
   AButtonRect: TRectF;
   ICount: integer;
   AScrollOffset: single;
-//  AIntersect: TRectF;
 begin
   if FChanged then
   begin
@@ -1523,22 +1746,18 @@ begin
     FActionButtons.DrawToCanvas(ACanvas, AButtonRect);
   end;
 
-  //AState := ACanvas.SaveState;
-  try
-    {AIntersect := r;
-    if AIntersect.Top < 0 then AIntersect.Top := 0;
-    if AIntersect.Bottom > Height then AIntersect.Bottom := Height;
-
-
-    }
-   // ACanvas.IntersectClipRect(r);
+  if FPurpose <> Seperator then
+  begin
     ACanvas.Fill.Color := GetColorOrDefault(FOwner.FOwner.Appearence.Background, claWhite);
 
     if FPurpose = TksVListItemPurpose.Header then
-      ACanvas.Fill.Color := GetColorOrDefault(FOwner.FOwner.Appearence.HeaderColor, $FFEAEAEA);
+      ACanvas.Fill.Color := GetColorOrDefault(FOwner.FOwner.Appearence.HeaderColor, $FFEAEAEA)
+    else
+    begin
+      if FBackground <> claNull then
+        ACanvas.Fill.Color := FBackground;
+    end;
 
-    if FBackground <> claNull then
-      ACanvas.Fill.Color := FBackground;
 
 
     if (FSelected) and (FOwner.FOwner.Appearence.SelectedColor <> claNull) then
@@ -1550,68 +1769,83 @@ begin
     ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
 
     ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);
-
-    if (FPurpose = TksVListItemPurpose.None) and (FCheckBoxVisible) then
-    begin
-      ACheckBoxes := FOwner.FOwner.FCheckBoxOptions;
-      if ACheckBoxes.Visible then
-      begin
-        ACheckBoxRect := AInternalRect;
-        if ACheckBoxes.Alignment = ksCbLeftAlign then
-        begin
-          ACheckBoxRect.Right := ACheckBoxRect.Left + 28;
-          AInternalRect.Left := AInternalRect.Left + 28;
-        end
-        else
-        begin
-          ACheckBoxRect.Left := ACheckBoxRect.Right - 28;
-          AInternalRect.Right := AInternalRect.Right - 28;
-        end;
-
-        AAccessories.DrawAccessory(ACanvas, ACheckBoxRect, GetCheckBoxImage(FChecked), claDimgray, claNull);
-      end;
-    end;
-
-    AInternalRect.Left := AInternalRect.Left + 4;
-    AInternalRect.Right := AInternalRect.Right - 4;
-
-    if FImage.IsEmpty = False then
-    begin
-      FImage.DrawToCanvas(ACanvas, AInternalRect);
-      AInternalRect.Left := AInternalRect.Left + FImage.Width + 8;
-    end;
-
-    if (FAccessory.Visible) and (FPurpose = TksVListItemPurpose.None) then
-    begin
-      //AInternalRect.Right := AInternalRect.Right + (Accessory.Width/2);
-      Accessory.DrawToCanvas(ACanvas, AInternalRect);
-      //AInternalRect.Right := AInternalRect.Right - (Accessory.Width/2);
-      if FAccessory <> nil then
-        AInternalRect.Right := (AInternalRect.Right - (FAccessory.Width+(2*GetScreenScale(False))));
-    end;
-
-
-    Title.DrawToCanvas(ACanvas, AInternalRect);
-    Quantity.DrawToCanvas(ACanvas, AInternalRect);
-    SubTitle.DrawToCanvas(ACanvas, AInternalRect);
-    FDetail.DrawToCanvas(ACanvas, AInternalRect);
-
-    for ICount := 0 to FObjects.Count-1 do
-      FObjects[ICount].DrawToCanvas(ACanvas, AInternalRect);
-
-  finally
-  //  ACanvas.RestoreState(AState);
   end;
+
+  if (FPurpose = TksVListItemPurpose.None) and (FCheckBoxVisible) then
+  begin
+    ACheckBoxes := FOwner.FOwner.FCheckBoxOptions;
+    if ACheckBoxes.Visible then
+    begin
+      ACheckBoxRect := AInternalRect;
+      if ACheckBoxes.Alignment = ksCbLeftAlign then
+      begin
+        ACheckBoxRect.Right := ACheckBoxRect.Left + 28;
+        AInternalRect.Left := AInternalRect.Left + 28;
+      end
+      else
+      begin
+        ACheckBoxRect.Left := ACheckBoxRect.Right - 28;
+        AInternalRect.Right := AInternalRect.Right - 28;
+      end;
+
+      AAccessories.DrawAccessory(ACanvas, ACheckBoxRect, GetCheckBoxImage(FChecked), claDimgray, claNull);
+    end;
+  end;
+
+  AInternalRect.Left := AInternalRect.Left + 4;
+  AInternalRect.Right := AInternalRect.Right - 4;
+
+  if FImage.IsEmpty = False then
+  begin
+    FImage.DrawToCanvas(ACanvas, AInternalRect);
+    AInternalRect.Left := AInternalRect.Left + FImage.Width + 8;
+  end;
+
+  if (FAccessory.Visible) and (FPurpose = TksVListItemPurpose.None) then
+  begin
+    Accessory.DrawToCanvas(ACanvas, AInternalRect);
+    if FAccessory <> nil then
+      AInternalRect.Right := (AInternalRect.Right - (FAccessory.Width+(2*GetScreenScale(False))));
+  end;
+
+
+  Title.DrawToCanvas(ACanvas, AInternalRect);
+  Quantity.DrawToCanvas(ACanvas, AInternalRect);
+  SubTitle.DrawToCanvas(ACanvas, AInternalRect);
+  FDetail.DrawToCanvas(ACanvas, AInternalRect);
+
+  for ICount := 0 to FObjects.Count-1 do
+    FObjects[ICount].DrawToCanvas(ACanvas, AInternalRect);
 
   ACanvas.Stroke.Thickness := 1 / GetScreenScale;
   ACanvas.Stroke.Color := FOwner.FOwner.Appearence.SeparatorColor;
   if ACanvas.Stroke.Color = claNull then
     ACanvas.Stroke.Color := claDarkgray;
 
-  if (FIndex = 0) {and (FPurpose = None) and (AScrollPos < 0)} then
-    ACanvas.DrawLine(PointF(0, ARect.Top+(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Top+(ACanvas.Stroke.Thickness/2)), 1);
+  if (FIndex = 0) and (FPurpose <> Seperator) {and (AScrollPos <= 0)} then
+  begin
+    if FOwner.FOwner.ScrollPos < 0 then
+      ACanvas.DrawLine(PointF(0, ARect.Top-(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Top-(ACanvas.Stroke.Thickness/2)), 1)
+    else
+      ACanvas.DrawLine(PointF(0, ARect.Top{+(ACanvas.Stroke.Thickness/2)}), PointF(ARect.Width, ARect.Top{+(ACanvas.Stroke.Thickness/2)}), 1);
+  end;
 
-  ACanvas.DrawLine(PointF(0, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), 1);
+
+  if (FIndex > 0) and (FOwner[FIndex-1].Purpose = Seperator) and (Self.Purpose <> Seperator) then
+    ACanvas.DrawLine(PointF(0, ARect.Top-(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Top-(ACanvas.Stroke.Thickness/2)), 1);
+
+  if (FPurpose <> Seperator) and (FIndex < FOwner.Count-1) then
+  begin
+    if FOwner.Items[FIndex+1].Purpose <> Seperator then
+      ACanvas.DrawLine(PointF(0, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), PointF(ARect.Width, ARect.Bottom-(ACanvas.Stroke.Thickness/2)), 1)
+    else
+      ACanvas.DrawLine(PointF(0, ARect.Bottom), PointF(ARect.Width, ARect.Bottom), 1);
+  end;
+
+
+  if (FPurpose <> Seperator) and (FIndex = FOwner.Count-1) then
+    ACanvas.DrawLine(PointF(0, ARect.Bottom), PointF(ARect.Width, ARect.Bottom), 1);
+
 end;
 
 function TksVListItem.GetHasData(const AIndex: string): Boolean;
@@ -1692,29 +1926,35 @@ var
   AItem: TksVListItem;
 begin
   for AItem in FItems do
-    AItem.FChecked := True;
+  begin
+    if AItem.CheckBoxVisible then
+      AItem.FChecked := True;
+  end;
 end;
 
 procedure TksVirtualListView.ClearItems;
 begin
   FItems.Clear;
+  FAniCalc.UpdatePosImmediately;
 end;
 
 function TksVirtualListView.HandleAppEvent(AAppEvent: TApplicationEvent;
   AContext: TObject): Boolean;
 begin
-  case AAppEvent of
-    TApplicationEvent.LowMemory:
-      ;
-  end;
+ { case AAppEvent of
+    TApplicationEvent.LowMemory: ;
+    TApplicationEvent.WillBecomeInactive: DisableTimers;
+    TApplicationEvent.EnteredBackground: DisableTimers;
+    TApplicationEvent.BecameActive: EnableTimers;
+    TApplicationEvent.WillBecomeForeground: EnableTimers;
+  end; }
   Result := True;
 end;
 
 constructor TksVirtualListView.Create(AOwner: TComponent);
 begin
   inherited;
-  TPlatformServices.Current.SupportsPlatformService(IFMXTimerService,
-    FTimerService);
+  TPlatformServices.Current.SupportsPlatformService(IFMXTimerService, FTimerService);
   if TPlatformServices.Current.SupportsPlatformService
     (IFMXApplicationEventService, IInterface(FEventService)) then
     FEventService.SetApplicationEventHandler(HandleAppEvent);
@@ -1722,7 +1962,9 @@ begin
   FAppearence := TksVirtualListViewAppearence.Create(Self);
   FNoItemsText := TksNoItemsText.Create(Self);
   //FFont := TFont.Create;
-  FDeletedItemCleanup := CreateTimer(500, DoCleanupDeletedItems);
+
+  //FDeletedItemCleanup := CreateTimer(500, DoCleanupDeletedItems);
+
   FItemIndex := -1;
   FScrollPos := 0;
   FUpdateCount := 0;
@@ -1734,11 +1976,12 @@ begin
   FItems := TksVListItemList.Create(Self);
   FScrollBar := TksScrollBar.Create(Self);
   FScrollBar.Stored := False;
+  FShowScrollBar := True;
 
   FPullToRefresh := TksVListPullToRefreshOptions.Create;
   FDeleteButton := TksVListDeleteButton.Create;
 
-  FScrollBar.Width := 8;
+  FScrollBar.Width := 0;
   FPendingRefresh := False;
 
   CreateAniCalc5(False);
@@ -1780,7 +2023,7 @@ end;
 
 destructor TksVirtualListView.Destroy;
 begin
-  KillTimer(FDeletedItemCleanup);
+  //KillTimer(FDeletedItemCleanup);
   FreeAndNil(FAniCalc);
   FreeAndNil(FItems);
   FreeAndNil(FCheckBoxOptions);
@@ -1823,9 +2066,12 @@ begin
 
   if FCheckBoxOptions.Visible then
   begin
-    if FCheckBoxOptions.FMode = ksSingleSelect then
-      UncheckAll;
-    AItem.FChecked := not AItem.Checked;
+    if AItem.CheckBoxVisible then
+    begin
+      if FCheckBoxOptions.FMode = ksSingleSelect then
+        UncheckAll;
+      AItem.FChecked := not AItem.Checked;
+    end;
   end;
 
   SelectItem(AItem);
@@ -1848,6 +2094,17 @@ procedure TksVirtualListView.DoItemDateSelected(Sender: TObject;
 begin
   if Assigned(FOnItemDateSelectedEvent) then
     FOnItemDateSelectedEvent(Self, ARow, ADate);
+  {$IFDEF ANDROID}
+  Application.ProcessMessages;
+  Repaint;
+  {$ENDIF}
+end;
+
+procedure TksVirtualListView.DoItemDateTimeSelected(Sender: TObject;
+  ARow: TksVListItem; ADateTime: TDateTime);
+begin
+  if Assigned(FOnItemDateTimeSelectedEvent) then
+    FOnItemDateTimeSelectedEvent(Self, ARow, ADateTime);
   {$IFDEF ANDROID}
   Application.ProcessMessages;
   Repaint;
@@ -1922,13 +2179,12 @@ begin
   inherited DoMouseLeave;
 end;
 
-procedure TksVirtualListView.DoPullRefresh;
+{procedure TksVirtualListView.DoPullRefresh;
 begin
   KillTimer(FPullRefreshTimer);
   if Assigned(FOnPullRefresh) then
     FOnPullRefresh(Self);
-
-end;
+end; }
 
 procedure TksVirtualListView.DrawPullToRefresh;
 var
@@ -1993,6 +2249,8 @@ begin
     Exit;
   KillTimer(FLongTapTimer);
 
+  if FAniCalc = nil then
+    Exit;
   if (FAniCalc.Down) then
   begin
     if (FMousePt.y > FMouseDownPos.y - 4) and (FMousePt.y < FMouseDownPos.y + 4)
@@ -2021,6 +2279,8 @@ begin
   begin
     FItems.UpdateItemRects;
     UpdateScrollLimmits;
+    //if ScrollPos >= FMaxScrollPos then
+    //  FAniCalc.UpdatePosImmediately;
     Invalidate;
     inherited EndUpdate;
   end;
@@ -2149,7 +2409,7 @@ begin
     for ICount := 0 to Items.Count - 1 do
     begin
       AItem := Items[ICount];
-      if (AItem.IsItemVisible(AViewPort)) and (AItem.Purpose = TksVListItemPurpose.None) then
+      if (AItem.IsItemVisible(AViewPort)) and (AItem.Purpose <> TksVListItemPurpose.Header) then
       begin
         if ATopItem = -1 then
           ATopItem := ICount;
@@ -2252,6 +2512,22 @@ begin
   ScrollTo(APos);
 end;
 
+procedure TksVirtualListView.ScrollToItem(AItem: TksVListItem);
+var
+  i: TksVListItem;
+  APos: integer;
+begin
+  FItems.UpdateItemRects;
+  APos := 0;
+  for i in FItems do
+  begin
+    if i = AItem  then
+      Break;
+    APos := Trunc(i.ItemRect.Top);
+  end;
+  ScrollTo(APos);
+end;
+
 procedure TksVirtualListView.SelectItem(AItem: TksVListItem);
 begin
   if FSelectionOptions.SelectionType = ksSingleSelect then
@@ -2349,31 +2625,41 @@ end;
 
 procedure TksVirtualListView.SetScrollPos(const Value: integer);
 begin
-  if not SameValue(FScrollPos, Value, TEpsilon.Vector) then
+
+  //if not SameValue(FScrollPos, Value, TEpsilon.Vector) then
+  if Round(Value) <> Round(FScrollPos) then
+
   begin
     UnfocusControl;
     PickerService.HidePickers;//HidePickers(False);
 
     FItems.UpdateItemRects;
-    FScrollBar.Visible := True;
+    FScrollBar.Visible := FShowScrollBar;
     FScrollBar.Opacity := 1;
     FScrollPos := Value;
 
-    //FItems.UpdateItemHeaders;
     InvalidateRect(ClipRect);
     if Assigned(FOnScroll) then
       FOnScroll(Self);
     FScrollBar.OnChange := nil;
     FScrollBar.Value := Value;
-    FScrollBar.OnChange := ScrollBarChanged;
+
+    if value = 0 then
+      FAniCalc.UpdatePosImmediately;
 
     if (value = 0) and (FPendingRefresh) then
     begin
+      //FAniCalc.OnChanged := nil;
       FAniCalc.UpdatePosImmediately;
-      Application.ProcessMessages;
-      if Assigned(FOnPullRefresh) then
-        FOnPullRefresh(Self);
+     // Application.ProcessMessages;
+      if FPullToRefresh.Enabled  then
+      begin
+        if Assigned(FOnPullRefresh) then
+          FOnPullRefresh(Self);
+      end;
+      //FAniCalc.OnChanged := AniCalcChange;
     end;
+   FScrollBar.OnChange := ScrollBarChanged;
   end;
 end;
 
@@ -2382,6 +2668,12 @@ procedure TksVirtualListView.SwipeItem(AItem: TksVListItem;
 begin
   DoItemSwiped(AItem, ASwipeDirection);
 end;
+
+{procedure TksVirtualListView.Tap(const Point: TPointF);
+begin
+  inherited;
+  FMouseDownPos := Point;
+end;  }
 
 procedure TksVirtualListView.UncheckAll;
 var
@@ -2519,7 +2811,7 @@ begin
   if FAniCalc.Down then
     FAniCalc.MouseMove(x, y);
   if (ssLeft in Shift) then
-    FPendingRefresh := ((ScrollPos <= -50) and (FAniCalc.Down)) and (FPullToRefresh.Enabled);
+    FPendingRefresh := ((ScrollPos <= -50) and (FAniCalc.Down)) {and (FPullToRefresh.Enabled)};
   if (FAniCalc.Down) and (FMouseDownPos.y <> y) then
   begin
     if FSelectionOptions.KeepSelection = False then
@@ -2612,17 +2904,19 @@ begin
 
   if FMouseDownItem <> nil then
   begin
-    AObj := FMouseDownItem.Objects.ObjectAtPos(FMouseDownItem, x, y);
-    if AObj <> nil then
+    AObj := nil;
+    //ShowMessage(y.ToString+'  '+FMouseDownPos.Y.ToString);
+    if (y > (FMouseDownPos.Y-8)) and (y < (FMouseDownPos.Y+8))  then
     begin
-      AObj.Clicked;
+      if FMouseDownItem.Objects <> nil then
+        AObj := FMouseDownItem.Objects.ObjectAtPos(FMouseDownItem, x, y);
+      if AObj <> nil then
+        AObj.Clicked(x-AObj.FObjectRect.Left, y-AObj.FObjectRect.Top);
     end;
   end;
 
-
   if FSelectionOptions.FKeepSelection = False then
     DeselectAll;
-
 end;
 
 procedure TksVirtualListView.MouseWheel(Shift: TShiftState; WheelDelta: integer;
@@ -2659,6 +2953,7 @@ begin
   Result.Background := FOwner.Appearence.ItemBackground;
   Result.OnEditInput := FOwner.DoItemEditInput;
   Result.OnDateSelected := FOwner.DoItemDateSelected;
+  Result.OnDateTimeSelected := FOwner.DoItemDateTimeSelected;
   Result.OnTimeSelected := FOwner.DoItemTimeSelected;
   Result.BeforeSelectPickerItem := FOwner.DoBeforeItemPickerSelected;
   Result.OnSelectPickerItem := FOwner.DoItemPickerSelected;
@@ -2707,20 +3002,14 @@ end;
 function TksVListItemList.AddHeader(AText: string): TksVListItem;
 begin
   Result := Add(AText, '', '');
-  //Result.BeginUpdate;
-  try
-    Result.Background := GetColorOrDefault(FOwner.Appearence.HeaderColor, claNull);
-    Result.Title.Font.Size := 13;
-    Result.Title.TextSettings.FontColor := claBlack;
-    Result.Detail.Font.Size := 12;
-    Result.Detail.TextSettings.FontColor := claDimgray;
-
-    Result.Purpose := Header;
-    Result.CanSelect := False;
-    Result.Title.VertAlign := TVerticalAlignment.taAlignBottom;
-  finally
-  //  Result.EndUpdate;
-  end;
+  Result.Background := GetColorOrDefault(FOwner.Appearence.HeaderColor, claNull);
+  Result.Title.Font.Size := 13;
+  Result.Title.TextSettings.FontColor := claBlack;
+  Result.Detail.Font.Size := 12;
+  Result.Detail.TextSettings.FontColor := claDimgray;
+  Result.Purpose := Header;
+  Result.CanSelect := False;
+  Result.Title.VertAlign := TVerticalAlignment.taAlignBottom;
 end;
 
 function TksVListItemList.AddInputSelector(ATitle, ASubTitle, ADetail,
@@ -2732,22 +3021,58 @@ begin
 end;
 
 function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
-  AImage: TBitmap; ATagStr: string; AItems: array of string): TksVListItem;
+  AImage: TBitmap; ATagStr: string; AItems: TStrings; const ADefaultItem: string): TksVListItem;
 var
   ICount: integer;
 begin
   Result := Add(ATitle, ASubTitle, ADetail, AImage, atMore);
-  for ICount := Low(AItems) to High(AItems) do
+  for ICount := 0 to AItems.Count-1 do
     Result.PickerItems.Add(AItems[ICount]);
-
+  Result.FDefaultPickerItem := ADefaultItem;
   Result.SelectorType := TksVListItemSelectorType.ksSelectorPicker;
   Result.TagStr := ATagStr;
+end;
+
+function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
+  AImage: TBitmap; ATagStr: string; AItems: array of string; const ADefaultItem: string): TksVListItem;
+var
+  AStr: string;
+  AStrings: TStrings;
+begin
+  AStrings := TStringList.Create;
+  try
+    for AStr in AItems do
+      AStrings.Add(AStr);
+    Result := AddPickerSelector(ATitle, ASubTitle, ADetail, AImage, ATagStr, AStrings, ADefaultItem);
+  finally
+    FreeAndNil(AStrings);
+  end;
 end;
 
 function TksVListItemList.AddPickerSelector(ATitle, ASubTitle, ADetail: string;
   AImage: TBitmap; ATagStr: string): TksVListItem;
 begin
   Result := AddPickerSelector(ATitle, ASubTitle, ADetail, AImage, ATagStr, []);
+end;
+
+function TksVListItemList.AddSeperator(const AText: string = ''): TksVListItem;
+var
+  AObj: TksVListItemTextObject;
+begin
+  Result := Add('', '', '');
+
+  Result.Background := claNull; //FOwner.Appearence.Background;
+  Result.Purpose := TksVListItemPurpose.Seperator;
+
+  if AText <> '' then Result.Height := 48;
+
+  AObj := Result.AddText(0, 0, AText);
+  AObj.VertAlign := TVerticalAlignment.taAlignBottom;
+  AObj.TextSettings.FontColor := claDimgray;
+
+  AObj.Font.Size := 12;
+  AObj.Top := -5;
+  Result.CanSelect := False;
 end;
 
 function TksVListItemList.AddDateSelector(ATitle, ASubTitle: string; ASelected: TDateTime;
@@ -2761,6 +3086,20 @@ begin
   Result := Add(ATitle, ASubTitle, AStr, AImage, atMore);
   Result.FSelectedDate := ASelected;
   Result.SelectorType := TksVListItemSelectorType.ksSelectorDate;
+  Result.TagStr := ATagStr;
+end;
+
+function TksVListItemList.AddDateTimeSelector(ATitle, ASubTitle: string;
+  ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
+var
+  AStr: string;
+begin
+  AStr := '';
+  if ASelected > 0 then
+    AStr := FormatDateTime('ddd, dd mmm, yyyy - hh:nn', ASelected);
+  Result := Add(ATitle, ASubTitle, AStr, AImage, atMore);
+  Result.FSelectedDateTime := ASelected;
+  Result.SelectorType := TksVListItemSelectorType.ksSelectorDateTime;
   Result.TagStr := ATagStr;
 end;
 
@@ -2873,33 +3212,18 @@ begin
   end;
 end;
 
-{
-function TksVListItemList.GetCount: integer;
-begin
-  Result := FItems.Count;
-end;
-
-
-function TksVListItemList.IndexOf(AItem: TksVListItem): integer;
-begin
-  Result := FItems.IndexOf(AItem);
-end;
-
-function TksVListItemList.GetItem(index: integer): TksVListItem;
-begin
-  Result := FItems[index];
-end;     }
-
 function TksVListItemList.ItemAtPos(x, y: single): TksVListItem;
 var
   ICount: integer;
+  ARect: TRectF;
 begin
   Result := nil;
   y := y + FOwner.ScrollPos;
-
   for ICount := 0 to Count - 1 do
   begin
-    if PtInRect(Items[ICount].ItemRect, PointF(x, y)) then
+    ARect := Items[ICount].ItemRect;
+
+    if (Y >= ARect.Top) and (y < ARect.Bottom) then
     begin
       Result := Items[ICount];
       Exit;
@@ -2921,6 +3245,16 @@ begin
       Exit;
     end;
   end;
+end;
+
+procedure TksVListItemList.SetCheckedByTagStr(ATagStr: string;
+  AChecked: Boolean);
+var
+  AItem: TksVListItem;
+begin
+  AItem := ItemByTagStr(ATagStr);
+  if AItem <> nil then
+    AItem.Checked := AChecked;
 end;
 
 procedure TksVListItemList.Changed(AUpdateScrollLimits: Boolean);
@@ -3045,6 +3379,7 @@ end;
 procedure TksVListItemTextObject.ClearCache;
 begin
   inherited;
+  FTextSize := PointF(0, 0);
   {$IFDEF IOS}
   FreeAndNil(FCached);
   FCached := TBitmap.Create;
@@ -3070,6 +3405,7 @@ begin
   FTextLayout := TTextLayoutManager.DefaultTextLayout.Create;
   FTextSettings := TTextSettings.Create(nil);
   FTextSettings.Trimming := TTextTrimming.Character;
+  FTextSettings.OnChanged := TextSettingsChanged;
   FMaxWidth := 0;
   FActualTextWidth := 0;
   FText := '';
@@ -3120,9 +3456,12 @@ begin
     FTextLayout.HorizontalAlign := FTextSettings.HorzAlign;
     FTextLayout.VerticalAlign := FTextSettings.VertAlign;
     FTextLayout.Padding.Rect := RectF(0,0,0,0);
-    //FTextLayout.Trimming := FTextSettings.Trimming;
+    FTextLayout.Trimming := FTextSettings.Trimming;
+
     if FTextSettings.WordWrap  then
       FTextLayout.Trimming := TTextTrimming.None;
+
+
     FTextLayout.TopLeft := PointF(ARect.Left, ARect.Top);
     FTextLayout.MaxSize := PointF(ARect.Width, ARect.Height);
     FTextLayout.EndUpdate;
@@ -3218,6 +3557,11 @@ begin
     FText := Value;
     Changed;
   end;
+end;
+
+procedure TksVListItemTextObject.TextSettingsChanged(Sender: TObject);
+begin
+  Changed;
 end;
 
 { TksVListItemBaseObject }
@@ -3437,12 +3781,12 @@ end;
 constructor TksVListItemImageObject.Create(AItem: TksVListItem);
 begin
   inherited;
-  //FOwnsImage := True;
   FBitmap := TBitmap.Create;;
   FRenderImage := TBitmap.Create;
   //FCached := nil;
   FBackground := claNull;
   FOpacity := 1;
+  FBadge := 0;
 end;
 
 destructor TksVListItemImageObject.Destroy;
@@ -3456,7 +3800,6 @@ procedure TksVListItemImageObject.DrawToCanvas(ACanvas: TCanvas;
   AItemRect: TRectF);
 var
   ARect: TRectF;
-  ABmp: TBitmap;
 begin
   inherited;
   ARect := CalcObjectRect(AItemRect);
@@ -3471,58 +3814,10 @@ begin
   if FRenderImage.IsEmpty then
     FRenderImage.Assign(FBitmap);
 
-  if (Self is TksVListItemAccessoryObject) and
-     (FOwner.Selected) and
-     (FOwner.FOwner.FOwner.Appearence.SelectedFontColor <> claNull) then
-  begin
-    ABmp := TBitmap.Create;
-    try
-      ABmp.Assign(FRenderImage);
-      ReplaceOpaqueColor(ABmp, FOwner.FOwner.FOwner.Appearence.SelectedFontColor);
-      ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, FOpacity, False);
-    finally
-      FreeAndNil(ABmp);
-    end;
-  end
-  else
-  begin
+  ACanvas.DrawBitmap(FRenderImage, RectF(0, 0, FBitmap.Width, FBitmap.Height), ARect, FOpacity, True);
 
-    //if FImageShape = ksImageRect then
-      ACanvas.DrawBitmap(FRenderImage, RectF(0, 0, FBitmap.Width, FBitmap.Height), ARect, FOpacity, True);
-   // else
-    begin
-      // circle cropping...
-      {ABmp := TBitmap.Create(FBitmap.Width, FBitmap.Height);
-      try
-        ABmp.Canvas.BeginScene;
-        ABmp.Canvas.Fill.Bitmap.Bitmap := FBitmap;
-        ABmp.Canvas.Fill.Kind := TBrushKind.Bitmap;
-        ABmp.Canvas.FillEllipse(RectF(0, 0, FBitmap.Width, FBitmap.Height), 1);
-        ABmp.Canvas.EndScene;
-
-        ACanvas.DrawBitmap(ABmp, RectF(0, 0, FBitmap.Width, FBitmap.Height), ARect, FOpacity, True);
-        ABmp.Free;
-
-        ABmp := TBitmap.Create(Round(ARect.Width*4), Round(ARect.Height*4));
-
-        ABmp.Clear(claNull);
-        ABmp.Canvas.BeginScene;
-        ABmp.Canvas.Stroke.Thickness := 2;
-        ABmp.Canvas.Stroke.Color := claDimgray;
-        ABmp.Canvas.Stroke.Kind := TBrushKind.Solid;
-        ABmp.Canvas.DrawEllipse(RectF(1, 1, ABmp.Width-1, ABmp.Height-1), 1);
-        ABmp.Canvas.EndScene;
-
-        ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), ARect, FOpacity, True);
-        //ACanvas.Stroke.Color := claDimgray;
-        //ACanvas.Stroke.Kind := TBrushKind.Solid;
-        //ACanvas.DrawEllipse(ARect, 1);
-
-      finally
-        ABmp.Free;
-      end; }
-    end;
-  end;
+  if FBadge > 0 then
+    GenerateBadge(ACanvas,  PointF(ARect.Right-12, ARect.Top-4), FBadge, claRed, claWhite);
 end;
 
 function TksVListItemImageObject.GetIsEmpty: Boolean;
@@ -3541,6 +3836,12 @@ begin
     FBackground := Value;
     Changed;
   end;
+end;
+
+procedure TksVListItemImageObject.SetBadge(const Value: integer);
+begin
+  FBadge := Value;
+  Changed;
 end;
 
 procedure TksVListItemImageObject.SetBitmap(const Value: TBitmap);
@@ -3611,6 +3912,12 @@ end;  }
 
 { TksVListItemAccessoryObject }
 
+procedure TksVListItemAccessoryObject.Changed;
+begin
+  inherited;
+  RedrawAccessory;
+end;
+
 constructor TksVListItemAccessoryObject.Create(AItem: TksVListItem);
 begin
   inherited;
@@ -3618,58 +3925,15 @@ begin
   FColor := claNull;
 end;
 
-procedure TksVListItemAccessoryObject.DrawToCanvas(ACanvas: TCanvas;
-  AItemRect: TRectF);
-var
-  ABmp: TBitmap;
-begin
-  {if FAccessoryType <> atNone then
-  begin
-    Bitmap := AAccessories.GetAccessoryImage(FAccessoryType);
-    FWidth := Bitmap.Width/GetScreenScale(False);
-    FHeight := Bitmap.Height/GetScreenScale(False);
-    inherited;
-  end;  }
-  //inherited;
-
-  ABmp := AAccessories.GetAccessoryImage(FAccessoryType);
-
-  //if Bitmap <> nil then
-  //begin
-  //frmMain.imgAvailable.Bitmap := AAccessories.GetAccessoryImage(atMore);
-
-  if (ABmp.Width > 0) and (ABmp.Height > 0) then
-  begin
-    FWidth := ABmp.Width/GetScreenScale(False);
-    FHeight := ABmp.Height/GetScreenScale(False);
-    ACanvas.DrawBitmap(ABmp, RectF(0, 0, ABmp.Width, ABmp.Height), CalcObjectRect(AItemRect), 1, True);
-  end;
-
-  //end;
-  //ACanvas.Stroke.Color := claBlack;
-  //ACanvas.DrawRect(CalcObjectRect(AItemRect), 0, 0, AllCorners, 1);
-end;
 
 
 procedure TksVListItemAccessoryObject.RedrawAccessory;
 begin
   Bitmap := AAccessories.GetAccessoryImage(FAccessoryType);
-
-  {FreeAndNil(FBitmap);
-  Bitmap := AAccessories.GetAccessoryImage(FAccessoryType);
+  FWidth := Bitmap.Width / GetScreenScale(False);
+  FHeight := Bitmap.Height / GetScreenScale(False);
   if FColor <> claNull then
-    SetOpaqueColor(FColor);
-
-  if Bitmap.IsEmpty then
-  begin
-    FWidth := 0;
-    FHeight := 0;
-  end    }
-  {else
-  begin
-    FWidth := Bitmap.Width / GetScreenScale;
-    FHeight := Bitmap.Height / GetScreenScale;
-  end;   }
+    ReplaceOpaqueColor(Bitmap, FColor);
 end;
 
 procedure TksVListItemAccessoryObject.SetAccessoryType
@@ -3683,24 +3947,16 @@ begin
   end;
 end;
 
-{procedure TksVListItemAccessoryObject.SetBitmap(const Value: TBitmap);
-begin
-  inherited SetBitmap(Value);
-  FWidth := FWidth / GetScreenScale;
-  FHeight := FHeight / GetScreenScale;
-end; }
-
-{
 procedure TksVListItemAccessoryObject.SetColor(const Value: TAlphaColor);
 begin
-  FOwnsImage := False;
   FColor := Value;
-  if Value <> claNull then
-  begin
-    FOwnsImage := True;
-    RedrawAccessory;
-  end;
-end;    }
+  RedrawAccessory;
+end;
+
+procedure TksVListItemAccessoryObject.SetOpaqueColor(AColor: TAlphaColor);
+begin
+  Color := AColor;
+end;
 
 { TksVksListActionButton }
 
@@ -3859,6 +4115,7 @@ constructor TksScrollBar.Create(AOwner: TComponent);
 begin
   inherited;
   FDesignInteractive := False;
+  HitTest := False;
 end;
 
 { TksVirtualListViewAppearence }
@@ -3996,12 +4253,14 @@ begin
   FStroke := TStrokeBrush.Create(TBrushKind.Solid, claBlack);
   FFill := TBrush.Create(TBrushKind.Solid, claNull);
   FCornerRadius := 0;
+  //FCanvas := TBitmap.Create;
 end;
 
 destructor TksVListItemShapeObject.Destroy;
 begin
   FreeAndNil(FStroke);
   FreeAndNil(FFill);
+  //FreeAndNil(FCanvas);
   inherited;
 end;
 
@@ -4010,9 +4269,46 @@ var
   ARect: TRectF;
 begin
   inherited;
+
   ARect := CalcObjectRect(AItemRect);
-  ACanvas.FillRect(ARect, FCornerRadius, FCornerRadius, AllCorners, 1, FFill);
-  ACanvas.DrawRect(ARect, FCornerRadius, FCornerRadius, AllCorners, 1, FStroke);
+  //AState := ACanvas.SaveState;
+  try
+    //ACanvas.IntersectClipRect(ARect);
+    ACanvas.Fill.Kind := TBrushKind.Solid;
+    ACanvas.FillRect(ARect, FCornerRadius, FCornerRadius, AllCorners, 1, FFill);
+
+    ACanvas.Stroke.Thickness := GetScreenScale(False);
+    ACanvas.DrawRect(ARect, FCornerRadius, FCornerRadius, AllCorners, 1, FStroke);
+
+  finally
+  //  ACanvas.RestoreState(AState);
+  end;
+
+
+  {FCanvas := TBitmap.Create;
+  try
+    ARect := CalcObjectRect(AItemRect);
+    FCanvas.SetSize(Round(ARect.Width * GetScreenScale(False)), Round(ARect.Height * GetScreenScale(False)));
+    FCanvas.Clear(claNull);
+
+    FCanvas.Canvas.BeginScene(nil);
+    try
+      FCanvas.Canvas.IntersectClipRect(RectF(0, 0, FCanvas.Width, FCanvas.Height));
+
+      //if FFill <> cla then
+      FCanvas.Canvas.Fill.Kind := TBrushKind.Solid;
+
+      FCanvas.Canvas.FillRect(RectF(1, 0, FCanvas.Width, FCanvas.Height-1), FCornerRadius, FCornerRadius, AllCorners, 1, FFill);
+
+      FCanvas.Canvas.Stroke.Thickness := GetScreenScale(False);
+      FCanvas.Canvas.DrawRect(RectF(1, 0, FCanvas.Width, FCanvas.Height-1), FCornerRadius, FCornerRadius, AllCorners, 1, FStroke);
+    finally
+      FCanvas.Canvas.EndScene;
+    end;
+    ACanvas.DrawBitmap(FCanvas, RectF(0, 0, FCanvas.Width, FCanvas.Height), ARect, 1, True);
+  finally
+    FCanvas.Free;
+  end;  }
 end;
 
 { TksVListItemBubbleObject }
@@ -4134,6 +4430,234 @@ end;
 procedure TksVListItemSwitchObject.Toggle;
 begin
   Checked := not Checked;
+end;
+
+
+
+
+{ TksVListItemProgressBarObject }
+
+procedure TksVListItemProgressBarObject.DrawToCanvas(ACanvas: TCanvas;
+  AItemRect: TRectF);
+var
+  ARect: TRectF;
+  ABarRect: TRectF;
+  AState: TCanvasSaveState;
+begin
+  ARect := CalcObjectRect(AItemRect);
+(*  FCanvas.SetSize(Round(ARect.Width * GetScreenScale(False)), Round(ARect.Height * GetScreenScale(False)));
+  FCanvas.Canvas.BeginScene(nil);
+  try
+    FCanvas.Canvas.IntersectClipRect(RectF(0, 0, FCanvas.Width, FCanvas.Height));
+    FCanvas.Canvas.Fill.Color := claWhite;//FBackground;
+    FCanvas.Canvas.FillRect(RectF(0, 0, FCanvas.Width, FCanvas.Height-1), FCornerRadius, FCornerRadius, AllCorners, 1);
+
+    FCanvas.Canvas.Fill.Color := Fill.Color;
+    FCanvas.Canvas.FillRect(RectF(0, 0, (FCanvas.Width / FMax) * (FValue), FCanvas.Height-1), FCornerRadius, FCornerRadius, AllCorners, 1);
+
+    //FCanvas.Canvas.Stroke.Color := FStroke.Color;
+    //FCanvas.Canvas.Stroke.Thickness := GetScreenScale(False);
+    //FCanvas.Canvas.DrawRect(RectF(0, 0, FCanvas.Width, FCanvas.Height-1), FCornerRadius, FCornerRadius, AllCorners, 1, FStroke);
+
+  finally
+    FCanvas.Canvas.EndScene;
+  end;   *)
+
+
+  AState := ACanvas.SaveState;
+  try
+    ACanvas.IntersectClipRect(ARect);
+    //ACanvas.DrawBitmap(FCanvas, RectF(0, 0, FCanvas.Width, FCanvas.Height), ARect, 1, False);
+
+    acanvas.Fill.Kind := TBrushKind.Solid;
+    aCanvas.Fill.Color := claWhite;//FBackground;
+    aCanvas.FillRect(ARect, FCornerRadius, FCornerRadius, AllCorners, 1);
+
+    aCanvas.Fill.Color := FFill.Color;
+    ABarRect := ARect;
+    ABarRect.Width := (ABarRect.Width / FMax) * FValue;
+    aCanvas.FillRect(ABarRect, FCornerRadius, FCornerRadius, AllCorners, 1);
+
+    acanvas.Stroke.Color := FStroke.Color;
+    acanvas.Stroke.Thickness := 1;//GetScreenScale(False);
+    ACanvas.DrawRect(ARect, FCornerRadius, FCornerRadius, AllCorners, 1);
+
+  finally
+    ACanvas.RestoreState(AState);
+  end;
+end;
+
+procedure TksVListItemProgressBarObject.SetMax(const Value: integer);
+begin
+  FMax := Value;
+  Changed;
+end;
+
+procedure TksVListItemProgressBarObject.SetValue(const Value: integer);
+begin
+  FValue := Value;
+  Changed;
+end;
+
+{ TksVListItemSegmentButtons }
+
+procedure TksVListItemSegmentButtons.Clicked(x, y: single);
+var
+  ABtnWidth: single;
+  AIndex: integer;
+  lv: TksVirtualListView;
+  ACurrentIndex: integer;
+begin
+  inherited;
+  lv := ListView;
+  ACurrentIndex := FItemIndex;
+  ABtnWidth := FObjectRect.Width / FCaptions.Count;
+  for AIndex := 1 to FCaptions.Count do
+  begin
+    if (AIndex * ABtnWidth) > x then
+    begin
+
+      FItemIndex := AIndex-1;
+
+      Break;
+    end;
+  end;
+
+  if (FItemIndex = ACurrentIndex) and (FCaptions.Count = 2) then
+  begin
+    // toggle...
+    if FItemIndex = 0 then
+      FItemIndex := 1
+    else
+      FItemIndex := 0;
+  end;
+
+  if Assigned(lv.FOnItemSegmentButtonClick) then
+    lv.FOnItemSegmentButtonClick(lv, FOwner, FID, FItemIndex);
+end;
+
+constructor TksVListItemSegmentButtons.Create(AItem: TksVListItem);
+begin
+  inherited;
+  FCaptions := TStringList.Create;
+  FItemIndex := 0;
+  FColor := claDodgerblue;
+  FHideInactiveText := False;
+end;
+
+destructor TksVListItemSegmentButtons.Destroy;
+begin
+  FreeAndNil(FCaptions);
+  inherited;
+end;
+
+procedure TksVListItemSegmentButtons.DrawToCanvas(ACanvas: TCanvas;
+  AItemRect: TRectF);
+var
+  ARect: TRectF;
+  AState: TCanvasSaveState;
+  ABtnWidth: single;
+  ICount: integer;
+  APos: single;
+  r: TRectF;
+begin
+  if (FVisible = False) then
+    Exit;
+  //inherited;
+  ARect := CalcObjectRect(AItemRect);
+
+  AState := ACanvas.SaveState;
+  try
+    ACanvas.IntersectClipRect(ARect);
+    ACanvas.Stroke.Thickness := 1;///GetScreenScale;
+
+    ACanvas.Stroke.Color := FColor;
+    ACanvas.Fill.Color := FColor;
+    ACanvas.FillRect(ARect, 0, 0, AllCorners, 1);
+
+    if FCaptions.Count > 0 then
+    begin
+      ABtnWidth := ARect.Width / FCaptions.Count;
+      APos := ARect.Left;
+      //ACanvas.Stroke.Color := claWhite;
+
+      for ICount := 0 to FCaptions.Count-1 do
+      begin
+        APos := APos + ABtnWidth;
+
+        //ACanvas.Stroke.Color := claNull;
+        if ICount = FItemIndex then
+          ACanvas.Fill.Color := FColor
+        else
+          ACanvas.Fill.Color := claWhite;
+
+
+        r := RectF(APos-ABtnWidth, ARect.Top, APos, ARect.Bottom);
+        ACanvas.FillRect(r, 0, 0, AllCorners, 1);
+
+        ACanvas.Stroke.Color := FColor;
+
+        //r := RectF(APos-ABtnWidth, ARect.Top, APos, ARect.Bottom);
+        ACanvas.DrawLine(PointF(r.Right, r.Top), PointF(r.Right, r.Bottom), 1);
+
+
+        ACanvas.Font.Size := 11;
+        if FItemIndex = ICount then
+          ACanvas.Fill.Color := claWhite
+        else
+          ACanvas.Fill.Color := FColor;
+        if (FHideInactiveText = False) or (FItemIndex = ICount) then
+          ACanvas.FillText(r, FCaptions[ICount], False, 1, [], TTextAlign.Center, TTextAlign.Center);
+      end;
+    end;
+
+  finally
+    ACanvas.RestoreState(AState);
+  end;
+    ACanvas.Stroke.Kind := TBrushKind.Solid;
+    ACanvas.Stroke.Thickness := 1;
+    ACanvas.Stroke.Color := FColor;
+    ACanvas.DrawRect(ARect, 0, 0, AllCorners, 1);
+end;
+
+procedure TksVListItemSegmentButtons.SetColor(const Value: TAlphaColor);
+begin
+  FColor := Value;
+  changed;
+end;
+
+procedure TksVListItemSegmentButtons.SetItemIndex(const Value: integer);
+begin
+  FItemIndex := Value;
+  Changed;
+end;
+
+{ TksVListItemLineObject }
+
+constructor TksVListItemLineObject.Create(AItem: TksVListItem);
+begin
+  inherited;
+  FStroke := TStrokeBrush.Create(TBrushKind.Solid, claBlack);
+end;
+
+destructor TksVListItemLineObject.Destroy;
+begin
+  FreeAndNil(FStroke);
+  inherited;
+end;
+
+procedure TksVListItemLineObject.DrawToCanvas(ACanvas: TCanvas;
+  AItemRect: TRectF);
+var
+  ARect: TRectF;
+begin
+  inherited;
+  if FStroke.Color = claRed then
+  begin
+   // Beep;
+  end;
+  ARect := CalcObjectRect(AItemRect);
+  ACanvas.DrawLine(ARect.TopLeft, ARect.BottomRight, 1, FStroke);
 end;
 
 end.

@@ -4,6 +4,7 @@ package KernowSoftwareFMX;
 
 //{$DEFINE INCLUDE_LEGACY_COMPONENTS}
 
+
 requires
   rtl,
   fmx,

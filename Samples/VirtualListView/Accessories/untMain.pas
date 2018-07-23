@@ -14,8 +14,11 @@ type
     Label1: TLabel;
     ksVirtualListView1: TksVirtualListView;
     ToolBar2: TToolBar;
+    ksSegmentButtons1: TksSegmentButtons;
     procedure FormCreate(Sender: TObject);
     procedure ksSegmentButtons1Change(Sender: TObject);
+    procedure ksSegmentButtons1SelectSegment(Sender: TObject; AIndex: Integer;
+      AButton: TksSegmentButton);
   private
     procedure PopulateList;
 
@@ -44,10 +47,18 @@ begin
   PopulateList;
 end;
 
+procedure TForm24.ksSegmentButtons1SelectSegment(Sender: TObject;
+  AIndex: Integer; AButton: TksSegmentButton);
+begin
+  PopulateList;
+end;
+
 procedure TForm24.PopulateList;
 var
   ICount: TksAccessoryType;
   AEnumName: string;
+  AItem: TksVListItem;
+  AColor: TAlphaColor;
 begin
   ksVirtualListView1.BeginUpdate;
   try
@@ -55,7 +66,15 @@ begin
     for ICount := Low(TksAccessoryType) to High(TksAccessoryType) do
     begin
       AEnumName := GetENumName(TypeInfo(TksAccessoryType), Ord(ICount));
-      ksVirtualListView1.Items.Add(AEnumName, '', '', ICount);
+      AItem := ksVirtualListView1.Items.Add(AEnumName, '', '', ICount);
+      AColor := claNull;
+      case ksSegmentButtons1.ItemIndex of
+        1: AColor := claRed;
+        2: AColor := claGreen;
+        3: AColor := claBlue;
+      end;
+      if AColor <> claNull then
+        AItem.Accessory.Color := AColor;
     end;
   finally
     ksVirtualListView1.EndUpdate;

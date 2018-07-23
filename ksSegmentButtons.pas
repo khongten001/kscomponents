@@ -111,6 +111,7 @@ type
   TksSegmentButtons = class(TksControl)
   private
     FGroupID: string;
+    FInitialIndex: integer;
     FItemIndex: integer;
     FBtnWidth: single;
     FFontSize: integer;
@@ -119,6 +120,8 @@ type
     FTintColor: TAlphaColor;
     FBackgroundColor: TAlphaColor;
     FOnSelectSegment: TksSelectSegmentButtonEvent;
+    FChanged: Boolean;
+    FMouseUpCalled: Boolean;
     procedure UpdateButtons;
     procedure SetItemIndex(const Value: integer);
     procedure SetSegments(const Value: TksSegmentButtonCollection);
@@ -132,8 +135,8 @@ type
   protected
     procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    //procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    {procedure DoMouseLeave; override;                }
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
+    procedure DoMouseLeave; override;
     procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -147,8 +150,10 @@ type
     property FontSize: integer read FFontSize write SetFontSize default 14;
     property ItemIndex: integer read FItemIndex write SetItemIndex default -1;
     property Margins;
+    property Padding;
     property Position;
     property Width;
+
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claNull;
     property BackgroundColor: TAlphaColor read FBackgroundColor write SetBackgroundColor default claNull;
     property Segments: TksSegmentButtonCollection read FSegments write SetSegments;
@@ -157,6 +162,8 @@ type
     property Visible;
     // events
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    property OnMouseDown;
+    property OnMouseUp;
     property OnSelectSegment: TksSelectSegmentButtonEvent read FOnSelectSegment write FOnSelectSegment;
   end;
 
@@ -298,6 +305,7 @@ begin
   Size.Height := 50;
   Size.Width := 300;
   FFontSize := 14;
+  FChanged := False;
 end;
 
 destructor TksSegmentButtons.Destroy;
@@ -307,16 +315,24 @@ begin
 end;
 
 
-{
+
 procedure TksSegmentButtons.DoMouseLeave;
 begin
   inherited;
-  if FMouseDown then
+  if FMouseUpCalled then
+    Exit;
+  if FInitialIndex <> FItemIndex then
   begin
-    FMouseDown := False;
-    Tap(Point(0, 0));
+    FItemIndex := FInitialIndex;
+    FChanged := False;
+    UpdateButtons;
+
+     {
+    if Assigned(FOnSelectSegment) then
+      FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]); }
+
   end;
-end;    }
+end;
 
 function TksSegmentButtons.GetSelected: TKsSegmentButton;
 begin
@@ -338,19 +354,36 @@ var
   ASegment: TksSegmentButton;
 begin
   inherited;
+  FMouseUpCalled := False;
+  FInitialIndex := FItemIndex;
   HitTest := False;
-  ASegment := ButtonFromPos(x, y);
-  if ASegment <> nil then
-  begin
-    if ASegment.Index <> FItemIndex then
+  try
+    FChanged := False;
+    ASegment := ButtonFromPos(x, y);
+    if ASegment <> nil then
     begin
-      ItemIndex := ASegment.Index;
-      if Assigned(FOnSelectSegment) then
-        FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]);
+      if ASegment.Index <> FItemIndex then
+      begin
+        ItemIndex := ASegment.Index;
+
+      end;
     end;
+    //Application.ProcessMessages;
+  finally
+    HitTest := True;
   end;
-  //Application.ProcessMessages;
-  HitTest := True;
+end;
+
+procedure TksSegmentButtons.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
+  Y: Single);
+begin
+  inherited;
+  FMouseUpCalled := True;
+  if FChanged then
+  begin
+    if Assigned(FOnSelectSegment) then
+      FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]);
+  end;
 end;
 
 {
@@ -445,7 +478,8 @@ begin
 
           IsPressed := ICount = FItemIndex;
           Width := FBtnWidth;
-          Height := 30;
+          Height := 34;
+
           {TextSettings.FontColorForState.Focused := FTintColor;
           TextSettings.FontColorForState.Active := FTintColor;
           TextSettings.FontColorForState.Normal := FTintColor;
@@ -498,23 +532,12 @@ procedure TksSegmentButtons.SetItemIndex(const Value: integer);
 begin
   if FItemIndex <> Value then
   begin
-
+    FChanged := True;
     FItemIndex := Value;
     UpdateButtons;
     Repaint;
-    //Application.ProcessMessages;
-
     if Assigned(FOnChange) then
       FOnChange(Self);
-    {if FItemIndex > -1 then
-    begin
-      TThread.Synchronize (TThread.CurrentThread,
-      procedure ()
-      begin
-        if Assigned(FOnSelectSegment) then
-        FOnSelectSegment(Self, FItemIndex, Segments[FItemIndex]);
-      end); }
-
   end;
 end;
 
@@ -655,7 +678,7 @@ begin
   RenderText(Canvas, ClipRect, FText, Canvas.Font, Canvas.Fill.Color, False, TTextAlign.Center, TTextAlign.Center, TTextTrimming.Character);
 
   if FBadge > 0 then
-    GenerateBadge(Canvas, PointF(ClipRect.Right-20, ClipRect.Top-6), FBadge, claRed, claNull, claWhite);
+    GenerateBadge(Canvas, PointF(ClipRect.Right-20, ClipRect.Top-6), FBadge, claRed, claWhite);
 end;
 
 procedure TksSegmentSpeedButton.SetBadge(const Value: integer);

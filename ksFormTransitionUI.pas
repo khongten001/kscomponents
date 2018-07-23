@@ -2,6 +2,8 @@ unit ksFormTransitionUI;
 
 interface
 
+{$I ksComponents.inc}
+
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Objects,
@@ -16,6 +18,7 @@ type
 
     //function GenerateFormImageExt(AForm: TCommonCustomForm): TBitmap;
     procedure Delay;
+    procedure AnimateImage(AImg: TImage; XY: string; ANewValue: single);
     { Private declarations }
   public
     procedure Initialise(AFrom, ATo: TCommonCustomForm);
@@ -72,13 +75,28 @@ begin
   {$ENDIF}
 end;
 
+procedure TfrmFormTransitionUI.AnimateImage(AImg: TImage; XY: string; ANewValue: single);
+begin
+  {$IFNDEF ANDROID}
+    {$IFDEF XE10_2_OR_NEWER}
+      {$IFDEF FMX_TOKYO_FIX}
+      TAnimator.AnimateFloat(AImg, 'Position.'+XY, ANewValue, C_TRANSITION_DURATION);
+      {$ELSE}
+      TAnimator.AnimateFloatWait(AImg, 'Position.'+XY, ANewValue, C_TRANSITION_DURATION);
+      {$ENDIF}
+    {$ENDIF}
+  {$ELSE}
+  TAnimator.AnimateFloat(AImg, 'Position.'+XY, ANewValue, C_TRANSITION_DURATION);
+  {$ENDIF}
+end;
+
 procedure TfrmFormTransitionUI.Animate(ATransition: TksTransitionType; APop: Boolean);
 var
   w,h: single;
 begin
+
   w := Image1.Bitmap.Width / GetScreenScale;
   h := Image1.Bitmap.Height / GetScreenScale;
-
 
   if ATransition = ksFtSlideInFromRight then
   begin
@@ -92,7 +110,7 @@ begin
       Delay;
       TAnimator.AnimateFloat(Image1, 'Position.X', w, C_TRANSITION_DURATION);
       TAnimator.AnimateFloat(Fade, 'Opacity', 0, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image2, 'Position.X', 0, C_TRANSITION_DURATION);
+      AnimateImage(Image2, 'X', 0);
     end
     else
     begin
@@ -104,7 +122,7 @@ begin
       Delay;
       TAnimator.AnimateFloat(Image1, 'Position.X', 0-(w/3), C_TRANSITION_DURATION);
       TAnimator.AnimateFloat(Fade, 'Opacity', C_FADE_OPACITY, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image2, 'Position.X', 0, C_TRANSITION_DURATION);
+      AnimateImage(Image2, 'X', 0);
     end;
   end;
 
@@ -119,7 +137,7 @@ begin
       Image1.BringToFront;
       Delay;
       TAnimator.AnimateFloat(Fade, 'Opacity', 0, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image1, 'Position.Y', h, C_TRANSITION_DURATION);
+      AnimateImage(Image1, 'Y', h);
     end
     else
     begin
@@ -130,7 +148,7 @@ begin
       Image2.BringToFront;
       Delay;
       TAnimator.AnimateFloat(Fade, 'Opacity', C_FADE_OPACITY, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image2, 'Position.Y', 0, C_TRANSITION_DURATION);
+      AnimateImage(Image2, 'Y', 0);
     end;
   end;
 
@@ -146,7 +164,7 @@ begin
       Delay;
       TAnimator.AnimateFloat(Image1, 'Position.X', 0-w, C_TRANSITION_DURATION);
       TAnimator.AnimateFloat(Fade, 'Opacity', 0, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image2, 'Position.X', 0, C_TRANSITION_DURATION);
+      AnimateImage(Image2, 'X', 0);
     end
     else
     begin
@@ -158,7 +176,7 @@ begin
       Delay;
       TAnimator.AnimateFloat(Image1, 'Position.X', (w/3), C_TRANSITION_DURATION);
       TAnimator.AnimateFloat(Fade, 'Opacity', C_FADE_OPACITY, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image2, 'Position.X', 0, C_TRANSITION_DURATION);
+      AnimateImage(Image2, 'X', 0);
     end;
   end;
 
@@ -173,7 +191,7 @@ begin
       Image1.BringToFront;
       Delay;
       TAnimator.AnimateFloat(Fade, 'Opacity', 0, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image1, 'Position.Y', 0-h, C_TRANSITION_DURATION);
+      AnimateImage(Image1, 'Y', 0-h);
     end
     else
     begin
@@ -184,7 +202,7 @@ begin
       Image2.BringToFront;
       Delay;
       TAnimator.AnimateFloat(Fade, 'Opacity', C_FADE_OPACITY, C_TRANSITION_DURATION);
-      TAnimator.AnimateFloatWait(Image2, 'Position.Y', 0, C_TRANSITION_DURATION);
+      AnimateImage(Image2, 'Y', 0);
     end;
   end;
 

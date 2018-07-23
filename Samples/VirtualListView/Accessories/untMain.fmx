@@ -47,5 +47,34 @@ object Form24: TForm24
     Size.PlatformDefault = False
     StyleLookup = 'bottomtoolbar'
     TabOrder = 1
+    object ksSegmentButtons1: TksSegmentButtons
+      Align = Client
+      ItemIndex = 0
+      Segments = <
+        item
+          ID = ''
+          Text = 'DEFAULT'
+          BadgeValue = 0
+        end
+        item
+          ID = ''
+          Text = 'RED'
+          BadgeValue = 0
+        end
+        item
+          ID = ''
+          Text = 'GREEN'
+          BadgeValue = 0
+        end
+        item
+          ID = ''
+          Text = 'BLUE'
+          BadgeValue = 0
+        end>
+      Size.Width = 319.000000000000000000
+      Size.Height = 36.000000000000000000
+      Size.PlatformDefault = False
+      OnSelectSegment = ksSegmentButtons1SelectSegment
+    end
   end
 end

@@ -464,6 +464,7 @@ begin
     if FTileColumns < 1 then
       FTileColumns := 1;
     RecreateMenu;
+    FMenu.Repaint;
   end;
 end;
 

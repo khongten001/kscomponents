@@ -46,11 +46,13 @@ type
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
   TksToolbar = class(TPresentedControl)
   private
+    FButton: TSpeedButton;
     FTintColor: TAlphaColor;
     FFont: TFont;
     FTextColor: TAlphaColor;
+    FButtonColor: TAlphaColor;
     FText: string;
-    FMouseDown: Boolean;
+
     FFormTransition: TksFormTransition;
     FOnMenuButtonClick: TNotifyEvent;
     FShowMenuButton: Boolean;
@@ -58,19 +60,19 @@ type
     FBackButtonEnabled: Boolean;
     FShowBackButton: Boolean;
     procedure Changed(Sender: TObject);
-    procedure BackButtonClicked;
+    procedure ButtonClicked(Sender: TObject);
+
     procedure SetShowMenuButton(const Value: Boolean);
     procedure SetTintColor(const Value: TAlphaColor);
     procedure SetTextColor(const Value: TAlphaColor);
     procedure SetText(const Value: string);
     procedure SetFont(const Value: TFont);
-    function GetButtonOpacity: single;
     procedure SetShowBackButton(const Value: Boolean);
+    procedure SetButtonColor(const Value: TAlphaColor);
+    procedure UpdateButton;
   protected
     procedure Paint; override;
     function GetDefaultSize: TSizeF; override;
-    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
-    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
     procedure DoMouseLeave; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -85,6 +87,7 @@ type
 
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claWhitesmoke;
     property TextColor: TAlphaColor read FTextColor write SetTextColor default claBlack;
+    property ButtonColor: TAlphaColor read FButtonColor write SetButtonColor default claBlack;
     property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
     property ShowBackButton: Boolean read FShowBackButton write SetShowBackButton default True;
 
@@ -110,11 +113,12 @@ end;
 
 { TksToolbar }
 
-procedure TksToolbar.BackButtonClicked;
+procedure TksToolbar.ButtonClicked(Sender: TObject);
 begin
   PickerService.HidePickers;
   HideKeyboard;
   Application.ProcessMessages;
+
 
   if FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0 then
   begin
@@ -124,10 +128,18 @@ begin
   else
   begin
     if (Assigned(FOnBackButtonClick))and (FShowBackButton)  then
+    begin
       FOnBackButtonClick(Self);
-    FFormTransition.Pop;
+    	FFormTransition.Pop;
+    end
+    else
+    if (FShowBackButton)  then
+    begin
+    	FFormTransition.Pop;
+    end;
   end;
 end;
+
 
 procedure TksToolbar.Changed(Sender: TObject);
 begin
@@ -137,6 +149,18 @@ end;
 constructor TksToolbar.Create(AOwner: TComponent);
 begin
   inherited;
+  FButton := TSpeedButton.Create(Self);
+  FButton.Align := TAlignLayout.Left;
+  FButton.StyleLookup := 'detailstoolbutton';
+  FButton.Width := 44;
+  FButton.IconTintColor := claDodgerblue;
+  FButton.TintColor := claDodgerblue;
+  FButton.CanFocus := False;
+  FButton.Stored := False;
+  //FButton.Visible := False;
+  FButton.OnClick := ButtonClicked;
+  AddObject(FButton);
+
   FFont := TFont.Create;
   FFont.Size := 14;
   Align := TAlignLayout.MostTop;
@@ -144,7 +168,6 @@ begin
 
   FTintColor := claWhitesmoke;
   FTextColor := claBlack;
-  FMouseDown := False;
 
   FFont.OnChanged := Changed;
 
@@ -156,8 +179,6 @@ end;
 destructor TksToolbar.Destroy;
 begin
   FreeAndNil(FFormTransition);
-  //FreeAndNil(FMenuBmp);
-  //FreeAndNil(FBackBmp);
   FreeAndNil(FFont);
   inherited;
 end;
@@ -170,8 +191,6 @@ end;
 procedure TksToolbar.DoMouseLeave;
 begin
   inherited;
-  FMouseDown := False;
-  InvalidateRect(ClipRect);
 end;
 
 procedure TksToolbar.EnableBackButton;
@@ -179,109 +198,52 @@ begin
   FBackButtonEnabled := True;
 end;
 
-function TksToolbar.GetButtonOpacity: single;
-begin
-  Result := 1;
-  if FMouseDown then
-    Result := 0.5;
-end;
-
 function TksToolbar.GetDefaultSize: TSizeF;
 begin
   Result := TSizeF.Create(120, 44);
 end;
 
-procedure TksToolbar.MouseDown(Button: TMouseButton; Shift: TShiftState; X,
-  Y: Single);
-begin
-  inherited;
-  FMouseDown := X < 30;
-  if FMouseDown then
-  begin
-    if FBackButtonEnabled = False then
-      Exit;
-    InvalidateRect(ClipRect);
-    Application.ProcessMessages;
-  end;
-end;
-
-procedure TksToolbar.MouseUp(Button: TMouseButton; Shift: TShiftState; X,
-  Y: Single);
-begin
-  inherited;
-  if FMouseDown then
-  begin
-    FMouseDown := False;
-    InvalidateRect(ClipRect);
-    Application.ProcessMessages;
-
-    TThread.Synchronize (TThread.CurrentThread,
-      procedure ()
-      begin
-        BackButtonClicked;
-      end);
-
-  end;
-end;
-
 procedure TksToolbar.Paint;
 var
-  ABmp: TBitmap;
-  s: single;
+  AState: TCanvasSaveState;
 begin
   inherited;
   if Locked then
     Exit;
-  ABmp := nil;
-  s := GetScreenScale(False);
 
-  if (csDesigning in ComponentState) then
-    ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atDetails)
-  else
-  begin
-    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) then
-    begin
-      if (FShowMenuButton) then
-        ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atDetails);
-    end
-    else
-      if FShowBackButton then
-        ABmp := AAccessories.GetAccessoryImage(TksAccessoryType.atArrowLeft);
-  end;
+  UpdateButton;
 
-
-
-  Canvas.BeginScene;
+  AState := Canvas.SaveState;
   try
-    Canvas.Fill.Color := FTintColor;
-    Canvas.Fill.Kind := TBrushKind.Solid;
-    Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
+    Canvas.BeginScene;
+    try
+      Canvas.IntersectClipRect(ClipRect);
 
-    Canvas.Font.Assign(FFont);
-    Canvas.Fill.Color := FTextColor;
-    Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
+      Canvas.Fill.Color := FTintColor;
+      Canvas.Fill.Kind := TBrushKind.Solid;
+      Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
 
-    (*{$IFDEF ANDROID}
-    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) and (FShowMenuButton) then
 
-      Canvas.FillText(Rect(0, 0, 50, Round(Height)), 'MENU', False, 1, [], TTextAlign.Center);
+      Canvas.Font.Assign(FFont);
+      Canvas.Fill.Color := FTextColor;
+      Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
 
-    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) > 0) and (FShowBackButton) then
-      Canvas.FillText(Rect(0, 0, 50, Round(Height)), 'BACK', False, 1, [], TTextAlign.Center);
-
-    {$ELSE}   *)
-    if ABmp <> nil then
-    begin
-      ReplaceOpaqueColor(ABmp, FTextColor);
-      Canvas.DrawBitmap(ABmp,
-                        RectF(0, 0, ABmp.Width, ABmp.Height),
-                        RectF(4, (Height/2)-((ABmp.Height/s)/2), 4+(ABmp.Width/s), (Height/2)+((ABmp.Height/s)/2)),
-                        GetButtonOpacity);
+      Canvas.Stroke.Thickness := 1;
+      Canvas.Stroke.Color := claDimgray;
+      Canvas.Stroke.Kind := TBrushKind.Solid;
+      Canvas.DrawLine(PointF(0, Height), PointF(Width, Height), 1);
+    finally
+      Canvas.EndScene;
     end;
-   //{$ENDIF}
   finally
-    Canvas.EndScene;
+    Canvas.RestoreState(AState);
   end;
+end;
+
+procedure TksToolbar.SetButtonColor(const Value: TAlphaColor);
+begin
+  FButtonColor := Value;
+  Repaint;
 end;
 
 procedure TksToolbar.SetFont(const Value: TFont);
@@ -292,13 +254,13 @@ end;
 procedure TksToolbar.SetShowBackButton(const Value: Boolean);
 begin
   FShowBackButton := Value;
-  //InvalidateRect(ClipRect);
+  UpdateButton
 end;
 
 procedure TksToolbar.SetShowMenuButton(const Value: Boolean);
 begin
   FShowMenuButton := Value;
-  //InvalidateRect(ClipRect);
+  UpdateButton;
 end;
 
 procedure TksToolbar.SetText(const Value: string);
@@ -313,6 +275,7 @@ end;
 procedure TksToolbar.SetTextColor(const Value: TAlphaColor);
 begin
   FTextColor := Value;
+  Repaint;
 end;
 
 procedure TksToolbar.SetTintColor(const Value: TAlphaColor);
@@ -321,6 +284,25 @@ begin
   begin
     FTintColor := Value;
     Repaint;
+  end;
+end;
+
+procedure TksToolbar.UpdateButton;
+begin
+  if Root is TCommonCustomForm then
+  begin
+    if (FFormTransition.GetFormDepth(Root as TCommonCustomForm) = 0) then
+    begin
+      FButton.Visible := FShowMenuButton;
+      if FButton.StyleLookup <> 'detailstoolbutton' then
+        FButton.StyleLookup := 'detailstoolbutton';
+    end
+    else
+    begin
+      FButton.Visible := FShowBackButton;
+      if FButton.StyleLookup <> 'arrowlefttoolbutton' then
+        FButton.StyleLookup := 'arrowlefttoolbutton'
+    end;
   end;
 end;
 

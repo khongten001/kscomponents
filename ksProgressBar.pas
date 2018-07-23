@@ -63,6 +63,7 @@ type
     property Width;
     property Size;
     property Margins;
+    property Padding;
     property Position;
     property BackgroundColor: TAlphaColor read FBackgroundColor write SetBackgroundColor default claGainsboro;
     property BarColor: TAlphaColor read FBarColor write SetBarColor default claDodgerblue;
@@ -70,6 +71,7 @@ type
     property MaxValue: integer read FMaxValue write SetMaxValue default 100;
     property Value: integer read FValue write SetValue default 50;
     property Percent: integer read GetPercent;
+    property Visible;
 
   end;
 

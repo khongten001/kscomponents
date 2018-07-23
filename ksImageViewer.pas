@@ -82,6 +82,8 @@ type
     property Bitmap: TBitmap read FBitmap write SetBitmap;
     property Zoom: single read FZoom write SetZoom;
     property Position;
+    property Padding;
+    property Margins;
     property Size;
     property Width;
     property Height;

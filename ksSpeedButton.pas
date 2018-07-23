@@ -169,22 +169,22 @@ begin
       if (FMouseDown) then
       begin
         {$IFDEF IOS}
-        ReplaceOpaqueColor(FBitmap, GetColorOrDefault(FIconColor, claLightskyblue));
+        ReplaceOpaqueColor(ABmp, GetColorOrDefault(FIconColor, claLightskyblue));
         {$ENDIF}
         {$IFDEF ANDROID}
-        ReplaceOpaqueColor(FBitmap, GetColorOrDefault(FIconColor, claDimgray));
+        ReplaceOpaqueColor(ABmp, GetColorOrDefault(FIconColor, claDimgray));
         {$ENDIF}
       end
       else
       begin
         {$IFDEF IOS}
-        ReplaceOpaqueColor(FBitmap, GetColorOrDefault(FIconColor, claDodgerblue));
+        ReplaceOpaqueColor(ABmp, GetColorOrDefault(FIconColor, claDodgerblue));
         {$ENDIF}
         {$IFDEF ANDROID}
-        ReplaceOpaqueColor(FBitmap, GetColorOrDefault(FIconColor, claDimgray));
+        ReplaceOpaqueColor(ABmp, GetColorOrDefault(FIconColor, claDimgray));
         {$ENDIF}
         {$IFDEF MSWINDOWS}
-        ReplaceOpaqueColor(FBitmap, FIconColor);
+        ReplaceOpaqueColor(ABmp, FIconColor);
         {$ENDIF}
       end;
 
