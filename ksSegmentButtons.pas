@@ -113,7 +113,7 @@ type
     FGroupID: string;
     FInitialIndex: integer;
     FItemIndex: integer;
-    FBtnWidth: single;
+    FBtnSize: single;
     FFontSize: integer;
     FOnChange: TNotifyEvent;
     FSegments: TksSegmentButtonCollection;
@@ -122,6 +122,7 @@ type
     FOnSelectSegment: TksSelectSegmentButtonEvent;
     FChanged: Boolean;
     FMouseUpCalled: Boolean;
+    FVertical: Boolean;
     procedure UpdateButtons;
     procedure SetItemIndex(const Value: integer);
     procedure SetSegments(const Value: TksSegmentButtonCollection);
@@ -132,6 +133,7 @@ type
     procedure SetSelectedID(const Value: string);
     function ButtonFromPos(x,y: single): TksSegmentButton;
     procedure SetFontSize(const Value: integer);
+    procedure SetVertical(const Value: Boolean);
   protected
     procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Single); override;
@@ -157,6 +159,7 @@ type
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claNull;
     property BackgroundColor: TAlphaColor read FBackgroundColor write SetBackgroundColor default claNull;
     property Segments: TksSegmentButtonCollection read FSegments write SetSegments;
+    property Vertical:Boolean read FVertical write SetVertical default false;
     property Size;
     property Height;
     property Visible;
@@ -263,7 +266,8 @@ begin
   begin
     FGroupID := (Source as TksSegmentButtons).FGroupID;
     FItemIndex := (Source as TksSegmentButtons).FItemIndex;
-    FBtnWidth := (Source as TksSegmentButtons).FBtnWidth;
+    FBtnSize := (Source as TksSegmentButtons).FBtnSize;
+    FVertical:= (Source as TksSegmentButtons).FVertical;
     FOnChange := (Source as TksSegmentButtons).FOnChange;
     FTintColor := (Source as TksSegmentButtons).FTintColor;
     FBackgroundColor := (Source as TksSegmentButtons).FBackgroundColor;
@@ -302,6 +306,7 @@ begin
   FGroupID := StringReplace(FGroupID, '}', '', [rfReplaceAll]);
   FBackgroundColor := claNull;
   FTintColor := claNull;
+  fVertical :=false;
   Size.Height := 50;
   Size.Width := 300;
   FFontSize := 14;
@@ -433,70 +438,118 @@ var
 begin
   if FSegments.VisibleCount = 0 then
     Exit;
-
-  FBtnWidth := (Width-16) / FSegments.VisibleCount;
-  i := 0;
-  for ICount := 0 to FSegments.Count-1 do
-  begin
-    FSegments[ICount].FButton.Visible := FSegments[ICount].Visible;
-    if FSegments[Icount].Visible then
+  if not fvertical then
+   begin
+    FBtnSize := (Width-16) / FSegments.VisibleCount;
+    i := 0;
+    for ICount := 0 to FSegments.Count-1 do
     begin
-      if Assigned(FSegments[ICount].FButton) then
+      FSegments[ICount].FButton.Visible := FSegments[ICount].Visible;
+      if FSegments[Icount].Visible then
       begin
-        if ContainsObject(FSegments[ICount].FButton) = False then
-          AddObject(FSegments[ICount].FButton);
-
-        with FSegments[ICount].FButton do
+        if Assigned(FSegments[ICount].FButton) then
         begin
-         (* IsPressed := False;
+          if ContainsObject(FSegments[ICount].FButton) = False then
+            AddObject(FSegments[ICount].FButton);
 
-          if ICount = 0 then s := 'toolbuttonleft';
-          if ICount > 0 then s := 'toolbuttonmiddle';
-          if ICount = FSegments.Count-1 then s := 'toolbuttonright';
-
-
-          {$IFDEF ANDROID}
-          //StyleLookup := 'listitembutton';
-          //Height := 30;
-          {$ELSE}
-          //FSegments[ICount].FButton.StyleLookup := s;
-
-          //StaysPressed := ICount = FItemIndex;
-
-          //GroupName := FGroupID;
-
-          //TintColor := FTintColor;
-
-                                *)
-          Index := ICount;
-
-          if Selected <> nil then
+          with FSegments[ICount].FButton do
           begin
-            if (Selected.Visible = False) and (FSegments.VisibleCount > 0) then
-              ItemIndex := ICount;
+           (* IsPressed := False;
+
+            if ICount = 0 then s := 'toolbuttonleft';
+            if ICount > 0 then s := 'toolbuttonmiddle';
+            if ICount = FSegments.Count-1 then s := 'toolbuttonright';
+
+
+            {$IFDEF ANDROID}
+            //StyleLookup := 'listitembutton';
+            //Height := 30;
+            {$ELSE}
+            //FSegments[ICount].FButton.StyleLookup := s;
+
+            //StaysPressed := ICount = FItemIndex;
+
+            //GroupName := FGroupID;
+
+            //TintColor := FTintColor;
+
+                                  *)
+            Index := ICount;
+
+            if Selected <> nil then
+            begin
+              if (Selected.Visible = False) and (FSegments.VisibleCount > 0) then
+                ItemIndex := ICount;
+            end;
+
+            IsPressed := ICount = FItemIndex;
+            Width := FBtnSize;
+            Height := 34;
+
+            {TextSettings.FontColorForState.Focused := FTintColor;
+            TextSettings.FontColorForState.Active := FTintColor;
+            TextSettings.FontColorForState.Normal := FTintColor;
+            TextSettings.FontColorForState.Pressed := FBackgroundColor;}
+            Text := FSegments[ICount].Text;
+
+            //TextSettings.FontColor := FTintColor;
+
+           // {$ENDIF}
+            Position.Y := (Self.Height - Height) / 2;
+            Position.X := (i * FBtnSize)+8;
+
+            i := i + 1;
           end;
-
-          IsPressed := ICount = FItemIndex;
-          Width := FBtnWidth;
-          Height := 34;
-
-          {TextSettings.FontColorForState.Focused := FTintColor;
-          TextSettings.FontColorForState.Active := FTintColor;
-          TextSettings.FontColorForState.Normal := FTintColor;
-          TextSettings.FontColorForState.Pressed := FBackgroundColor;}
-          Text := FSegments[ICount].Text;
-
-          //TextSettings.FontColor := FTintColor;
-
-         // {$ENDIF}
-          Position.Y := (Self.Height - Height) / 2;
-          Position.X := (i * FBtnWidth)+8;
-
-          i := i + 1;
         end;
       end;
     end;
-  end;
+   end
+  else
+   begin
+     FBtnSize := (Height-16) / FSegments.VisibleCount;
+    i := 0;
+    for ICount := 0 to FSegments.Count-1 do
+    begin
+      FSegments[ICount].FButton.Visible := FSegments[ICount].Visible;
+      if FSegments[Icount].Visible then
+      begin
+        if Assigned(FSegments[ICount].FButton) then
+        begin
+          if ContainsObject(FSegments[ICount].FButton) = False then
+            AddObject(FSegments[ICount].FButton);
+
+          with FSegments[ICount].FButton do
+          begin
+            Index := ICount;
+            if Selected <> nil then
+            begin
+              if (Selected.Visible = False) and (FSegments.VisibleCount > 0) then
+                ItemIndex := ICount;
+            end;
+
+            IsPressed := ICount = FItemIndex;
+            Width := self.Width-16;
+            Height := FBtnSize;
+
+            {TextSettings.FontColorForState.Focused := FTintColor;
+            TextSettings.FontColorForState.Active := FTintColor;
+            TextSettings.FontColorForState.Normal := FTintColor;
+            TextSettings.FontColorForState.Pressed := FBackgroundColor;}
+            Text := FSegments[ICount].Text;
+
+            //TextSettings.FontColor := FTintColor;
+
+           // {$ENDIF}
+            Position.Y := (i * FBtnSize)+8;
+            Position.X :=(Self.width - width) / 2;
+
+            i := i + 1;
+          end;
+        end;
+      end;
+    end;
+   end;
+
 end;
 
 procedure TksSegmentButtons.SelectSegmentByText(AText: string);
@@ -565,6 +618,18 @@ procedure TksSegmentButtons.SetTintColor(const Value: TAlphaColor);
 begin
   FTintColor := Value;
   UpdateButtons;
+end;
+
+procedure TksSegmentButtons.SetVertical(const Value: Boolean);
+var t:single;
+begin
+  if fvertical<>value then
+   begin
+    FVertical := Value;
+    t:=Size.Height;
+    Size.Height := Size.Width;
+    Size.Width := t;
+   end;
 end;
 
 { TksSegmentButtonCollection }
