@@ -1526,7 +1526,7 @@ end;
 procedure TksVListItem.ShowDatePicker(ASelected: TDateTime);
 begin
   PickerService.HidePickers;
-  PickerService.ShowDatePicker('', ASelected, DoDatePickerChanged);
+  PickerService.ShowDatePicker(FOwner.FOwner, '', ASelected, DoDatePickerChanged);
 end;
 
 {$IFDEF IOS}
@@ -1540,7 +1540,7 @@ end;
 procedure TksVListItem.ShowTimePicker(ASelected: TDateTime);
 begin
   PickerService.HidePickers;
-  PickerService.ShowTimePicker('', ASelected, DoTimePickerChanged);
+  PickerService.ShowTimePicker(FOwner.FOwner, '', ASelected, DoTimePickerChanged);
 end;
 
 procedure TksVListItem.SlideOut(ADirection: TksVListSwipeDirection);
