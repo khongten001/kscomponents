@@ -2430,7 +2430,6 @@ begin
                   PointF(ARect.Right-12, ARect.Top-4),
                   FBadgeValue,
                   FBadgeColor,
-                  claWhite,
                   FBadgeTextColor);
   end;
 end;
