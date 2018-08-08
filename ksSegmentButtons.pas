@@ -85,14 +85,19 @@ type
 
   TKsSegmentButton = class(TCollectionItem)
   protected
-
+    function IDStored: Boolean; virtual;
+    function TextStored: Boolean; virtual;
+    function IconStored: Boolean; virtual;
     function ImageIndexStored: Boolean; virtual;
+    function BadgeValueStored: Boolean; virtual;
+
    private
     FID: string;
     FText: string;
     FVisible: Boolean;
     FIcon: TksStandardIcon;
     FimageIndex:Integer;
+    FBadgeValue:integer;
     function GetImageIndex: Integer;
     procedure SetImageIndex(const Value: Integer);
 
@@ -107,17 +112,15 @@ type
     constructor Create(Collection: TCollection); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
-
   public
      FButton: TksSegmentSpeedButton;
-
   published
-    property ID: string read FID write FID;
-    property Text: string read FText write SetText;
+    property ID: string read FID write FID stored IDStored;
+    property Text: string read FText write SetText stored TextStored;
     property BoundsRect: TRectF read GetBoundsRect;
     property Index: integer read GetIndex;
-    property BadgeValue: integer read GetBadgeValue write SetBadgeValue;
-    property Icon: TksStandardIcon read FIcon write SetIcon;
+    property BadgeValue: integer read GetBadgeValue write SetBadgeValue stored BadgeValueStored default 0;
+    property Icon: TksStandardIcon read FIcon write SetIcon stored IconStored default TksStandardIcon.Custom;
     property Visible: Boolean read FVisible write SetVisible default True;
     property ImageIndex: Integer read GetImageIndex write SetImageIndex stored ImageIndexStored default -1;
 
@@ -236,9 +239,34 @@ begin
 end;
 
 { TKsSegmentButton }
+
+
+function TKsSegmentButton.IDStored: Boolean;
+begin
+  Result :=  (ID <> '');
+end;
+
+
+function TKsSegmentButton.TextStored: Boolean;
+begin
+  Result :=  (Text <> '');
+end;
+
+
+function TKsSegmentButton.IconStored: Boolean;
+begin
+  Result :=  (Icon <> TksStandardIcon.Custom);
+end;
+
 function TKsSegmentButton.ImageIndexStored: Boolean;
 begin
   Result :=  (ImageIndex <> -1);
+end;
+
+
+function TKsSegmentButton.BadgeValueStored: Boolean;
+begin
+  Result :=  (BadgeValue <> -1);
 end;
 
 
@@ -256,6 +284,7 @@ constructor TKsSegmentButton.Create(Collection: TCollection);
 begin
   inherited Create(Collection);
   FimageIndex:=-1;
+  FBadgeValue:=0;
   FButton := TksSegmentSpeedButton.Create((Collection as TksSegmentButtonCollection).FSegmentButtons);
   FVisible := True;
   ficon:=TksStandardIcon.Custom;
@@ -275,7 +304,8 @@ end;
 
 function TKsSegmentButton.GetBadgeValue: integer;
 begin
-  Result := FButton.Badge;
+  result:=FBadgeValue;
+
 end;
 
 function TKsSegmentButton.GetBoundsRect: TRectF;
@@ -299,7 +329,9 @@ end;
 
 procedure TKsSegmentButton.SetBadgeValue(const Value: integer);
 begin
-  FButton.Badge := Value;
+  fbadgevalue:=value;
+  if fbutton<>nil then
+   FButton.Badge := Value;
 end;
 
 procedure TKsSegmentButton.SetIcon(const Value: TksStandardIcon);
