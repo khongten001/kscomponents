@@ -455,6 +455,7 @@ type
     FOnClick: TNotifyEvent;
     FObjects: TksVListObjectList;
     FTagStr: string;
+    FTagObject:Tobject;
     FCheckBoxVisible: Boolean;
     //FPickerService: IFMXPickerService;
     //FPicker: TCustomListPicker;
@@ -565,6 +566,7 @@ type
       default None;
     property TagInt: integer read FTagInt write FTagInt default 0;
     property TagStr: string read FTagStr write FTagStr;
+    property TagObject: Tobject read FTagObject write FTagObject;
     property HasData[const AIndex: string]: Boolean read GetHasData;
     property Data[const AIndex: string]: TValue read GetItemData write SetItemData;
 
@@ -617,6 +619,7 @@ type
     function AddTimeSelector(ATitle, ASubTitle: string; ASelected: TDateTime; AImage: TBitmap; ATagStr: string): TksVListItem;
     function AddInputSelector(ATitle, ASubTitle, ADetail, ATagStr: string): TksVListItem;
     function AddHeader(AText: string): TksVListItem;
+    function InsertHeader(AIndex: integer;AText: string): TksVListItem;
     function AddSeperator(const AText: string = ''): TksVListItem;
     function AddChatBubble(AText, ASender: string; AColor, ATextColor: TAlphaColor; ALeftAlign: Boolean): TksVListItem;
     function Insert(AIndex: integer; ATitle, ASubTitle, ADetail,AQuantity: string; const AAccessory: TksAccessoryType = atNone): TksVListItem;
@@ -1038,6 +1041,7 @@ begin
   FIndex := 0;
   FTagInt := 0;
   FTagStr := '';
+  FTagObject := nil;
   FIconSize := 28;
   FOwner := Owner;
   FChecked := False;
@@ -1633,8 +1637,12 @@ begin
 
     if FPurpose = Header then
     begin
-      FTitle.VertAlign := TVerticalAlignment.taAlignBottom;
-      FTitle.Top := -6;
+
+     (*  PGiacomo69 // FTitle.VertAlign := TVerticalAlignment.taAlignBottom;
+      // FTitle.Top := -6; *)
+      FTitle.VertAlign := TVerticalAlignment.taVerticalCenter;
+      FTitle.Top := 0;
+
     end;
   finally
     Dec(FUpdateCount);
@@ -1808,6 +1816,8 @@ begin
       AInternalRect.Right := (AInternalRect.Right - (FAccessory.Width+(2*GetScreenScale(False))));
   end;
 
+    if (FPurpose = TksVListItemPurpose.Header) then // Giacomo
+     FTitle.TextSettings.FontColor :=FOwner.FOwner.Appearence.HeaderFontColor;
 
   Title.DrawToCanvas(ACanvas, AInternalRect);
   Quantity.DrawToCanvas(ACanvas, AInternalRect);
@@ -3002,6 +3012,20 @@ end;
 function TksVListItemList.AddHeader(AText: string): TksVListItem;
 begin
   Result := Add(AText, '', '');
+  Result.Background := GetColorOrDefault(FOwner.Appearence.HeaderColor, claNull);
+  Result.Title.Font.Size := 13;
+  Result.Title.TextSettings.FontColor := claBlack;
+  Result.Detail.Font.Size := 12;
+  Result.Detail.TextSettings.FontColor := claDimgray;
+  Result.Purpose := Header;
+  Result.CanSelect := False;
+  Result.Title.VertAlign := TVerticalAlignment.taAlignBottom;
+end;
+
+
+function TksVListItemList.InsertHeader(AIndex: integer;AText: string): TksVListItem;
+begin
+  Result := insert(Aindex,AText, '', '','');
   Result.Background := GetColorOrDefault(FOwner.Appearence.HeaderColor, claNull);
   Result.Title.Font.Size := 13;
   Result.Title.TextSettings.FontColor := claBlack;
