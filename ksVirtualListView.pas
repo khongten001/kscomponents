@@ -124,6 +124,7 @@ type
     FText: string;
     FIsDeleteButton: Boolean;
     FAccessory: TksAccessoryType;
+    FTagObject: TObject;
   private
     FButtonRect: TRectF;
     procedure SetAccessory(const Value: TksAccessoryType);
@@ -139,6 +140,8 @@ type
     property Color: TAlphaColor read FColor write FColor;
     property Width: integer read FWidth write FWidth default 80;
     property IsDeleteButton: Boolean read FIsDeleteButton write FIsDeleteButton;
+    property TagObject: TObject read FTagObject write FTagObject;
+
   end;
 
   TksVListActionButtons = class(TObjectList<TksVListActionButton>)
@@ -3990,11 +3993,14 @@ begin
   FIcon := TBitmap.Create;
   FTextColor := claWhite;
   FWidth := 80;
+  FTagObject := nil;
 end;
 
 destructor TksVListActionButton.Destroy;
 begin
   FreeAndNil(FIcon);
+  if FTagObject <> nil then FreeAndNil(FTagObject);
+
   inherited;
 end;
 
