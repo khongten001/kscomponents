@@ -723,6 +723,8 @@ type
     FSelectionOptions: TksVListSelectionOptions;
     FPendingRefresh: Boolean;
     FOnPullRefresh: TNotifyEvent;
+    FOnReleaseIsFiring: Boolean;
+    FOnReleaseText: TNotifyEvent;
     FTimerService: IFMXTimerService;
     FLongTapTimer: TFmxHandle;
     //FDeletedItemCleanup: TFmxHandle;
@@ -884,6 +886,8 @@ type
     property OnMouseUp;
     property OnScroll: TNotifyEvent read FOnScroll write FOnScroll;
     property OnPullRefresh: TNotifyEvent read FOnPullRefresh write FOnPullRefresh;
+    property OnReleaseText: TNotifyEvent read FOnReleaseText write FOnReleaseText;
+
     property OnItemDeleted: TNotifyEvent read FOnItemDeleted write FOnItemDeleted;
     property OnActionButtonClick: TksItemActionButtonClickEvent read FOnActionButtonClick write FOnActionButtonClick;
     property OnItemEditInput: TksItemEditInputEvent read FOnItemEditInputEvent write FOnItemEditInputEvent;
@@ -2012,6 +2016,9 @@ begin
     Items.Add('Title 2', 'sub title', 'detail');
     Items.Add('Title 3', 'sub title', 'detail');
   end;
+
+  FOnReleaseIsFiring := false;
+
 end;
 
 procedure TksVirtualListView.CreateAniCalc5(AUpdateLimits: Boolean);
@@ -2221,7 +2228,21 @@ begin
 
       AText := FPullToRefresh.PullText;
       if FPendingRefresh then
+      begin
         AText := FPullToRefresh.ReleaseText;
+
+      	if Assigned(FOnReleaseText) and (not FOnReleaseIsFiring) then
+        begin
+          FOnReleaseText(self);
+          FOnReleaseIsFiring := true;
+        end;
+
+      end
+      else
+      begin
+        FOnReleaseIsFiring := false;
+      end;
+
 
       Canvas.FillText(RectF(0, 0, Width, 50), AText, False, 1, [],
         TTextAlign.Center, TTextAlign.Center);
