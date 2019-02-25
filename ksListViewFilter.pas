@@ -79,10 +79,14 @@ end;
 constructor TksListViewFilter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+
+  if (csDesigning in ComponentState) then exit;
+
   FTimer := TTimer.Create(nil);
   FTimer.Interval := 1000;
   FTimer.OnTimer := DoTimer;
   FClearButton := TButton.Create(Self);
+  FClearButton.Name := Name + 'FilterButton';
   FClearButton.Align := TAlignLayout.Right;
   FClearButton.TextSettings.Font.Size := 13;
   FClearButton.StyledSettings := [TStyledSetting.Family,TStyledSetting.Style,TStyledSetting.FontColor];
