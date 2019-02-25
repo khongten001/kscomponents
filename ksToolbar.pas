@@ -41,24 +41,30 @@ type
     //procedure SetTransition(ATransition: TksTransitionType);
   //end;
 
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
-    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
-    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+  [ComponentPlatformsAttribute(
+    pidWin32 or
+    pidWin64 or
+    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64 {$ELSE} pidiOSDevice {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidiOSSimulator32 or pidiOSSimulator64 {$ELSE} pidiOSSimulator {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidAndroid32Arm or pidAndroid64Arm {$ELSE} pidAndroid {$ENDIF}
+    )]
   TksToolbar = class(TPresentedControl)
   private
     FButton: TSpeedButton;
+    //FButtonInitialized: Boolean;
     FTintColor: TAlphaColor;
     FFont: TFont;
     FTextColor: TAlphaColor;
     FButtonColor: TAlphaColor;
     FText: string;
-
+    FBackButtonText: string;
     FFormTransition: TksFormTransition;
     FOnMenuButtonClick: TNotifyEvent;
     FShowMenuButton: Boolean;
     FOnBackButtonClick: TNotifyEvent;
     FBackButtonEnabled: Boolean;
     FShowBackButton: Boolean;
+    FFirstPaint: Boolean;
     procedure Changed(Sender: TObject);
     procedure ButtonClicked(Sender: TObject);
 
@@ -70,6 +76,7 @@ type
     procedure SetShowBackButton(const Value: Boolean);
     procedure SetButtonColor(const Value: TAlphaColor);
     procedure UpdateButton;
+    procedure SetBackButtonText(const Value: string);
   protected
     procedure Paint; override;
     function GetDefaultSize: TSizeF; override;
@@ -85,9 +92,10 @@ type
     property Size;
     property TabOrder;
 
+    property BackButtonText: string read FBackButtonText write SetBackButtonText;
     property TintColor: TAlphaColor read FTintColor write SetTintColor default claWhitesmoke;
     property TextColor: TAlphaColor read FTextColor write SetTextColor default claBlack;
-    property ButtonColor: TAlphaColor read FButtonColor write SetButtonColor default claBlack;
+    property ButtonColor: TAlphaColor read FButtonColor write SetButtonColor default claDodgerblue;
     property ShowMenuButton: Boolean read FShowMenuButton write SetShowMenuButton default True;
     property ShowBackButton: Boolean read FShowBackButton write SetShowBackButton default True;
 
@@ -149,14 +157,18 @@ end;
 constructor TksToolbar.Create(AOwner: TComponent);
 begin
   inherited;
+  FFirstPaint := True;
   FButton := TSpeedButton.Create(Self);
   FButton.Align := TAlignLayout.Left;
   FButton.StyleLookup := 'detailstoolbutton';
   FButton.Width := 44;
+  FButton.TouchTargetExpansion.Rect := Rect(4, 4, 4, 4);
+  FButtonColor := claDodgerblue;
   FButton.IconTintColor := claDodgerblue;
-  FButton.TintColor := claDodgerblue;
-  FButton.CanFocus := False;
+  FButton.TintColor := FButtonColor;
+  FButton.CanFocus := True;
   FButton.Stored := False;
+  FButton.StyledSettings := [TStyledSetting.Family,TStyledSetting.Style,TStyledSetting.FontColor];
   //FButton.Visible := False;
   FButton.OnClick := ButtonClicked;
   AddObject(FButton);
@@ -174,6 +186,7 @@ begin
   FShowMenuButton := True;
   FShowBackButton := True;
   FBackButtonEnabled := True;
+
 end;
 
 destructor TksToolbar.Destroy;
@@ -186,6 +199,7 @@ end;
 procedure TksToolbar.DisableBackButton;
 begin
   FBackButtonEnabled := False;
+  UpdateButton;
 end;
 
 procedure TksToolbar.DoMouseLeave;
@@ -196,6 +210,7 @@ end;
 procedure TksToolbar.EnableBackButton;
 begin
   FBackButtonEnabled := True;
+  UpdateButton;
 end;
 
 function TksToolbar.GetDefaultSize: TSizeF;
@@ -208,42 +223,47 @@ var
   AState: TCanvasSaveState;
 begin
   inherited;
-  if Locked then
-    Exit;
-
-  UpdateButton;
+  if FFirstPaint then
+  begin
+    FFirstPaint := False;
+    UpdateButton;
+  end;
 
   AState := Canvas.SaveState;
   try
-    Canvas.BeginScene;
-    try
-      Canvas.IntersectClipRect(ClipRect);
-
-      Canvas.Fill.Color := FTintColor;
-      Canvas.Fill.Kind := TBrushKind.Solid;
-      Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
+    Canvas.IntersectClipRect(ClipRect);
+    Canvas.Fill.Color := FTintColor;
+    Canvas.Fill.Kind := TBrushKind.Solid;
+    Canvas.FillRect(ClipRect, 0, 0, AllCorners, 1);
 
 
-      Canvas.Font.Assign(FFont);
-      Canvas.Fill.Color := FTextColor;
-      Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
+    Canvas.Font.Assign(FFont);
+    Canvas.Fill.Color := FTextColor;
+    Canvas.FillText(ClipRect, FText, False, 1, [], TTextAlign.Center);
 
-      Canvas.Stroke.Thickness := 1;
-      Canvas.Stroke.Color := claDimgray;
-      Canvas.Stroke.Kind := TBrushKind.Solid;
-      Canvas.DrawLine(PointF(0, Height), PointF(Width, Height), 1);
-    finally
-      Canvas.EndScene;
-    end;
+    Canvas.Stroke.Thickness := 1;
+    Canvas.Stroke.Color := claDimgray;
+    Canvas.Stroke.Kind := TBrushKind.Solid;
+    Canvas.DrawLine(PointF(0, Height), PointF(Width, Height), 1);
+    FButton.Repaint;
   finally
     Canvas.RestoreState(AState);
+  end;
+end;
+
+procedure TksToolbar.SetBackButtonText(const Value: string);
+begin
+  if FBackButtonText <> Value then
+  begin
+    FBackButtonText := Value;
+    UpdateButton;
   end;
 end;
 
 procedure TksToolbar.SetButtonColor(const Value: TAlphaColor);
 begin
   FButtonColor := Value;
-  Repaint;
+  UpdateButton;
 end;
 
 procedure TksToolbar.SetFont(const Value: TFont);
@@ -275,7 +295,7 @@ end;
 procedure TksToolbar.SetTextColor(const Value: TAlphaColor);
 begin
   FTextColor := Value;
-  Repaint;
+  UpdateButton;
 end;
 
 procedure TksToolbar.SetTintColor(const Value: TAlphaColor);
@@ -283,7 +303,7 @@ begin
   if FTintColor <> Value then
   begin
     FTintColor := Value;
-    Repaint;
+    UpdateButton;
   end;
 end;
 
@@ -301,7 +321,14 @@ begin
     begin
       FButton.Visible := FShowBackButton;
       if FButton.StyleLookup <> 'arrowlefttoolbutton' then
-        FButton.StyleLookup := 'arrowlefttoolbutton'
+        FButton.StyleLookup := 'arrowlefttoolbutton';
+      if FBackButtonText <> '' then
+      begin
+        FButton.StyleLookup := '';
+        FButton.Text := FBackButtonText;
+        FButton.Width := 60;
+        FButton.Font.Size := 14;
+      end;
     end;
   end;
 end;

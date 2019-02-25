@@ -133,6 +133,39 @@ var
 
 // ------------------------------------------------------------------------------
 
+
+procedure InitializeSwitch(const AForce: Boolean = false); var ASwitch: TSwitch; i: Boolean;
+begin
+  if not assigned(application.MainForm) then exit;
+  if (not AForce) and (not ASwitchSize.IsZero) then exit;
+
+  ASwitch := TSwitch.Create(nil);
+  try
+    ASwitch.Parent := application.MainForm;
+    ASwitch.Visible := False;
+    ASwitch.ApplyStyleLookup;
+    for i := Low(ASwitchBmp) to High(ASwitchBmp) do
+    begin
+      ASwitch.IsChecked := i;
+
+      ASwitchSize.Width := ASwitch.Width;
+      ASwitchSize.Height := ASwitch.Height;
+
+      ASwitchBmp[i].SetSize(Round(ASwitch.Width), Round(ASwitch.Height));
+      ASwitchBmp[i].Clear(0);
+      if ASwitchBmp[i].Canvas.BeginScene(nil) then
+      begin
+        ASwitch.PaintTo(ASwitchBmp[i].Canvas, RectF(0, 0, ASwitch.Width,
+          ASwitch.Height), nil);
+        ASwitchBmp[i].Canvas.EndScene;
+      end;
+    end;
+  finally
+    ASwitch.DisposeOf;
+  end;
+end;
+
+(*
 procedure InitialiseSwitchSize;
 var
   ASwitch: TSwitch;
@@ -144,57 +177,28 @@ begin
   finally
     ASwitch.DisposeOf;
   end;
-end;
+end;  *)
 
 function SwitchWidth: single;
 begin
-  if ASwitchSize.IsZero then
-    InitialiseSwitchSize;
+  InitializeSwitch;
   Result := ASwitchSize.Width;
 end;
 
 function SwitchHeight: single;
 begin
-  if ASwitchSize.IsZero then
-    InitialiseSwitchSize;
+  InitializeSwitch;
   Result := ASwitchSize.Height;
 end;
 
 procedure SwitchImage(ACanvas: TCanvas; ARect: TRectF; AChecked: Boolean);
 var
-  ASwitch: TSwitch;
   ASaveState: TCanvasSaveState;
 begin
+  InitializeSwitch;
   ASaveState := ACanvas.SaveState;
   try
-    if ASwitchBmp[AChecked].IsEmpty = False then
-    begin
-      ACanvas.DrawBitmap(ASwitchBmp[AChecked],
-                         RectF(0, 0, ASwitchBmp[AChecked].Width, ASwitchBmp[AChecked].Height),
-                         ARect,
-                         1);
-      Exit;
-    end;
-
-    ASwitch := TSwitch.Create(nil);
-    try
-      Application.MainForm.AddObject(ASwitch);
-      ASwitch.IsChecked := AChecked;
-      ASwitch.Visible := False;
-      ASwitch.ApplyStyleLookup;
-
-
-      ASwitchBmp[AChecked].SetSize(Round(ASwitch.Width), Round(ASwitch.Height));
-      ASwitchBmp[AChecked].Canvas.BeginScene(nil);
-      ASwitchBmp[AChecked].Canvas.Clear(claNull);
-      ASwitch.PaintTo(ASwitchBmp[AChecked].Canvas, RectF(0, 0, ASwitch.Width, ASwitch.Height), nil);
-      ASwitchBmp[AChecked].Canvas.EndScene;
-      Application.MainForm.RemoveObject(ASwitch);
-
-      SwitchImage(ACanvas, ARect, AChecked);
-    finally
-      ASwitch.DisposeOf;
-    end;
+    ACanvas.DrawBitmap(ASwitchBmp[AChecked], RectF(0, 0, ASwitchBmp[AChecked].Width, ASwitchBmp[AChecked].Height), ARect, 1);
   finally
     ACanvas.RestoreState(ASaveState);
   end;
@@ -392,7 +396,7 @@ begin
 {$IFDEF XE8_OR_NEWER}
     AImgRect := ABitmapLink.LinkByScale(FImageScale, True).SourceRect;
 {$ELSE}
-    AImgRect := ABitmapLink.LinkByScale(FImageScale).SourceRect;
+    AImgRect := ABitmapLink.LinkByScale(FImageScale, False).SourceRect;
 {$ENDIF}
     Result.SetSize(Round(AImgRect.Width), Round(AImgRect.Height));
     Result.Clear(claNull);
@@ -518,3 +522,4 @@ initialization
   FreeAndNil(ASwitchBmp[False]);
 
 end.
+

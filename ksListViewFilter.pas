@@ -33,17 +33,23 @@ uses Classes, FMX.StdCtrls, FMX.Graphics, ksTypes, FMX.Objects,
   System.UITypes, System.UIConsts, FMX.Edit, FMX.Types;
 
 type
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
-    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
-    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+  [ComponentPlatformsAttribute(
+    pidWin32 or
+    pidWin64 or
+    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64 {$ELSE} pidiOSDevice {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidiOSSimulator32 or pidiOSSimulator64 {$ELSE} pidiOSSimulator {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidAndroid32Arm or pidAndroid64Arm {$ELSE} pidAndroid {$ENDIF}
+    )]
 
   TksListViewFilter = class(TCustomEdit)
   private
     FTimer: TTimer;
     FClearButton: TButton;
+    FButtonText: string;
     procedure DoTimer(Sender: TObject);
     procedure DoClickClear(Sender: TObject);
     procedure ClearButtonMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
+    procedure SetButtonText(const Value: string);
   protected
     procedure SetText(const Value: string); override;
   public
@@ -51,6 +57,7 @@ type
     destructor Destroy; override;
     procedure Unfocus;
   published
+    property ButtonText: string read FButtonText write SetButtonText;
   end;
 
   procedure Register;
@@ -79,7 +86,6 @@ end;
 constructor TksListViewFilter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-
   if (csDesigning in ComponentState) then exit;
 
   FTimer := TTimer.Create(nil);
@@ -90,7 +96,8 @@ begin
   FClearButton.Align := TAlignLayout.Right;
   FClearButton.TextSettings.Font.Size := 13;
   FClearButton.StyledSettings := [TStyledSetting.Family,TStyledSetting.Style,TStyledSetting.FontColor];
-  FClearButton.Text := 'CLEAR';
+  FButtonText := 'CLEAR';
+  FClearButton.Text := FButtonText;
   FClearButton.HitTest := True;
   FClearButton.CanFocus := False;
   StyleLookup := 'searcheditbox';
@@ -117,6 +124,12 @@ end;
 procedure TksListViewFilter.DoTimer(Sender: TObject);
 begin
   FClearButton.Visible := Text <> '';
+end;
+
+procedure TksListViewFilter.SetButtonText(const Value: string);
+begin
+  FButtonText := Value;
+  FClearButton.Text := FButtonText;
 end;
 
 procedure TksListViewFilter.SetText(const Value: string);

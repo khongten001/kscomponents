@@ -48,7 +48,7 @@ interface
 
 {$I ksComponents.inc}
 
-uses Classes,FMX.Controls, FMX.Layouts, FMX.Types, System.Types, System.Generics.Collections,
+uses Classes, FMX.Controls, FMX.Layouts, FMX.Types, System.Types, System.Generics.Collections,
   FMX.Graphics, FMX.Objects, FMX.InertialMovement, System.UITypes, System.TypInfo,
   System.UIConsts, System.Rtti, FMX.DateTimeCtrls, FMX.StdCtrls, FMX.Utils,
   FMX.Styles, FMX.Styles.Objects, FMX.Edit, FMX.SearchBox, FMX.ListBox, FMX.Effects,
@@ -70,7 +70,6 @@ const
 
   // default which stretches to row height
   C_TABLEVIEW_DEFAULT_IMAGE_SIZE = 24;
-  C_TABLEVIEW_QTY_SIZE = 12;
   C_TABLEVIEW_DEFAULT_SELECT_DURATION = 200;
   C_TABlEVIEW_SCROLL_THRESHOLD = 10;
 
@@ -776,7 +775,6 @@ type
     FTileBackground: TksTableViewItemTileBackground;
     FImage: TksTableViewItemImage;
     FTitle: TksTableViewItemText;
-    FQty: TksTableViewItemText;
     FSubTitle: TksTableViewItemText;
     FDetail: TksTableViewItemText;
     FAccessory: TksTableViewItemAccessory;
@@ -912,7 +910,6 @@ type
     property TileBackground : TksTableViewItemTileBackground read FTileBackground;
     property Image: TksTableViewItemImage read FImage;
     property Title: TksTableViewItemText read FTitle;
-    property Qty: TksTableViewItemText read FQty;
     property SubTitle: TksTableViewItemText read FSubTitle;
     property TextColor: TAlphaColor read FTextColor write SetTextColor default claBlack;
     property Detail: TksTableViewItemText read FDetail;
@@ -965,15 +962,9 @@ type
     constructor Create(ATableView: TksTableView; AOwnsObjects: Boolean); virtual;
     procedure Move(CurIndex, NewIndex: Integer); overload;
     function AddHeader(AText: string): TksTableViewItem;
-    function InsertHeader(i:integer;AText: string): TksTableViewItem;
     function AddItem(AText: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
     function AddItem(AText, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
     function AddItem(AText, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
-    function AddItem(AText, ASubTitle, ADetail,aQty: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
-    function InsertItem(i:integer;AText: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
-    function InsertItem(i:integer;AText, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
-    function InsertItem(i:integer;AText, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
-    function InsertItem(i:integer;AText, ASubTitle, ADetail, aQty: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem; overload;
     function AddChatBubble(AText: string; APosition: TksTableViewChatBubblePosition; AColor, ATextColor: TAlphaColor; const AUserImage: TBitmap): TksTableViewChatBubble;
     function AddDateSelector(AText: string; ADate: TDateTime): TksTableViewItem;
     function AddItemSelector(AText, ASelected: string; AItems: TStrings): TksTableViewItem; overload;
@@ -1129,7 +1120,6 @@ type
   TksTableViewTextDefaults = class(TPersistent)
   private
     FTitle: TksTableViewTextDefault;
-    FQty: TksTableViewTextDefault;
     FSubtitle: TksTableViewTextDefault;
     FDetail: TksTableViewTextDefault;
     FHeader: TksTableViewTextDefault;
@@ -1137,13 +1127,11 @@ type
     procedure SetSubTitle(const Value: TksTableViewTextDefault);
     procedure SetTitle(const Value: TksTableViewTextDefault);
     procedure SetHeader(const Value: TksTableViewTextDefault);
-    procedure SetQty(const Value: TksTableViewTextDefault);
   public
     constructor Create;
     destructor Destroy; override;
   published
     property Title: TksTableViewTextDefault read FTitle write SetTitle;
-    property Qty: TksTableViewTextDefault read FQty write SetQty;
     property SubTitle: TksTableViewTextDefault read FSubtitle write SetSubTitle;
     property Detail: TksTableViewTextDefault read FDetail write SetDetail;
     property Header: TksTableViewTextDefault read FHeader write SetHeader;
@@ -2438,13 +2426,11 @@ begin
   end;
   if FBadgeValue > 0 then
   begin
-
     GenerateBadge(ACanvas,
-
                   PointF(ARect.Right-12, ARect.Top-4),
                   FBadgeValue,
                   FBadgeColor,
-                  FBadgeTextColor);
+                  claWhite);
   end;
 end;
 
@@ -2604,64 +2590,17 @@ end;
 
 { TksTableViewItems }
 
-function TksTableViewItems.AddItem(AText: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem;
-begin
- result:=InsertItem(-1,atext,AAccessory);
-end;
-function TksTableViewItems.AddItem(AText, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem;
-begin
- result:=InsertItem(-1,atext,aDetail,AAccessory);
-end;
-function TksTableViewItems.AddItem(AText, ASubTitle, ADetail: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem;
-begin
- result:=InsertItem(-1,atext,aSubTitle,aDetail,AAccessory);
-end;
-
-function TksTableViewItems.AddItem(AText, ASubTitle, ADetail,aQty: string; const AAccessory: TksAccessoryType = atNone): TksTableViewItem;
-begin
- result:=InsertItem(-1,atext,aSubTitle,aDetail,aQty,AAccessory);
-end;
-
-
-
-function TksTableViewItems.InsertItem(i:integer;AText: string;
+function TksTableViewItems.AddItem(AText: string;
   const AAccessory: TksAccessoryType = atNone): TksTableViewItem;
 begin
-  Result := InsertItem(i,AText, '', AAccessory);
+  Result := AddItem(AText, '', AAccessory);
 end;
 
-function TksTableViewItems.InsertItem(i:integer;AText, ADetail: string;
+function TksTableViewItems.AddItem(AText, ADetail: string;
   const AAccessory: TksAccessoryType): TksTableViewItem;
 begin
-  Result := InsertItem(i,AText, '', ADetail, AAccessory);
+  Result := AddItem(AText, '', ADetail, AAccessory);
 end;
-
-function TksTableViewItems.InsertItem(i:integer;AText, ASubTitle, ADetail: string;
-  const AAccessory: TksAccessoryType): TksTableViewItem;
-begin
- Result := InsertItem(i,AText, aDetail, ADetail, AAccessory);
-end;
-
-function TksTableViewItems.InsertItem(i:integer;AText, ASubTitle, ADetail,aQty: string;
-  const AAccessory: TksAccessoryType): TksTableViewItem;
-begin
-  Result := TksTableViewItem.Create(FTableView);
-  Result.Title.Text := AText;
-  Result.qty.Text := AQty;
-  Result.SubTitle.Text := ASubTitle;
-  Result.Detail.Text := ADetail;
-  Result.Accessory.Accessory := AAccessory;
-  Result.Accessory.OwnsBitmap := True;
-  Result.Height := FTableView.ItemHeight;
-  if ((i>=0) and (i<count)) then
-    insert(i,result)
-   else
-    Add(Result);
-  UpdateIndexes;
-  Result.UpdateSearchIndex;
-  FTableView.UpdateAll(True);
-end;
-
 
 function TksTableViewItems.AddChatBubble(AText: string;
   APosition: TksTableViewChatBubblePosition;
@@ -2729,20 +2668,21 @@ begin
   FTableView.UpdateAll(True);
 end;
 
-function TksTableViewItems.InsertHeader(i:integer;AText: string): TksTableViewItem;
+function TksTableViewItems.AddItem(AText, ASubTitle, ADetail: string;
+  const AAccessory: TksAccessoryType): TksTableViewItem;
 begin
   Result := TksTableViewItem.Create(FTableView);
   Result.Title.Text := AText;
-  Result.Title.Font.Assign(FTableView.TextDefaults.Header.Font);
-  Result.Title.TextColor := FTableView.TextDefaults.Header.TextColor;
-  //Result.FSearchIndex := '';
-  Result.Height := FTableView.HeaderOptions.Height;
-  Result.Purpose := TksTableViewItemPurpose.Header;
-  insert(i,Result);
-  //UpdateIndexes;
+  Result.SubTitle.Text := ASubTitle;
+  Result.Detail.Text := ADetail;
+  Result.Accessory.Accessory := AAccessory;
+  Result.Accessory.OwnsBitmap := True;
+  Result.Height := FTableView.ItemHeight;
+  Add(Result);
+  UpdateIndexes;
+  Result.UpdateSearchIndex;
   FTableView.UpdateAll(True);
 end;
-
 
 function TksTableViewItems.AddItemSelector(AText, ASelected: string; AItems: TStrings): TksTableViewItem;
 begin
@@ -3118,7 +3058,6 @@ begin
     FTileBackground.Render(RectF(0, 0, 0, 0), _FBitmap.Canvas);
     FImage.Render(RectF(0, 0, 0, 0), _FBitmap.Canvas);
     FTitle.Render(RectF(0, 0, 0, 0), _FBitmap.Canvas);
-    FQty.Render(RectF(0, 0, 0, 0), _FBitmap.Canvas);
     FSubTitle.Render(RectF(0, 0, 0, 0), _FBitmap.Canvas);
     FDetail.Render(RectF(0, 0, 0, 0), _FBitmap.Canvas);
 
@@ -3205,12 +3144,6 @@ begin
     FTitle.Font.Assign(FTableView.TextDefaults.Title.Font);
     FTitle.TextColor := FTableView.TextDefaults.Title.TextColor;
 
-    FQty := TksTableViewItemText.Create(Self);
-    FQty.TextAlignment := TTextAlign.Trailing;
-    FQty.Font.Assign(FTableView.TextDefaults.Qty.Font);
-    FQty.TextColor := FTableView.TextDefaults.Qty.TextColor;
-
-
     FSubTitle := TksTableViewItemText.Create(Self);
     FSubTitle.Font.Assign(FTableView.TextDefaults.SubTitle.Font);
     FSubTitle.TextColor := FTableView.TextDefaults.SubTitle.TextColor;
@@ -3254,7 +3187,6 @@ end;
 destructor TksTableViewItem.Destroy;
 begin
   FreeAndNil(FTitle);
-  FreeAndNil(FQty);
   FreeAndNil(FSubTitle);
   FreeAndNil(FDetail);
   FreeAndNil(FIndicator);
@@ -3646,14 +3578,6 @@ begin
           ARect.Left := ARect.Left + FTableView.ItemImageSize + 4;
         end;
       end;
-      if fQty.Visible and (fqty.Text<>'') then
-       begin
-          FQty.Width := C_TABLEVIEW_QTY_SIZE;
-          FQty.Height := CalculateTextHeight(FQty.Text, FQty.Font, FQty.WordWrap, FQty.FTrimming);
-          FQty.FPlaceOffset := PointF(ARect.Left, 0);
-          ARect.Left := ARect.Left + C_TABLEVIEW_QTY_SIZE + 6;
-       end;
-
 
       FTitle.FPlaceOffset := PointF(ARect.Left, 0);
       FTitle.Width := ARect.Width;
@@ -3676,7 +3600,6 @@ begin
     begin
       FIndicator.Width          := 0;
       FTitle.Width              := 0;
-      FQty.Width              := 0;
       FSubTitle.Width           := 0;
       FDetail.Width             := 0;
       FAccessory.Width          := 0;
@@ -4003,7 +3926,6 @@ begin
       (FObjects[ICount] as TksTableViewItemText).Font.Style := AFontStyle;
   end;
   FTitle.Font.Style := AFontStyle;
-  FQty.Font.Style := AFontStyle;
   FSubTitle.Font.Style := AFontStyle;
   FDetail.Font.Style := AFontStyle;
 end;
@@ -4029,7 +3951,6 @@ begin
       (FObjects[ICount] as TksTableViewItemText).TextColor := AColor;
   end;
   FTitle.TextColor := AColor;
-  FQty.TextColor := AColor;
   FSubTitle.TextColor := AColor;
   FDetail.TextColor := AColor;
   Changed;
@@ -6917,20 +6838,17 @@ end;
 constructor TksTableViewTextDefaults.Create;
 begin
   FTitle := TksTableViewTextDefault.Create;
-  FQty := TksTableViewTextDefault.Create;
   FSubtitle := TksTableViewTextDefault.Create;
   FDetail := TksTableViewTextDefault.Create;
   FHeader := TksTableViewTextDefault.Create;
 
   FSubtitle.TextColor := claDimgray;
-  FQty.FFont.Style:=[TFontStyle.fsBold];
   FDetail.TextColor := claDodgerblue;
 end;
 
 destructor TksTableViewTextDefaults.Destroy;
 begin
   FreeAndNil(FTitle);
-  FreeAndNil(FQty);
   FreeAndNil(FSubtitle);
   FreeAndNil(FDetail);
   FreeAndNil(FHeader);
@@ -6957,10 +6875,6 @@ begin
   FTitle.Assign(Value);
 end;
 
-procedure TksTableViewTextDefaults.SetQty(const Value: TksTableViewTextDefault);
-begin
-  FQty.Assign(Value);
-end;
 
 // ------------------------------------------------------------------------------
 

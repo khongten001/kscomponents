@@ -2,6 +2,9 @@ unit ksLoadingIndicator;
 
 interface
 
+{$I ksComponents.inc}
+
+
 uses FMX.Forms, Classes, FMX.Controls, FMX.Objects, ksTypes, FMX.Graphics,
   FMX.StdCtrls, FMX.Layouts
   {$IFDEF IOS}
@@ -10,12 +13,13 @@ uses FMX.Forms, Classes, FMX.Controls, FMX.Objects, ksTypes, FMX.Graphics,
   ;
 
 type
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
-    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
-    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
-
-
-
+  [ComponentPlatformsAttribute(
+    pidWin32 or
+    pidWin64 or
+    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64 {$ELSE} pidiOSDevice {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidiOSSimulator32 or pidiOSSimulator64 {$ELSE} pidiOSSimulator {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidAndroid32Arm or pidAndroid64Arm {$ELSE} pidAndroid {$ENDIF}
+    )]
   TksLoadingIndicator = class(TLayout)
   private
     FRectangle: TRectangle;
@@ -23,11 +27,14 @@ type
     FLoadingText: string;
     FFadeBackground: Boolean;
     FIsModal: Boolean;
-    FLabel: TLabel;
+    //FLabel: TLabel;
     FOpacity: single;
+    FAnimated: Boolean;
+    FAnimator: TAniIndicator;
     procedure SetIsModal(const Value: Boolean);
     procedure SetFadeBackground(const Value: Boolean);
     procedure SetOpacity(const Value: single);
+    procedure SetAnimated(const Value: Boolean);
   protected
   public
     constructor Create(AOwner: TComponent); override;
@@ -35,6 +42,7 @@ type
     procedure ShowLoading;
     procedure HideLoading;
   published
+    property Animated: Boolean read FAnimated write SetAnimated;
     property IsModal: Boolean read FIsModal write SetIsModal default False;
     property LoadingText: string read FLoadingText write FLoadingText;
     property FadeBackground: Boolean read FFadeBackground write SetFadeBackground default False;
@@ -117,14 +125,13 @@ begin
     ALoadingIndicator.FadeBackground := AFade;
     ALoadingIndicator.IsModal := AModal;
     ALoadingIndicator.Opacity := AOpacity;
-
+    ALoadingIndicator.Animated := True;
     AForm.AddObject(ALoadingIndicator);
 
     ALoadingIndicator.BringToFront;
   except
     //
   end;
-  Application.ProcessMessages;
 end;
 
 procedure HideLoadingIndicator(AForm: TCommonCustomForm);
@@ -167,29 +174,36 @@ begin
   AddObject(FBackground);
 
 
-  FRectangle := TRectangle.Create(Self);
+ { FRectangle := TRectangle.Create(Self);
   FRectangle.Align := TAlignLayout.Center;
-  FRectangle.Stroke.Kind := TBrushKind.None;
-  FRectangle.Stroke.Color := claNull;
-  FRectangle.Fill.Color := claBlack;
-  FRectangle.Width := 90;
-  FRectangle.Height := 70;
+  FRectangle.Stroke.Kind := TBrushKind.Solid;
+  FRectangle.Stroke.Color := claBlack;
+  FRectangle.Fill.Color := claWhite;
+  FRectangle.Width := 50;
+  FRectangle.Height := 50;
 
   FRectangle.XRadius := 5;
   FRectangle.YRadius := 5;
 
-  FRectangle.Opacity := FOpacity;
+  FRectangle.Opacity := FOpacity;   }
 
-  FLabel := TLabel.Create(Self);
+ { FLabel := TLabel.Create(Self);
   FLabel.Align := TAlignLayout.Client;
   FLabel.TextSettings.FontColor := claWhite;
   FLabel.Text := FLoadingText;
   FLabel.TextSettings.HorzAlign := TTextAlign.Center;
   FLabel.TextSettings.VertAlign := TTextAlign.Center;
-  FLabel.StyledSettings := [];
+  FLabel.StyledSettings := [];      }
+
+  FAnimator := TAniIndicator.Create(Self);
+  FAnimator.Align := TAlignLayout.Client;
+  FAnimator.
 
   AddObject(FRectangle);
-  AddObject(FLabel);
+  //AddObject(FLabel);
+  AddObject(FAnimator);
+
+
 end;
 
 
@@ -203,6 +217,12 @@ begin
   HideLoadingIndicator(Owner as TForm);
 end;
 
+
+procedure TksLoadingIndicator.SetAnimated(const Value: Boolean);
+begin
+  FAnimated := Value;
+  FAnimator.Enabled := Value;
+end;
 
 procedure TksLoadingIndicator.SetFadeBackground(const Value: Boolean);
 begin
@@ -222,7 +242,7 @@ end;
 procedure TksLoadingIndicator.SetOpacity(const Value: single);
 begin
   FOpacity := Value;
-  FRectangle.Opacity := Value;
+  //FRectangle.Opacity := Value;
 end;
 
 procedure TksLoadingIndicator.ShowLoading;
@@ -233,6 +253,7 @@ end;
 
 
 end.
+
 
 
 

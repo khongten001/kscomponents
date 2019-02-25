@@ -443,15 +443,17 @@ end;    }
 
 procedure ReplaceOpaqueColor(ABmp: TBitmap; Color : TAlphaColor);
 var
-  x,y: Integer;
+  //x,y: Integer;
   AMap: TBitmapData;
   PixelColor: TAlphaColor;
   PixelWhiteColor: TAlphaColor;
   C: PAlphaColorRec;
 begin
-
-
-  if (Assigned(ABmp)) then
+  TThread.Synchronize(nil,procedure
+                    var
+                    x,y: Integer;
+                    begin
+                      if (Assigned(ABmp)) then
   begin
     if ABmp.Map(TMapAccess.ReadWrite, AMap) then
     try
@@ -470,6 +472,7 @@ begin
       ABmp.Unmap(AMap);
     end;
   end;
+  end);
 end;
 
 procedure SimulateClick(AControl: TControl; x, y: single);

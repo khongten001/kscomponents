@@ -35,9 +35,14 @@ uses {$IFDEF MSWINDOWS} Windows, {$ENDIF} Classes, FMX.StdCtrls, FMX.Graphics, k
 type
   TksPinCodeSubmitEvent = procedure(Sender: TObject; ACode: string) of object;
 
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
-    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
-    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+  [ComponentPlatformsAttribute(
+    pidWin32 or
+    pidWin64 or
+    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64 {$ELSE} pidiOSDevice {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidiOSSimulator32 or pidiOSSimulator64 {$ELSE} pidiOSSimulator {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidAndroid32Arm or pidAndroid64Arm {$ELSE} pidAndroid {$ENDIF}
+    )]
+
   TksPinCode = class(TControl)
   private
     FIndicator: TksProgressIndicator;
@@ -138,6 +143,8 @@ begin
 end;
 
 procedure TksPinCode.DoKeyPressed(AKey: string);
+var
+  ATask: ITask;
 begin
   if Length(FCode) < 4 then
   begin
@@ -149,17 +156,20 @@ begin
     {$ENDIF}
   end;
 
-  //Sleep(1000);
-  //FIndicator.Visible := True;
-
-
   Repaint;
 
   if Length(Fcode) = 4 then
   begin
-    Application.ProcessMessages;
-    Sleep(200);
-    DoSubmit;
+    aTask := TTask.Create (procedure ()
+    begin
+      Sleep(300);
+      TThread.Synchronize(nil,procedure
+                  begin
+                     //Interact with UI
+                     DoSubmit;
+                  end);
+    end);
+    aTask.Start;
   end;
 end;
 

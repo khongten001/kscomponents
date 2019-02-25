@@ -30,20 +30,21 @@ interface
 
 uses System.UITypes, FMX.Controls, FMX.Layouts, FMX.Objects, System.Classes,
   FMX.Types, Generics.Collections, FMX.Graphics, System.UIConsts, FMX.Effects,
-  FMX.StdCtrls, System.Types, FMX.Forms, ksTableView, FMX.Edit,
+  FMX.StdCtrls, System.Types, FMX.Forms, ksVirtualListView, FMX.Edit,
   FMX.VirtualKeyboard, System.Messaging, ksTypes;
 
 
 type
   TksChatView = class;
 
+  TksBubblePosition = (bpLeft, bpRight);
 
   TksChatBubbleInfo = record
     Text: string;
-    APosition: TksTableViewChatBubblePosition;
+    APosition: TksBubblePosition;
     Color: TAlphaColor;
     TextColor: TAlphaColor;
-    TableViewItem: TksTableViewItem;
+    Item: TksVListItem;
   end;
 
   TKsChatViewClickBubbleEvent = procedure(Sender: TObject; ABubble: TksChatBubbleInfo) of object;
@@ -69,7 +70,7 @@ type
     {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
   TksChatView = class(TksControl)
   private
-    FTableView: TksTableView;
+    FTableView: TksVirtualListView;
     FEdit: TksChatViewEdit;
     FMyImage: TBitmap;
     FSpacer: TLayout;
@@ -85,7 +86,7 @@ type
     procedure SetButtonText(const Value: string);
 
     procedure SetShowDoneButton(const Value: Boolean);
-    procedure DoChatViewClick(Sender: TObject; x, y: single; AItem: TksTableViewItem; AId: string; ARowObj: TksTableViewItemObject);
+    procedure DoChatViewClick(Sender: TObject; x, y: single; AItem: TksVListItem; AId: string; ARowObj: TksVListItemBubbleObject);
   protected
     procedure Paint; override;
     procedure DoSendButtonClick;

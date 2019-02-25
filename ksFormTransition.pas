@@ -78,9 +78,13 @@ type
 
   end;
 
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
-    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
-    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+  [ComponentPlatformsAttribute(
+    pidWin32 or
+    pidWin64 or
+    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64 {$ELSE} pidiOSDevice {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidiOSSimulator32 or pidiOSSimulator64 {$ELSE} pidiOSSimulator {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidAndroid32Arm or pidAndroid64Arm {$ELSE} pidAndroid {$ENDIF}
+    )]
 
   TksFormTransition = class(TksComponent)
   private
@@ -157,10 +161,15 @@ begin
     if IsIPad then
       ATran.Push(AForm, ksFtNoTransition, ARecordPush)
     else
+      {$IFDEF ANDROID}
+      ATran.Push(AForm, ksFtNoTransition, ARecordPush)
+      {$ELSE}
       ATran.Push(AForm, ATransition, ARecordPush);
+      {$ENDIF}
   finally
     FreeAndNil(ATran);
   end;
+  HideLoadingIndicator(AForm);
 end;
 
 procedure Pop;
@@ -352,16 +361,16 @@ begin
   try
 
 
+    if Supports(ATo, IksFormTransition, AFormIntf) then
+      AFormIntf.BeforeTransition(ksTmPop);
 
-
+    {$IFNDEF ANDROID}
     AAnimateForm := TfrmFormTransitionUI.Create(nil);
     try
       {$IFDEF XE10_2_OR_NEWER}
       AAnimateForm.SystemStatusBar.Assign(AFrom.SystemStatusBar);
       {$ENDIF}
        // moved to here...
-      if Supports(ATo, IksFormTransition, AFormIntf) then
-        AFormIntf.BeforeTransition(ksTmPop);
 
 
       AAnimateForm.Initialise(AFrom, ATo);
@@ -384,6 +393,13 @@ begin
     finally
       AAnimateForm.DisposeOf;
     end;
+    {$ELSE}
+    ATo.Visible := True;
+    AFrom.Visible := False;
+    ATo.Activate;
+    for ICount := ALevels downto 1 do
+      _InternalTransitionList.Delete(_InternalTransitionList.Count-1);
+    {$ENDIF}
   finally
     if ShowLoadingIndicatorOnTransition then
       HideLoadingIndicator(AFrom);
@@ -419,6 +435,8 @@ begin
   	Exit;
 
   AFrom := Screen.ActiveForm;
+
+  //(AFrom);
 
   ATo := AForm;
   {$IFDEF MSWINDOWS}

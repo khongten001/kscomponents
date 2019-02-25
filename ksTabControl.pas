@@ -144,9 +144,13 @@ type
     property Position;
   end;
 
-  [ComponentPlatformsAttribute(pidWin32 or pidWin64 or
-    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64
-    {$ELSE} pidiOSDevice {$ENDIF} or pidiOSSimulator or pidAndroid)]
+  [ComponentPlatformsAttribute(
+    pidWin32 or
+    pidWin64 or
+    {$IFDEF XE8_OR_NEWER} pidiOSDevice32 or pidiOSDevice64 {$ELSE} pidiOSDevice {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidiOSSimulator32 or pidiOSSimulator64 {$ELSE} pidiOSSimulator {$ENDIF} or
+    {$IFDEF XE10_3_OR_NEWER} pidAndroid32Arm or pidAndroid64Arm {$ELSE} pidAndroid {$ENDIF}
+    )]
   TksTabControl = class(TControl, IItemsContainer)
   private
     FTabBar: TksTabBar;
@@ -290,7 +294,7 @@ begin
 
   InflateRect(r, 0, -3);
 
-  ACanvas.Font.Size := 9;
+  ACanvas.Font.Size := 10;
   ACanvas.FillText(r, FText, False, 1, [], TTextAlign.Center, TTextAlign.Trailing);
   InflateRect(r, 0, -3);
 
@@ -327,7 +331,7 @@ begin
 
       ACanvas.DrawBitmap(FBadge, RectF(0, 0, FBadge.Width, FBadge.Height), ABadgeRect, 1);
       ACanvas.Fill.Color := claWhite;
-      ACanvas.Font.Size := 9;
+      ACanvas.Font.Size := 10;
       if FBadgeValue > 0 then
         ACanvas.FillText(ABadgeRect, IntToStr(FBadgeValue), False, 1, [], TTextAlign.Center);
     end;
@@ -358,18 +362,9 @@ begin
     s := GetScreenScale(False);
     FBadge := TBitmap.Create(Round(32*s), Round(32*s));
     FBadge.Clear(claNull);
-    FBadge.Canvas.Fill.Color := claRed;
+    //FBadge.Canvas.Fill.Color := claRed;
     FBadge.Canvas.Fill.Kind := TBrushKind.Solid;
-    FBadge.Canvas.BeginScene;
-    try
-      FBadge.Canvas.FillEllipse(RectF(0, 0, FBadge.Width, FBadge.Height), 1);
-    finally
-      FBadge.Canvas.EndScene;
-    end;
-     {GenerateBadge(fb,
-                            TksTabControl(Parent).Appearence.BadgeColor,
-                            TksTabControl(Parent).Appearence.BackgroundColor,
-                            claWhite); }
+    FBadge.Canvas.FillEllipse(RectF(0, 0, FBadge.Width, FBadge.Height), 1);
   end;
 end;
 
@@ -649,11 +644,23 @@ var
   ARect: TRectF;
 begin
   inherited;
+
   if Locked then
     Exit;
+
   Canvas.Fill.Color := FAppearence.BackgroundColor;
   if (SelectedTab <> nil) then
   begin
+    Canvas.Fill.Color := FAppearence.BackgroundColor;
+    if (SelectedTab <> nil) then
+    begin
+      if SelectedTab.Background <> claNull then
+        Canvas.Fill.Color := SelectedTab.Background;
+    end;
+    Canvas.Fill.Kind := TBrushKind.Solid;
+    ARect := ClipRect;
+    if TabPosition <> TksTabBarPosition.ksTbpNone then
+      ARect.Bottom := ARect.Bottom - FTabBar.Height;
     if SelectedTab.Background <> claNull then
       Canvas.Fill.Color := SelectedTab.Background;
   end;
@@ -662,6 +669,11 @@ begin
   if TabPosition <> TksTabBarPosition.ksTbpNone then
     ARect.Bottom := ARect.Bottom - FTabBar.Height;
 
+    Canvas.FillRect(ARect, 0, 0, AllCorners, 1);
+    if (csDesigning in ComponentState) then
+    begin
+      DrawDesignBorder(claDimgray, claDimgray);
+      Canvas.Fill.Color := claDimgray;;
   Canvas.FillRect(ARect, 0, 0, AllCorners, 1);
   if (csDesigning in ComponentState) then
   begin
@@ -669,6 +681,16 @@ begin
     Canvas.Fill.Color := claDimgray;;
 
 
+
+      {$IFDEF MSWINDOWS}
+      if GetTabCount = 0 then
+      begin
+        Canvas.Font.Size := 14;
+        Canvas.FillText(ClipRect, 'Right-click to add tabs', True, 1, [], TTextAlign.Center);
+      end;
+      {$ENDIF}
+
+    end;
 
     {$IFDEF MSWINDOWS}
     if GetTabCount = 0 then
@@ -836,8 +858,11 @@ var
   ATabControl: TksTabControl;
 begin
   inherited;
+  //if Locked then
+  //  Exit;
   if Locked then
     Exit;
+
   ATabControl := TksTabControl(FTabControl);
   with Canvas do
   begin
@@ -871,12 +896,14 @@ begin
         ATabControl.Tabs[ICount].DrawTab(Canvas, ICount, ATabControl.GetTabRect(ICount));
       end;
 
+      //Stroke.Color := claRed;
       case ATabControl.TabPosition of
         ksTbpBottom: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Top]);
         ksTbpTop: DrawRectSides(ARect, 0, 0, AllCorners,1, [TSide.Bottom]);
       end;
 
     finally
+
       RestoreState(AState);
       Font.Size := 10;
 
