@@ -245,7 +245,6 @@ begin
   ClipChildren := True;
   Stored := True;
   Locked := True;
-  HitTest := False;
   Text := Name;
   FHighlightStyle := ksTbHighlightSingleColor;
   FBackground := claWhite;
